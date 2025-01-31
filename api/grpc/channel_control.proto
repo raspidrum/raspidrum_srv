@@ -1,7 +1,11 @@
 syntax = "proto3";
 
+option go_package="github.com/raspidrum-srv/api/grpc";
+
+package channelControl.v1;
+
 service ChannelControl {
-  rpc SetValue(ControlValue) returns (ControlValue);
+  rpc SetValue(stream ControlValue) returns (stream ControlValue);
 }
 
 

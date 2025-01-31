@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Server",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/server/main.go",
+      "cwd": "${workspaceFolder}", // Важно: рабочая директория = корень проекта
+      //"env": {
+      //  "GO_ENV": "dev" // Пример переменных окружения
+      //},
+      "args": [], // Аргументы командной строки
+      "buildFlags": ""
+    }
+  ]
+}

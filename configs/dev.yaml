@@ -1,0 +1,3 @@
+host:
+  addr: localhost
+  port: 50051
