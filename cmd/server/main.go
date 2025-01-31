@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+
+	channelcontrol "github.com/raspidrum-srv/internal/app/channel_control"
 )
 
 type Config struct {
@@ -19,34 +20,6 @@ type Config struct {
 }
 
 var cfg Config
-
-// Server реализует GreeterServer
-type Server struct {
-	pb.UnimplementedChannelControlServer
-}
-
-// TODO: вынести в пакет работы с ChannelControl
-func (s *Server) SetValue(stream pb.ChannelControl_SetValueServer) error {
-	for {
-		in, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		out := &pb.ControlValue{
-			Key:   in.Key,
-			Seq:   in.Seq,
-			Value: in.Value,
-		}
-		if err := stream.Send(out); err != nil {
-			return err
-		}
-
-	}
-}
 
 func main() {
 	cfg, err := loadConfig("./configs")
@@ -61,7 +34,8 @@ func main() {
 
 	var opts []grpc.ServerOption
 	s := grpc.NewServer(opts...)
-	pb.RegisterChannelControlServer(s, &Server{})
+	server := channelcontrol.NewChannelControlServer()
+	pb.RegisterChannelControlServer(s, server)
 	log.Printf("Server is running, port: %d", cfg.Host.Port)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Server error: %v", err)
