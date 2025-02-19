@@ -1,0 +1,21 @@
+GENERATOR: 
+  PackageName: liblscp
+  PackageDescription: "Package liblscp provides Go bindings for lib of Linuxsampler LSCP protocol"
+  Includes: 
+    - "lscp/client.h"
+    - "lscp/device.h"
+    - "lscp/event.h"
+    - "lscp/socket.h"
+  Options:
+    SafeStrings: true
+  FlagGroups:
+    - name: "LDFLAGS"
+      flags: 
+      - "-lliblscp"
+      - "L ../liblscp"
+
+PARSER: 
+  IncludePaths: ["../liblscp"]
+  SourcesPaths: 
+    - "lscp/client.h"
+    
