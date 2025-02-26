@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
+	"os"
 
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/spf13/viper"
@@ -27,18 +28,23 @@ func main() {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to listen: %v", err)))
+		os.Exit(1)
 	}
 
 	var opts []grpc.ServerOption
 	s := grpc.NewServer(opts...)
 	server := channelcontrol.NewChannelControlServer()
 	pb.RegisterChannelControlServer(s, server)
-	log.Printf("Server is running, port: %d", cfg.Host.Port)
+	slog.Info("Server is running", slog.Int("port:", cfg.Host.Port))
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("Server error: %v", err)
+		slog.Error(fmt.Sprintln(fmt.Errorf("Server error: %v", err)))
+		os.Exit(1)
 	}
 }
 

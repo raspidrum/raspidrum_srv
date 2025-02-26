@@ -155,7 +155,7 @@ func parseMultiplicity(resultSet []string) (bool, error) {
 func ParseError(ln string, rs *ResultSet) error {
 	m, f := strings.CutPrefix(ln, "ERR:")
 	if !f {
-		return fmt.Errorf("not an error: '%s'", ln)
+		return fmt.Errorf("not an error result: '%s'", ln)
 	}
 	code, msg, f := strings.Cut(m, ":")
 	if !f {
@@ -165,6 +165,7 @@ func ParseError(ln string, rs *ResultSet) error {
 	if err != nil {
 		return fmt.Errorf("code not int: '%s' %w", code, err)
 	}
+	rs.Type = ResultType.Error
 	rs.Code = i
 	rs.Message = msg
 	return nil
@@ -197,7 +198,7 @@ func cutIndex(ln string) (index int, found bool, msg string, err error) {
 func ParseWarning(ln string, rs *ResultSet) error {
 	_, msg, f := strings.Cut(ln, "WRN")
 	if !f {
-		return fmt.Errorf("not an warning: '%s'", ln)
+		return fmt.Errorf("not a warning result: '%s'", ln)
 	}
 
 	idx, f, msg, err := cutIndex(msg)
@@ -220,16 +221,39 @@ func ParseWarning(ln string, rs *ResultSet) error {
 	if err != nil {
 		return fmt.Errorf("code not int: '%s' %w", code, err)
 	}
-	rs.IsWarning = true
+	rs.Type = ResultType.Warning
 	rs.Code = i
 	rs.Message = msg
 	return nil
 
 }
 
+func ParseOk(ln string, rs *ResultSet) error {
+	_, msg, f := strings.Cut(ln, "OK")
+	if !f {
+		return fmt.Errorf("not an OK result: '%s'", ln)
+	}
+	if len(msg) == 0 {
+		// it's empty "OK" result
+		return nil
+	}
+	idx, f, msg, err := cutIndex(msg)
+	if err != nil {
+		return err
+	}
+	if f {
+		rs.Index = idx
+	}
+	rs.Type = ResultType.Ok
+	rs.Message = msg
+	// it's "OK" result with index
+	return nil
+}
+
 // Parses an empty result set and returns an appropriate <code>ResultSet</code> object.
 // Notice that the result set may be of type warning or error.
 // n A <code>String</code> representing the single line result set to be parsed.
+// TODO: выпилить эту функцию, т.к. она полностью дублирует Client.getResultSet
 func ParseResultSet(ln string) (ResultSet, error) {
 	rs := ResultSet{}
 
