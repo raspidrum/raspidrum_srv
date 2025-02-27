@@ -26,7 +26,7 @@ func (e *LscpError) Error() string {
 
 // Parses an integer value.
 // @throws LscpException If the string does not contain valid integer value.
-func parseInt(s string) (int, error) {
+func ParseInt(s string) (int, error) {
 	i, err := strconv.Atoi(s)
 	if err != nil {
 		return 0, fmt.Errorf("not int: %s %w", s, err)
@@ -58,7 +58,7 @@ func ParceBoolList(list string) ([]bool, error) {
 }
 
 // Parses a comma separated list with integer values
-func parseIntList(list string) ([]int, error) {
+func ParseIntList(list string) ([]int, error) {
 	ar := strings.Split(list, ",")
 	bar := make([]int, len(ar))
 	for i, v := range ar {
@@ -72,7 +72,7 @@ func parseIntList(list string) ([]int, error) {
 }
 
 // Parses a comma separated list with float values.
-func parseFloatList(list string) ([]float64, error) {
+func ParseFloatList(list string) ([]float64, error) {
 	ar := strings.Split(list, ",")
 	bar := make([]float64, len(ar))
 	for i, v := range ar {
@@ -121,7 +121,7 @@ func ParseStringList(list string, sep string) ([]string, error) {
 // resultSet A string array containing the information categories of a multi-line result set.
 func parseType(resultSet []string) (ParameterType, error) {
 	if resultSet == nil || len(resultSet) == 0 {
-		return Unknown, nil
+		return ptUnknown, nil
 	}
 	for _, s := range resultSet {
 		if strings.HasPrefix(s, "TYPE: ") {
@@ -130,7 +130,7 @@ func parseType(resultSet []string) (ParameterType, error) {
 
 		}
 	}
-	return Unknown, nil
+	return ptUnknown, nil
 }
 
 // Determines whether the parameter represented by the specified result set allows only one value or a list of values.

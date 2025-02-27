@@ -41,17 +41,11 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-// Gets information about the LinuxSampler instance.
-func (c *Client) GetServerInfo() (*ServerInfo, error) {
-	rs, err := c.retrieveInfo("GET SERVER INFO", true)
-	if err != nil {
-		return nil, fmt.Errorf("failed lscp command: %w", err)
+func (c *Client) Disconnect() error {
+	if err := c.conn.Close(); err != nil {
+		return fmt.Errorf("failed disconnect from LinuxSampler: %w", err)
 	}
-	si, err := NewServerInfo(rs.MultiLineResult)
-	if err != nil {
-		return nil, fmt.Errorf("failed lscp command: %w", err)
-	}
-	return &si, nil
+	return nil
 }
 
 func (c *Client) retrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, error) {
@@ -65,6 +59,14 @@ func (c *Client) retrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, er
 		return ResultSet, err
 	}
 	return ResultSet, nil
+}
+
+func (c *Client) retrieveIndex(lscpCmd string) (int, error) {
+	rs, err := c.retrieveInfo(lscpCmd, false)
+	if err != nil {
+		return 0, err
+	}
+	return rs.Index, nil
 }
 
 func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
@@ -126,4 +128,79 @@ func (c *Client) getLine() (string, error) {
 			return s, nil
 		}
 	}
+}
+
+func (c *Client) getIntegerList(lscpCmd string) ([]int, error) {
+	rs, err := c.retrieveInfo(lscpCmd, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed execute: %s : %w", lscpCmd, err)
+	}
+	return ParseIntList(rs.Message)
+}
+
+// LSCP common commands
+
+// Gets information about the LinuxSampler instance.
+func (c *Client) GetServerInfo() (*ServerInfo, error) {
+	rs, err := c.retrieveInfo("GET SERVER INFO", true)
+	if err != nil {
+		return nil, fmt.Errorf("failed lscp command: %w", err)
+	}
+	si, err := NewServerInfo(rs.MultiLineResult)
+	if err != nil {
+		return nil, fmt.Errorf("failed lscp command: %w", err)
+	}
+	return &si, nil
+}
+
+// LSCP audio commands
+
+// Creates a new audio output device for the desired audio output system.
+// adrv The desired audio output system
+// paramList An optional list of driver specific parameters. <code>Parameter</code>
+// Return the numerical ID of the newly created device.
+func (c *Client) CreateAudioOutputDevice(adrv string, params ...Parameter[any]) (int, error) {
+	cmd := "CREATE AUDIO_OUTPUT_DEVICE"
+	plist := make([]string, len(params))
+	for i, v := range params {
+		plist[i] = fmt.Sprintf("%s=%s", v.Name, v.GetStringValue())
+	}
+	return c.retrieveIndex(fmt.Sprintf("%s %s", cmd, strings.Join(plist, " ")))
+}
+
+// Gets a list of all created audio output devices.
+func (c *Client) GetAudioOutputDevices() ([]AudioOutputDevice, error) {
+	ids, err := c.GetAudioOutputDeviceIDs()
+	if err != nil {
+		return nil, err
+	}
+
+	audDevs := make([]AudioOutputDevice, len(ids))
+	for i, v := range ids {
+		audDevs[i], err = c.GetAudioOutputDeviceInfo(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return audDevs, nil
+}
+
+// Gets a list of numerical IDs of all created audio output devices.
+func (c *Client) GetAudioOutputDeviceIDs() ([]int, error) {
+	return c.getIntegerList("LIST AUDIO_OUTPUT_DEVICES")
+}
+
+// Gets the current settings of a specific, already created audio output device.
+// devId Specifies the numerical ID of the audio output device.
+func (c *Client) GetAudioOutputDeviceInfo(devId int) (AudioOutputDevice, error) {
+	cmd := "GET AUDIO_OUTPUT_DEVICE INFO"
+	rs, err := c.retrieveInfo(cmd, true)
+	if err != nil {
+		return AudioOutputDevice{}, fmt.Errorf("failed lscp command: %s : %w", cmd, err)
+	}
+	aod, err := ParseAudioOutputDevice(devId, rs.MultiLineResult)
+	if err != nil {
+		return AudioOutputDevice{}, err
+	}
+	return aod, nil
 }
