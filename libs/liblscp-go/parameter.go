@@ -64,5 +64,12 @@ func (p *Parameter[T]) RangeMax() (setted bool, value float64) {
 }
 
 func (p *Parameter[T]) GetStringValue() string {
-	return fmt.Sprintf("%v", p.Value)
+	var res string
+	switch any(p.Value).(type) {
+	case string:
+		res = fmt.Sprintf("'%v'", p.Value)
+	default:
+		res = fmt.Sprintf("%v", p.Value)
+	}
+	return res
 }

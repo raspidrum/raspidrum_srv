@@ -153,7 +153,7 @@ func (c *Client) GetServerInfo() (*ServerInfo, error) {
 	return &si, nil
 }
 
-// LSCP audio commands
+// LSCP AUDIO commands
 
 // Creates a new audio output device for the desired audio output system.
 // adrv The desired audio output system
@@ -203,4 +203,72 @@ func (c *Client) GetAudioOutputDeviceInfo(devId int) (AudioOutputDevice, error) 
 		return AudioOutputDevice{}, err
 	}
 	return aod, nil
+}
+
+// Alters a specific setting of an audio output channel.
+// chn The audio channel number.
+// prm A <code>Parameter</code> instance containing the name of the parameter
+// and the new value for this parameter.
+func (c *Client) SetAudioOutputChannelParameter(devId int, chn int, prm Parameter[any]) error {
+	cmd := fmt.Sprintf("SET AUDIO_OUTPUT_CHANNEL_PARAMETER %d %d %s=%s", devId, chn, prm.Name, prm.GetStringValue())
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// LSCP MIDI commands
+// Gets all MIDI input drivers currently available for the LinuxSampler instance.
+func (c *Client) GetMidiInputDriverNames() ([]string, error) {
+	cmd := "LIST AVAILABLE_MIDI_INPUT_DRIVERS"
+	rs, err := c.retrieveInfo(cmd, false)
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(rs.Message, ","), nil
+}
+
+// Creates a new MIDI input device.
+// miDriver The desired MIDI input system.
+// paramList An optional list of driver specific parameters. <code>Parameter</code>
+// instances can be easily created using {@link ParameterFactory} factory.
+// Return the numerical ID of the newly created device.
+func (c *Client) CreateMidiInputDevice(miDriver string, params ...Parameter[any]) (int, error) {
+	cmd := "CREATE MIDI_INPUT_DEVICE"
+	plist := make([]string, len(params))
+	for i, v := range params {
+		plist[i] = fmt.Sprintf("%s=%s", v.Name, v.GetStringValue())
+	}
+	return c.retrieveIndex(fmt.Sprintf("%s %s", cmd, strings.Join(plist, " ")))
+}
+
+// Destroys already created MIDI input device.
+// devId The numerical ID of the MIDI input device to be destroyed.
+func (c *Client) DestroyMidiInputDevice(devId int) error {
+	_, err := c.retrieveIndex(fmt.Sprintf("DESTROY MIDI_INPUT_DEVICE %d", devId))
+	return err
+}
+
+// Gets a list of numerical IDs of all created MIDI input devices.
+// An <code>Integer</code> array providing the numerical IDs of all created MIDI input devices.
+func (c *Client) GetMidiInputDeviceIDs() ([]int, error) {
+	return c.getIntegerList("LIST MIDI_INPUT_DEVICES")
+}
+
+// Gets detailed information about a specific MIDI input port.
+// devId The numerical ID of the MIDI input device.
+// midiPort The MIDI input port number.
+// Return an <code>MidiPort</code> instance containing information about the specified MIDI input port.
+func (c *Client) GetMidiInputPortInfo(devId int, midiPort int) (MidiPort, error) {
+	cmd := "GET MIDI_INPUT_PORT INFO"
+	rs, err := c.retrieveInfo(cmd, true)
+	if err != nil {
+		return MidiPort{}, fmt.Errorf("failed lscp command: %s : %w", cmd, err)
+	}
+	mp, err := ParseMidiPort(rs.MultiLineResult)
+	if err != nil {
+		return MidiPort{}, err
+	}
+	return mp, nil
 }
