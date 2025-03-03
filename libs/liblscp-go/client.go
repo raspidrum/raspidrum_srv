@@ -272,3 +272,158 @@ func (c *Client) GetMidiInputPortInfo(devId int, midiPort int) (MidiPort, error)
 	}
 	return mp, nil
 }
+
+// Alters a specific setting of a MIDI input port.
+func (c *Client) SetMidiInputPortParameter(devId int, port int, prm Parameter[any]) error {
+	cmd := fmt.Sprintf("SET MIDI_INPUT_PORT_PARAMETER %d %d %s=%s", devId, port, prm.Name, prm.GetStringValue())
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Loads and assigns an instrument to a sampler channel. Notice that this function will
+// return after the instrument is fully loaded and the channel is ready to be used.
+// filename The name of the instrument file on the LinuxSampler instance's host system.
+// instrIdx The index of the instrument in the instrument file.
+// samplerChn The number of the sampler channel the instrument should be assigned to.
+func (c *Client) LoadInstrument(filename string, instrIdx int, samplerChn int) error {
+	cmd := fmt.Sprintf("LOAD INSTRUMENT '%s' %d %d", filename, instrIdx, samplerChn)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Loads a sampler engine to a specific sampler channel.
+// engineName The name of the engine.
+// amplerChn The number of the sampler channel the deployed engine should be assigned to.
+func (c *Client) LoadSamplerEngine(engineName string, samplerChn int) error {
+	cmd := fmt.Sprintf("LOAD ENGINE %s %d", engineName, samplerChn)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Gets a list with numerical IDs of all created sampler channels.
+// return An <code>Integer</code> array providing the numerical IDs of all created sampler channels.
+func (c *Client) GetSamplerChannelIDs() ([]int, error) {
+	return c.getIntegerList("LIST CHANNELS")
+}
+
+// Adds a new sampler channel. This method will increment the sampler channel count by one
+// and the new sampler channel will be appended to the end of the sampler channel list.
+// return The number of the newly created sampler channel.
+func (c *Client) AddSamplerChannel() (int, error) {
+	return c.retrieveIndex("ADD CHANNEL")
+}
+
+// Removes the specified sampler channel.
+// samplerChn The numerical ID of the sampler channel to be removed.
+func (c *Client) RemoveSamplerChannel(samplerChn int) error {
+	cmd := fmt.Sprintf("REMOVE CHANNEL %d", samplerChn)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Gets a list of all available engines' names.
+// return <code>String</code> array with all available engines' names.
+func (c *Client) GetEngineNames() ([]string, error) {
+	rs, err := c.retrieveInfo("LIST AVAILABLE_ENGINES", false)
+	if err != nil {
+		return nil, err
+	}
+	ls, err := ParseStringList(rs.Message, ",")
+	if err != nil {
+		return nil, err
+	}
+	return ls, nil
+}
+
+// Sets the audio output device on the specified sampler channel.
+// samplerChn The sampler channel number.
+// devId The numerical ID of the audio output device.
+func (c *Client) SetChannelAudioOutputDevice(samplerChn int, devId int) error {
+	cmd := fmt.Sprintf("SET CHANNEL AUDIO_OUTPUT_DEVICE %d %d", samplerChn, devId)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Sets the audio output channel on the specified sampler channel.
+// samplerChn The sampler channel number.
+// audioOut The sampler channel's audio output channel which should be rerouted.
+// audioIn The audio channel of the selected audio output device where <code>audioOut</code> should be routed to.
+func (c *Client) SetChannelAudioOutputChannel(samplerChn int, audioOut int, audioIn int) error {
+	cmd := fmt.Sprintf("SET CHANNEL AUDIO_OUTPUT_CHANNEL %d %d %d", samplerChn, audioOut, audioIn)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Sets the MIDI input device on the specified sampler channel.
+// samplerChn The sampler channel number.
+// devId The numerical ID of the MIDI input device.
+func (c *Client) SetChannelMidiInputDevice(samplerChn int, devId int) error {
+	cmd := fmt.Sprintf("SET CHANNEL MIDI_INPUT_DEVICE %d %d", samplerChn, devId)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Sets the volume of the specified sampler channel.
+// samplerChn The sampler channel number.
+// volume The new volume value.
+func (c *Client) SetChannelVolume(samplerChn int, volume float64) error {
+	cmd := fmt.Sprintf("SET CHANNEL VOLUME %d %.2f", samplerChn, volume)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Mute/unmute the specified sampler channel.
+// samplerChn The sampler channel number.
+// mute If <code>true</code> the specified channel is muted, else the channel is unmuted.
+func (c *Client) SetChannelMute(samplerChn int, mute bool) error {
+	b := 0
+	if mute {
+		b = 1
+	}
+	cmd := fmt.Sprintf("SET CHANNEL MUTE %d %d", samplerChn, b)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Solo/unsolo the specified sampler channel.
+// samplerChn The sampler channel number.
+// solo <code>true</code> to solo the specified channel, <code>false</code> otherwise.
+func (c *Client) SetChannelSolo(samplerChn int, solo bool) error {
+	b := 0
+	if solo {
+		b = 1
+	}
+	cmd := fmt.Sprintf("SET CHANNEL SOLO %d %d", samplerChn, b)
+	_, err := c.retrieveIndex(cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}

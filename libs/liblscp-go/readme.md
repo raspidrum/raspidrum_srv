@@ -7,26 +7,32 @@
 
 + CREATE MIDI_INPUT_DEVICE ALSA
 
-SET MIDI_INPUT_PORT_PARAMETER 0 0 ALSA_SEQ_BINDINGS='20:0'
++ SET MIDI_INPUT_PORT_PARAMETER 0 0 ALSA_SEQ_BINDINGS='20:0'
 
-ADD CHANNEL
++ ADD CHANNEL
 
-LIST CHANNELS
++ LIST CHANNELS
   use: clear prev configuration (REMOVE CHANNEL) before loading new
 
-REMOVE CHANNEL <sampler-channel>
++ REMOVE CHANNEL <sampler-channel>
 
 RESET CHANNEL <sampler-channel>
 
-SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0
++ SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0
 
-SET CHANNEL MIDI_INPUT_DEVICE 0 0
++ SET CHANNEL MIDI_INPUT_DEVICE 0 0
 
-LOAD ENGINE sfz 0
++ LIST AVAILABLE_ENGINES
 
-LOAD INSTRUMENT '/home/drum/instruments/SamsSonor-wav/SamsSonor.sfz' 0 0
++ LOAD ENGINE sfz 0
 
-SET CHANNEL VOLUME 0 0.70
++ LOAD INSTRUMENT '/home/drum/instruments/SamsSonor-wav/SamsSonor.sfz' 0 0
+
++ SET CHANNEL VOLUME 0 0.70
+
++ SET CHANNEL MUTE
+
++ SET CHANNEL SOLO
 
 GET VOLUME
 
@@ -122,7 +128,7 @@ GET AUDIO_OUTPUT_CHANNEL INFO <dev-id> <channel>
 DESTROY AUDIO_OUTPUT_DEVICE <device-id>
   posible use: reload config
 
-SET CHANNEL AUDIO_OUTPUT_CHANNEL <sampler-chan> <audio-out> <audio-in>
++ SET CHANNEL AUDIO_OUTPUT_CHANNEL <sampler-chan> <audio-out> <audio-in>
 
 
 #### MIDI

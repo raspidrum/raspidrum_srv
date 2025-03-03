@@ -119,7 +119,7 @@ func ParseStringList(list string, sep string) ([]string, error) {
 
 // Gets the type of the parameter represented by the specified result set.
 // resultSet A string array containing the information categories of a multi-line result set.
-func parseType(resultSet []string) (ParameterType, error) {
+func ParseType(resultSet []string) (ParameterType, error) {
 	if resultSet == nil || len(resultSet) == 0 {
 		return ptUnknown, nil
 	}
