@@ -30,28 +30,24 @@ RESET CHANNEL <sampler-channel>
 
 + SET CHANNEL VOLUME 0 0.70
 
-+ SET CHANNEL MUTE
++ SET CHANNEL MUTE <sampler-channel> <mute>
 
-+ SET CHANNEL SOLO
++ SET CHANNEL SOLO <sampler-channel> <solo>
 
-GET VOLUME
++ GET VOLUME
 
-SET VOLUME <volume>
++ SET VOLUME <volume>
 
-SET CHANNEL MUTE <sampler-channel> <mute>
-
-SET CHANNEL SOLO <sampler-channel> <solo>
-
-RESET
++ RESET
 
 
 #### Fx
 
-CREATE FX_SEND <sampler-channel> <midi-ctrl> [<name>]
++ CREATE FX_SEND <sampler-channel> <midi-ctrl> [<name>]
 
-LIST FX_SENDS <sampler-channel>
++ LIST FX_SENDS <sampler-channel>
 
-DESTROY FX_SEND <sampler-channel> <fx-send-id>
++ DESTROY FX_SEND <sampler-channel> <fx-send-id>
 
 GET FX_SEND INFO <sampler-channel> <fx-send-id>
 

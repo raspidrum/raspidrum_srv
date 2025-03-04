@@ -11,6 +11,8 @@ import (
 	"google.golang.org/grpc"
 
 	channelcontrol "github.com/raspidrum-srv/internal/app/channel_control"
+
+	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 )
 
 type Config struct {
@@ -31,12 +33,19 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
+	lsClient := lscp.NewClient("localhost", "8888", "1s")
+	err = lsClient.Connect()
+	if err != nil {
+		slog.Error(fmt.Sprintln(fmt.Errorf("Failed connect to LinuxSampler: %v", err)))
+		os.Exit(1)
+	}
+
+	// start GRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))
 	if err != nil {
 		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to listen: %v", err)))
 		os.Exit(1)
 	}
-
 	var opts []grpc.ServerOption
 	s := grpc.NewServer(opts...)
 	server := channelcontrol.NewChannelControlServer()

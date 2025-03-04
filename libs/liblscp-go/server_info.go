@@ -3,8 +3,6 @@ package liblscp
 import (
 	"fmt"
 	"strings"
-
-	"github.com/hashicorp/hcl/hcl/strconv"
 )
 
 type ServerInfo struct {
@@ -23,14 +21,10 @@ func NewServerInfo(resultSet []string) (ServerInfo, error) {
 }
 
 func (s *ServerInfo) parseServerInfo(resultSet []string) error {
-	var err error
 	for _, v := range resultSet {
 		ln, f := strings.CutPrefix(v, "DESCRIPTION: ")
 		if f {
-			s.Desc, err = strconv.Unquote(ln)
-			if err != nil {
-				return fmt.Errorf("can't parse index: '%s' %w", ln, err)
-			}
+			s.Desc = ln
 			continue
 		}
 		ln, f = strings.CutPrefix(v, "VERSION: ")

@@ -35,7 +35,7 @@ func ParseInt(s string) (int, error) {
 }
 
 // Parses a float value.
-func parseFloat(s string) (float64, error) {
+func ParseFloat(s string) (float64, error) {
 	i, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return 0, fmt.Errorf("not float: %s %w", s, err)

@@ -16,6 +16,14 @@ type Client struct {
 	conn       net.Conn
 }
 
+func NewClient(host, port string, timeout string) Client {
+	return Client{
+		host:       host,
+		port:       port,
+		conTimeout: timeout,
+	}
+}
+
 func (c *Client) Connect() error {
 	t, err := time.ParseDuration(c.conTimeout)
 	if err != nil {
@@ -35,7 +43,7 @@ func (c *Client) Connect() error {
 	if err != nil {
 		return fmt.Errorf("failed get server info: %w", err)
 	}
-	slog.Info("connected to LinuxSampler", slog.String("ver:", si.Version))
+	slog.Info("connected to LinuxSampler", slog.String("ver", si.Version))
 
 	defer c.conn.Close()
 	return nil
@@ -51,7 +59,7 @@ func (c *Client) Disconnect() error {
 func (c *Client) retrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, error) {
 	_, err := fmt.Fprintf(c.conn, lscpCmd+"\r\n")
 	if err != nil {
-		return ResultSet{}, err
+		return ResultSet{}, fmt.Errorf("failed lscp command: %s : %w", lscpCmd, err)
 	}
 
 	ResultSet, err := c.getResultSet(isMultiResult)
@@ -71,7 +79,9 @@ func (c *Client) retrieveIndex(lscpCmd string) (int, error) {
 
 func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
 	rs := ResultSet{}
-	ln, err := c.getLine()
+	rd := bufio.NewReader(c.conn)
+
+	ln, err := c.getLine(rd)
 	if err != nil {
 		return rs, err
 	}
@@ -109,7 +119,7 @@ func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
 	// it's multuline result
 	for ln != "." {
 		rs.AddLine(ln)
-		ln, err = c.getLine()
+		ln, err = c.getLine(rd)
 		if err != nil {
 			return rs, err
 		}
@@ -118,14 +128,14 @@ func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
 	return rs, nil
 }
 
-func (c *Client) getLine() (string, error) {
+func (c *Client) getLine(r *bufio.Reader) (string, error) {
 	for {
-		s, err := bufio.NewReader(c.conn).ReadString('\r')
+		s, err := r.ReadString('\n')
 		if err != nil {
 			return "", err
 		}
 		if !strings.HasPrefix(s, "NOTIFY:") {
-			return s, nil
+			return strings.TrimSuffix(s, "\r\n"), nil
 		}
 	}
 }
@@ -196,7 +206,7 @@ func (c *Client) GetAudioOutputDeviceInfo(devId int) (AudioOutputDevice, error) 
 	cmd := "GET AUDIO_OUTPUT_DEVICE INFO"
 	rs, err := c.retrieveInfo(cmd, true)
 	if err != nil {
-		return AudioOutputDevice{}, fmt.Errorf("failed lscp command: %s : %w", cmd, err)
+		return AudioOutputDevice{}, err
 	}
 	aod, err := ParseAudioOutputDevice(devId, rs.MultiLineResult)
 	if err != nil {
@@ -212,10 +222,7 @@ func (c *Client) GetAudioOutputDeviceInfo(devId int) (AudioOutputDevice, error) 
 func (c *Client) SetAudioOutputChannelParameter(devId int, chn int, prm Parameter[any]) error {
 	cmd := fmt.Sprintf("SET AUDIO_OUTPUT_CHANNEL_PARAMETER %d %d %s=%s", devId, chn, prm.Name, prm.GetStringValue())
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // LSCP MIDI commands
@@ -277,10 +284,7 @@ func (c *Client) GetMidiInputPortInfo(devId int, midiPort int) (MidiPort, error)
 func (c *Client) SetMidiInputPortParameter(devId int, port int, prm Parameter[any]) error {
 	cmd := fmt.Sprintf("SET MIDI_INPUT_PORT_PARAMETER %d %d %s=%s", devId, port, prm.Name, prm.GetStringValue())
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Loads and assigns an instrument to a sampler channel. Notice that this function will
@@ -291,10 +295,7 @@ func (c *Client) SetMidiInputPortParameter(devId int, port int, prm Parameter[an
 func (c *Client) LoadInstrument(filename string, instrIdx int, samplerChn int) error {
 	cmd := fmt.Sprintf("LOAD INSTRUMENT '%s' %d %d", filename, instrIdx, samplerChn)
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Loads a sampler engine to a specific sampler channel.
@@ -303,10 +304,7 @@ func (c *Client) LoadInstrument(filename string, instrIdx int, samplerChn int) e
 func (c *Client) LoadSamplerEngine(engineName string, samplerChn int) error {
 	cmd := fmt.Sprintf("LOAD ENGINE %s %d", engineName, samplerChn)
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Gets a list with numerical IDs of all created sampler channels.
@@ -327,10 +325,7 @@ func (c *Client) AddSamplerChannel() (int, error) {
 func (c *Client) RemoveSamplerChannel(samplerChn int) error {
 	cmd := fmt.Sprintf("REMOVE CHANNEL %d", samplerChn)
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Gets a list of all available engines' names.
@@ -353,10 +348,7 @@ func (c *Client) GetEngineNames() ([]string, error) {
 func (c *Client) SetChannelAudioOutputDevice(samplerChn int, devId int) error {
 	cmd := fmt.Sprintf("SET CHANNEL AUDIO_OUTPUT_DEVICE %d %d", samplerChn, devId)
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Sets the audio output channel on the specified sampler channel.
@@ -366,10 +358,7 @@ func (c *Client) SetChannelAudioOutputDevice(samplerChn int, devId int) error {
 func (c *Client) SetChannelAudioOutputChannel(samplerChn int, audioOut int, audioIn int) error {
 	cmd := fmt.Sprintf("SET CHANNEL AUDIO_OUTPUT_CHANNEL %d %d %d", samplerChn, audioOut, audioIn)
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Sets the MIDI input device on the specified sampler channel.
@@ -378,10 +367,7 @@ func (c *Client) SetChannelAudioOutputChannel(samplerChn int, audioOut int, audi
 func (c *Client) SetChannelMidiInputDevice(samplerChn int, devId int) error {
 	cmd := fmt.Sprintf("SET CHANNEL MIDI_INPUT_DEVICE %d %d", samplerChn, devId)
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Sets the volume of the specified sampler channel.
@@ -390,10 +376,7 @@ func (c *Client) SetChannelMidiInputDevice(samplerChn int, devId int) error {
 func (c *Client) SetChannelVolume(samplerChn int, volume float64) error {
 	cmd := fmt.Sprintf("SET CHANNEL VOLUME %d %.2f", samplerChn, volume)
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Mute/unmute the specified sampler channel.
@@ -406,10 +389,7 @@ func (c *Client) SetChannelMute(samplerChn int, mute bool) error {
 	}
 	cmd := fmt.Sprintf("SET CHANNEL MUTE %d %d", samplerChn, b)
 	_, err := c.retrieveIndex(cmd)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Solo/unsolo the specified sampler channel.
@@ -422,8 +402,75 @@ func (c *Client) SetChannelSolo(samplerChn int, solo bool) error {
 	}
 	cmd := fmt.Sprintf("SET CHANNEL SOLO %d %d", samplerChn, b)
 	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Gets the global volume of the sampler.
+func (c *Client) GetVolume() (float64, error) {
+	rs, err := c.retrieveInfo("GET VOLUME", false)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return ParseFloat(rs.Message)
+}
+
+// Sets the global volume of the sampler.
+func (c *Client) SetVolume(vol float64) error {
+	_, err := c.retrieveIndex(fmt.Sprintf("SET VOLUME %.2f", vol))
+	return err
+}
+
+// Resets the whole sampler.
+func (c *Client) ResetSampler() error {
+	_, err := c.retrieveInfo("RESET", false)
+	return err
+}
+
+// FX
+
+// Creates an additional effect send on the specified sampler channel.
+// channel The sampler channel, on which a new effect send should be added.
+// midiCtrl Defines the MIDI controller, which will be able alter the effect send level.
+// name The name of the effect send entity. The name does not have to be unique.
+// return The unique ID of the newly created effect send entity.
+func (c *Client) CreateFxSend(channel int, midiCtrl int, name string) (int, error) {
+	var cmd string
+	if name == "" {
+		cmd = fmt.Sprintf("CREATE FX_SEND %d %d", channel, midiCtrl)
+	} else {
+		cmd = fmt.Sprintf("CREATE FX_SEND %d %d '%s'", channel, midiCtrl, name)
+	}
+	return c.retrieveIndex(cmd)
+}
+
+// Destroys the specified effect send on the specified sampler channel.
+// channel The sampler channel, from which the specified effect send should be removed.
+// fxSend The ID of the effect send that should be removed.
+func (c *Client) DestroyFxSend(channel int, fxSend int) error {
+	_, err := c.retrieveIndex(fmt.Sprintf("DESTROY FX_SEND %d %d", channel, fxSend))
+	return err
+}
+
+// Gets a list of effect sends on the specified sampler channel.
+// channel The sampler channel number.
+// return An <code>Integer</code> array providing the numerical IDs of all effect sends on the specified sampler channel.
+func (c *Client) GetFxSendIDs(channel int) ([]int, error) {
+	return c.getIntegerList(fmt.Sprintf("LIST FX_SENDS %d", channel))
+}
+
+// Gets the current settings of the specified effect send entity.
+// channel The sampler channel number.
+// fxSend The numerical ID of the effect send entity.
+// return <code>FxSend</code> instance containing the current settings of the specified effect send entity.
+func (c *Client) GetFxSendInfo(channel int, fxSend int) (FxSend, error) {
+	cmd := fmt.Sprintf("GET FX_SEND INFO %d %d", channel, fxSend)
+	rs, err := c.retrieveInfo(cmd, true)
+	if err != nil {
+		return FxSend{}, err
+	}
+	fs, err := ParseFxSend(rs.MultiLineResult)
+	if err != nil {
+		return fs, err
+	}
+	return fs, nil
 }
