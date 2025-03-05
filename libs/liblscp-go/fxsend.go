@@ -15,8 +15,8 @@ type FxSend struct {
 	DestChainPos   int
 }
 
-func ParseFxSend(multiLineResult []string) (FxSend, error) {
-	fs := FxSend{}
+func ParseFxSend(id int, multiLineResult []string) (FxSend, error) {
+	fs := FxSend{Id: id}
 	var err error
 
 	for _, v := range multiLineResult {

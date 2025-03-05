@@ -49,31 +49,31 @@ RESET CHANNEL <sampler-channel>
 
 + DESTROY FX_SEND <sampler-channel> <fx-send-id>
 
-GET FX_SEND INFO <sampler-channel> <fx-send-id>
++ GET FX_SEND INFO <sampler-channel> <fx-send-id>
 
-SET FX_SEND AUDIO_OUTPUT_CHANNEL <sampler-chan> <fx-send-id> <audio-src> <audio-dst>
++ SET FX_SEND AUDIO_OUTPUT_CHANNEL <sampler-chan> <fx-send-id> <audio-src> <audio-dst>
 
-SET FX_SEND EFFECT <sampler-chan> <fx-send-id> <effect-chain> <chain-pos>
++ SET FX_SEND EFFECT <sampler-chan> <fx-send-id> <effect-chain> <chain-pos>
 
-REMOVE FX_SEND EFFECT <sampler-chan> <fx-send-id>
++ REMOVE FX_SEND EFFECT <sampler-chan> <fx-send-id>
 
-SET FX_SEND LEVEL <sampler-chan> <fx-send-id> <volume>
++ SET FX_SEND LEVEL <sampler-chan> <fx-send-id> <volume>
 
-LIST AVAILABLE_EFFECTS
++ LIST AVAILABLE_EFFECTS
 
-GET EFFECT INFO <effect-index>
++ GET EFFECT INFO <effect-index>
 
-CREATE EFFECT_INSTANCE <effect-system> <module> <effect-name>
++ CREATE EFFECT_INSTANCE <effect-system> <module> <effect-name>
 
-CREATE EFFECT_INSTANCE <effect-index>
++ CREATE EFFECT_INSTANCE <effect-index>
 
-DESTROY EFFECT_INSTANCE <effect-instance>
++ DESTROY EFFECT_INSTANCE <effect-instance>
 
-LIST EFFECT_INSTANCES
++ LIST EFFECT_INSTANCES
 
-GET EFFECT_INSTANCE INFO <effect-instance>
++ GET EFFECT_INSTANCE INFO <effect-instance>
 
-GET EFFECT_INSTANCE_INPUT_CONTROL INFO <effect-instance> <input-control>
++ GET EFFECT_INSTANCE_INPUT_CONTROL INFO <effect-instance> <input-control>
 
 SET EFFECT_INSTANCE_INPUT_CONTROL VALUE <effect-instance> <input-control> <value>
 

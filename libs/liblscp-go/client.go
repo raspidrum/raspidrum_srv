@@ -151,16 +151,12 @@ func (c *Client) getIntegerList(lscpCmd string) ([]int, error) {
 // LSCP common commands
 
 // Gets information about the LinuxSampler instance.
-func (c *Client) GetServerInfo() (*ServerInfo, error) {
+func (c *Client) GetServerInfo() (ServerInfo, error) {
 	rs, err := c.retrieveInfo("GET SERVER INFO", true)
 	if err != nil {
-		return nil, fmt.Errorf("failed lscp command: %w", err)
+		return ServerInfo{}, err
 	}
-	si, err := NewServerInfo(rs.MultiLineResult)
-	if err != nil {
-		return nil, fmt.Errorf("failed lscp command: %w", err)
-	}
-	return &si, nil
+	return NewServerInfo(rs.MultiLineResult)
 }
 
 // LSCP AUDIO commands
@@ -208,11 +204,7 @@ func (c *Client) GetAudioOutputDeviceInfo(devId int) (AudioOutputDevice, error) 
 	if err != nil {
 		return AudioOutputDevice{}, err
 	}
-	aod, err := ParseAudioOutputDevice(devId, rs.MultiLineResult)
-	if err != nil {
-		return AudioOutputDevice{}, err
-	}
-	return aod, nil
+	return ParseAudioOutputDevice(devId, rs.MultiLineResult)
 }
 
 // Alters a specific setting of an audio output channel.
@@ -273,11 +265,7 @@ func (c *Client) GetMidiInputPortInfo(devId int, midiPort int) (MidiPort, error)
 	if err != nil {
 		return MidiPort{}, fmt.Errorf("failed lscp command: %s : %w", cmd, err)
 	}
-	mp, err := ParseMidiPort(rs.MultiLineResult)
-	if err != nil {
-		return MidiPort{}, err
-	}
-	return mp, nil
+	return ParseMidiPort(rs.MultiLineResult)
 }
 
 // Alters a specific setting of a MIDI input port.
@@ -468,9 +456,186 @@ func (c *Client) GetFxSendInfo(channel int, fxSend int) (FxSend, error) {
 	if err != nil {
 		return FxSend{}, err
 	}
-	fs, err := ParseFxSend(rs.MultiLineResult)
+	return ParseFxSend(fxSend, rs.MultiLineResult)
+}
+
+// Gets a list of all created effect sends on the specified sampler channel.
+// channel The sampler channel number.
+// return A <code>FxSend</code> array providing all created effect sends on the specified sampler channel.
+func (c *Client) GetFxSends(channel int) ([]FxSend, error) {
+	fids, err := c.GetFxSendIDs(channel)
 	if err != nil {
-		return fs, err
+		return nil, err
 	}
-	return fs, nil
+	fxs := make([]FxSend, len(fids))
+	for i, v := range fids {
+		fxs[i], err = c.GetFxSendInfo(channel, v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return fxs, nil
+}
+
+// Sets the destination of an effect send's audio channel in the specified sampler channel.
+// channel The sampler channel number.
+// fxSend The numerical ID of the effect send entity to be rerouted.
+// audioSrc The numerical ID of the effect send's audio output channel, which should be rerouted.
+// audioDst The audio channel of the selected audio output device where <code>audioSrc</code> should be routed to.
+func (c *Client) SetFxSendAudioOutputChannel(channel int, fxSend int, audioSrc int, audioDst int) error {
+	cmd := fmt.Sprintf("SET FX_SEND AUDIO_OUTPUT_CHANNEL %d %d %d %d", channel, fxSend, audioSrc, audioDst)
+	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Assign a destination effect to an effect send.
+// channel The sampler channel number.
+// fxSend The numerical ID of the effect send entity.
+// fxChainId The numerical ID of the destination effect chain.
+// chainPos The exact effect chain position in the effect chain which hosts the actual destination effect.
+func (c *Client) SetFxSendEffect(channel int, fxSend int, chainId int, chainPos int) error {
+	cmd := fmt.Sprintf("SET FX_SEND EFFECT %d %d %d %d", channel, fxSend, chainId, chainPos)
+	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Removes destination effect from an effect send.
+// channel The sampler channel number.
+// fxSend The numerical ID of the effect send entity.
+func (c *Client) RemoveFxSendEffect(channel int, fxSend int) error {
+	cmd := fmt.Sprintf("REMOVE FX_SEND EFFECT %d %d", channel, fxSend)
+	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Sets the current send level of the specified effect send entity in the specified sampler channel.
+// channel The sampler channel number.
+// fxSend The numerical ID of the effect send entity.
+// volume The new volume value (a value smaller than 1.0 means attenuation, whereas a value greater than 1.0 means amplification).
+func (c *Client) SetFxSendLevel(channel int, fxSend int, vol float64) error {
+	cmd := fmt.Sprintf("SET FX_SEND LEVEL %d %d %.2f", channel, fxSend, vol)
+	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Retrieves the list of available internal effects.
+// Note that the set of available internal effects can change at runtime.
+// return An <code>Integer</code> array providing the numerical IDs of all available internal effects.
+func (c *Client) GetEffectIDs() ([]int, error) {
+	return c.getIntegerList("LIST AVAILABLE_EFFECTS")
+}
+
+// Gets general informations about the specified effect.
+// effect The numerical ID of the effect entity.
+// return <code>Effect</code> instance containing general informations about the specified effect.
+func (c *Client) GetEffectInfo(effect int) (Effect, error) {
+	rs, err := c.retrieveInfo(fmt.Sprintf("GET EFFECT INFO %d", effect), true)
+	if err != nil {
+		return Effect{}, err
+	}
+	return ParseEffect(effect, rs.MultiLineResult)
+}
+
+// Gets the list of internal effects available to the sampler.
+// Note that the set of available internal effects can change at runtime.
+// return An <code>Effect</code> array providing the current list of internal effects.
+func (c *Client) GetEffects() ([]Effect, error) {
+	ids, err := c.GetEffectIDs()
+	if err != nil {
+		return nil, err
+	}
+	efs := make([]Effect, len(ids))
+	for i, v := range ids {
+		efs[i], err = c.GetEffectInfo(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return efs, nil
+}
+
+// Creates an instance of the desired effect.
+// param id The unique ID of the effect.
+// return The unique ID of the newly created effect instance.
+func (c *Client) CreateEffectInstanceById(id int) (int, error) {
+	return c.retrieveIndex(fmt.Sprintf("CREATE EFFECT_INSTANCE %d", id))
+}
+
+// Creates an instance of the desired effect.
+// The unique ID of the newly created effect instance.
+func (c *Client) CreateEffectInstance(effect Effect) (int, error) {
+	return c.CreateEffectInstanceById(effect.Id)
+}
+
+// Creates an instance of the desired effect.
+// return The unique ID of the newly created effect instance.
+func (c *Client) CreateEffectInstanceByAttrs(system, module, name string) (int, error) {
+	cmd := fmt.Sprintf("CREATE EFFECT_INSTANCE %s '%s' '%s'", system, module, name)
+	return c.retrieveIndex(cmd)
+}
+
+// Destroys the specified unused effect instance.
+// instanceId The numerical ID of the effect instance.
+func (c *Client) DestroyEffectInstance(instId int) error {
+	_, err := c.retrieveIndex(fmt.Sprintf("DESTROY EFFECT_INSTANCE %d", instId))
+	return err
+}
+
+// Retrieves the current list of effect instances.
+// return An <code>Integer</code> array providing the numerical IDs of all available effect instances.
+func (c *Client) GetEffectInscanceIDs() ([]int, error) {
+	return c.getIntegerList("LIST EFFECT_INSTANCES")
+}
+
+// Gets the current informations about the specified effect instance.
+// id The numerical ID of the effect instance.
+// return <code>EffectInstanceInfo</code> object containing the current informations about the specified effect instance.
+func (c *Client) GetEffectInstanceInfo(id int) (EffectInstance, error) {
+	rs, err := c.retrieveInfo(fmt.Sprintf("GET EFFECT_INSTANCE INFO %d", id), true)
+	if err != nil {
+		return EffectInstance{}, err
+	}
+	eff, err := ParseEffectInstance(id, rs.MultiLineResult)
+	if err != nil {
+		return eff, err
+	}
+	for i, _ := range eff.Params {
+		prm, err := c.GetEffectInstanceParameterInfo(id, i)
+		if err != nil {
+			return eff, err
+		}
+		eff.Params = append(eff.Params, prm)
+	}
+	return eff, nil
+}
+
+// Gets information about the specified effect parameter.
+// id The numerical ID of the effect instance.
+// parameter The parameter index.
+// return <code>EffectParameter</code> object containing information about the specified effect parameter.
+// Note that only the following fields are used - description, value, rangeMin, rangeMax, possibilities and default.
+func (c *Client) GetEffectInstanceParameterInfo(instId int, paramId int) (Parameter[float64], error) {
+	cmd := fmt.Sprintf("GET EFFECT_INSTANCE_INPUT_CONTROL INFO %d %d", instId, paramId)
+	rs, err := c.retrieveInfo(cmd, true)
+	if err != nil {
+		return Parameter[float64]{}, err
+	}
+	return ParseEffectParameter(rs.MultiLineResult)
+}
+
+// Gets the current list of effect instances.
+// return An <code>EffectInstanceInfo</code> array providing the current list of effect instances.
+func (c *Client) GetEffectInstances() ([]EffectInstance, error) {
+	ids, err := c.GetEffectInscanceIDs()
+	if err != nil {
+		return nil, err
+	}
+	efs := make([]EffectInstance, len(ids))
+	for i, v := range ids {
+		efs[i], err = c.GetEffectInstanceInfo(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return efs, nil
 }

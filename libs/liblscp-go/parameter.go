@@ -40,13 +40,22 @@ type Parameter[T any] struct {
 	IsMultiplicity bool
 	isMandatory    bool
 	Possibilities  []T
+	Default        T
 	rangeMin       *float64
 	rangeMax       *float64
 }
 
-func (p *Parameter[T]) SetRange(min *float64, max *float64) {
-	p.rangeMin = min
-	p.rangeMax = max
+func (p *Parameter[T]) SetRange(min float64, max float64) {
+	p.rangeMin = &min
+	p.rangeMax = &max
+}
+
+func (p *Parameter[T]) SetRangeMin(min float64) {
+	p.rangeMin = &min
+}
+
+func (p *Parameter[T]) SetRangeMax(max float64) {
+	p.rangeMin = &max
 }
 
 func (p *Parameter[T]) RangeMin() (setted bool, value float64) {
