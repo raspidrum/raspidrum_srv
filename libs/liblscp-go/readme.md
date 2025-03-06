@@ -16,7 +16,7 @@
 
 + REMOVE CHANNEL <sampler-channel>
 
-RESET CHANNEL <sampler-channel>
++ RESET CHANNEL <sampler-channel>
 
 + SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0
 
@@ -75,21 +75,21 @@ RESET CHANNEL <sampler-channel>
 
 + GET EFFECT_INSTANCE_INPUT_CONTROL INFO <effect-instance> <input-control>
 
-SET EFFECT_INSTANCE_INPUT_CONTROL VALUE <effect-instance> <input-control> <value>
++ SET EFFECT_INSTANCE_INPUT_CONTROL VALUE <effect-instance> <input-control> <value>
 
-LIST SEND_EFFECT_CHAINS <audio-device>
++ LIST SEND_EFFECT_CHAINS <audio-device>
 
-ADD SEND_EFFECT_CHAIN <audio-device>
++ ADD SEND_EFFECT_CHAIN <audio-device>
 
-REMOVE SEND_EFFECT_CHAIN <audio-device> <effect-chain>
++ REMOVE SEND_EFFECT_CHAIN <audio-device> <effect-chain>
 
-GET SEND_EFFECT_CHAIN INFO <audio-device> <effect-chain>
++ GET SEND_EFFECT_CHAIN INFO <audio-device> <effect-chain>
 
-APPEND SEND_EFFECT_CHAIN EFFECT <audio-device> <effect-chain> <effect-instance>
++ APPEND SEND_EFFECT_CHAIN EFFECT <audio-device> <effect-chain> <effect-instance>
 
-INSERT SEND_EFFECT_CHAIN EFFECT <audio-device> <effect-chain> <chain-pos> <effect-instance>
++ INSERT SEND_EFFECT_CHAIN EFFECT <audio-device> <effect-chain> <chain-pos> <effect-instance>
 
-REMOVE SEND_EFFECT_CHAIN EFFECT <audio-device> <effect-chain> <chain-pos>
++ REMOVE SEND_EFFECT_CHAIN EFFECT <audio-device> <effect-chain> <chain-pos>
 
 ## Optional commands
 
@@ -153,4 +153,4 @@ LIST CHANNEL MIDI_INPUTS <sampler-channel>
 
 REMOVE CHANNEL MIDI_INPUT <sampler-channel> [<midi-device-id> [<midi-input-port>]]
 
-SEND CHANNEL MIDI_DATA <midi-msg> <sampler-chan> <arg1> <arg2>
++ SEND CHANNEL MIDI_DATA <midi-msg> <sampler-chan> <arg1> <arg2>

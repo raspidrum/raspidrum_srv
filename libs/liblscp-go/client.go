@@ -159,7 +159,7 @@ func (c *Client) GetServerInfo() (ServerInfo, error) {
 	return NewServerInfo(rs.MultiLineResult)
 }
 
-// LSCP AUDIO commands
+// AUDIO commands
 
 // Creates a new audio output device for the desired audio output system.
 // adrv The desired audio output system
@@ -216,6 +216,8 @@ func (c *Client) SetAudioOutputChannelParameter(devId int, chn int, prm Paramete
 	_, err := c.retrieveIndex(cmd)
 	return err
 }
+
+// MIDI commands
 
 // LSCP MIDI commands
 // Gets all MIDI input drivers currently available for the LinuxSampler instance.
@@ -274,6 +276,17 @@ func (c *Client) SetMidiInputPortParameter(devId int, port int, prm Parameter[an
 	_, err := c.retrieveIndex(cmd)
 	return err
 }
+
+// Sends a MIDI event to this sampler channel.
+// samplerChn The sampler channel number.
+// type The type of MIDI message to send.
+func (c *Client) SendChannelMidiData(samplerChn int, eventType string, arg1, arg2 int) error {
+	cmd := fmt.Sprintf("SEND CHANNEL MIDI_DATA %s %d %d %d", eventType, samplerChn, arg1, arg2)
+	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Common commands
 
 // Loads and assigns an instrument to a sampler channel. Notice that this function will
 // return after the instrument is fully loaded and the channel is ready to be used.
@@ -405,6 +418,13 @@ func (c *Client) GetVolume() (float64, error) {
 // Sets the global volume of the sampler.
 func (c *Client) SetVolume(vol float64) error {
 	_, err := c.retrieveIndex(fmt.Sprintf("SET VOLUME %.2f", vol))
+	return err
+}
+
+// Resets the specified sampler channel.
+// samplerChn The sampler channel number.
+func (c *Client) ResetChannel(samplerChn int) error {
+	_, err := c.retrieveIndex(fmt.Sprintf("RESET CHANNEL %d", samplerChn))
 	return err
 }
 
@@ -638,4 +658,98 @@ func (c *Client) GetEffectInstances() ([]EffectInstance, error) {
 		}
 	}
 	return efs, nil
+}
+
+// Alters the current value of an effect parameter.
+// instanceId The numerical ID of the effect instance.
+// prmIndex The index of the parameter to alter.
+// value The new value for this parameter.
+func (c *Client) SetEffectInstanceParameter(instId int, paramId int, val float64) error {
+	cmd := fmt.Sprintf("SET EFFECT_INSTANCE_INPUT_CONTROL VALUE %d %d %.2f", instId, paramId, val)
+	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Retrieves the current list of send effect chains on the specified audio output device.
+// audioDeviceId The numerical ID of the audio output device.
+// return An <code>Integer</code> array providing the numerical IDs of all send effect chains on the specified audio output device.
+func (c *Client) GetSendEffectChainIDs(audioDevId int) ([]int, error) {
+	return c.getIntegerList(fmt.Sprintf("LIST SEND_EFFECT_CHAINS %d", audioDevId))
+}
+
+// Gets the current information of a send effect chain.
+// audioDeviceId The numerical ID of the audio output device.
+// chainId The numerical ID of the send effect chain.
+// return <code>EffectChainInfo</code> object containing the current informations about the specified effect chain.
+func (c *Client) GetSendEffectChainInfo(audioDevId int, chainId int) (EffectChain, error) {
+	cmd := fmt.Sprintf("GET SEND_EFFECT_CHAIN INFO %d %d", audioDevId, chainId)
+	rs, err := c.retrieveInfo(cmd, true)
+	if err != nil {
+		return EffectChain{}, nil
+	}
+	return ParseEffectChain(chainId, rs.MultiLineResult, c)
+}
+
+// Gets the current list of send effect chains on the specified audio output device.
+// audioDeviceId The numerical ID of the audio output device.
+// return An <code>EffectInstanceInfo</code> array providing the current list of effect instances.
+func (c *Client) GetSendEffectChains(audioDevId int) ([]EffectChain, error) {
+	ids, err := c.GetSendEffectChainIDs(audioDevId)
+	if err != nil {
+		return nil, err
+	}
+	efs := make([]EffectChain, len(ids))
+	for i, v := range ids {
+		efs[i], err = c.GetSendEffectChainInfo(audioDevId, v)
+		if err != nil {
+			return efs, nil
+		}
+	}
+	return efs, nil
+}
+
+// Adds a send effect chain to the specified audio output device.
+// audioDeviceId The numerical ID of the audio output device.
+// The numerical ID of the new send effect chain.
+func (c *Client) AddSendEffectChain(audioDevId int) (int, error) {
+	return c.retrieveIndex(fmt.Sprintf("ADD SEND_EFFECT_CHAIN %d", audioDevId))
+}
+
+// Removes a send effect chain from an audio output device.
+// audioDeviceId The numerical ID of the audio output device.
+// chainId The numerical ID of the send effect chain to remove.
+func (c *Client) RemoveSendEffectChain(audioDevId int, chainId int) error {
+	_, err := c.retrieveIndex(fmt.Sprintf("REMOVE SEND_EFFECT_CHAIN %d %d", audioDevId, chainId))
+	return err
+}
+
+// Adds an unused effect instance to the end of a send effect chain.
+// audioDeviceId The numerical ID of the audio output device.
+// chainId The numerical ID of the send effect chain.
+// fxInstanceId The numerical ID of the effect instance to add.
+func (c *Client) AppendEffectInstance(audioDevId int, chainId int, fxInstId int) error {
+	cmd := fmt.Sprintf("APPEND SEND_EFFECT_CHAIN EFFECT %d %d %d", audioDevId, chainId, fxInstId)
+	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Adds an unused effect instance at a certain position of a send effect chain.
+// audioDeviceId The numerical ID of the audio output device.
+// chainId The numerical ID of the send effect chain.
+// pos The exact position in the effect chain where the supplied effect shall be inserted to.
+// fxInstanceId The numerical ID of the effect instance to insert.
+func (c *Client) InsertEffectInstance(audioDevId, chainId, pos, fxInstId int) error {
+	cmd := fmt.Sprintf("INSERT SEND_EFFECT_CHAIN EFFECT %d %d %d %d", audioDevId, chainId, pos, fxInstId)
+	_, err := c.retrieveIndex(cmd)
+	return err
+}
+
+// Removes an effect instance from a certain position of a send effect chain.
+// audioDeviceId The numerical ID of the audio output device.
+// chainId The numerical ID of the send effect chain.
+// pos The exact position of the effect instance to be removed from the effect chain.
+func (c *Client) RemoveEffectInstanceFromChain(audioDevId, chainId, pos int) error {
+	cmd := fmt.Sprintf("REMOVE SEND_EFFECT_CHAIN EFFECT %d %d %d", audioDevId, chainId, pos)
+	_, err := c.retrieveIndex(cmd)
+	return err
 }

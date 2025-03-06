@@ -61,17 +61,9 @@ func ParseEffectParameter(ln []string) (Parameter[float64], error) {
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "POSSIBILITIES: "); f {
-			ls, err := parseEscapedStringListComma(vl)
+			ps, err := ParseFloatList(vl)
 			if err != nil {
 				return prm, err
-			}
-			ps := make([]float64, len(ls))
-			for i, iv := range ls {
-				f, err := ParseFloat(iv)
-				if err != nil {
-					return prm, err
-				}
-				ps[i] = f
 			}
 			prm.Possibilities = ps
 		}
