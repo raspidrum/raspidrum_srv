@@ -154,3 +154,82 @@ LIST CHANNEL MIDI_INPUTS <sampler-channel>
 REMOVE CHANNEL MIDI_INPUT <sampler-channel> [<midi-device-id> [<midi-input-port>]]
 
 + SEND CHANNEL MIDI_DATA <midi-msg> <sampler-chan> <arg1> <arg2>
+
+
+
+
+
+# Примеры ответов LinuxSampler
+
+```
+GET CHANNEL INFO 0
+
+ENGINE_NAME: SFZ
+VOLUME: 1.000
+AUDIO_OUTPUT_DEVICE: 0
+AUDIO_OUTPUT_CHANNELS: 2
+AUDIO_OUTPUT_ROUTING: 0,1
+MIDI_INPUT_DEVICE: 0
+MIDI_INPUT_PORT: 0
+MIDI_INPUT_CHANNEL: ALL
+INSTRUMENT_FILE: /Users/art/arth/\xd1\x83\xd0\xb4\xd0\xb0\xd1\x80\xd0\xbd\xd1\x8b\xd0\xb5\x20\xd0\xb8\x20\xd0\xb3\xd0\xb8\xd1\x82\xd0\xb0\xd1\x80\xd0\xb0/drum\x20sounds/SFZ/SamsSonor-wav/SamsSonor.sfz
+INSTRUMENT_NR: 0
+INSTRUMENT_NAME: SamsSonor
+INSTRUMENT_STATUS: 100
+MUTE: false
+SOLO: false
+MIDI_INSTRUMENT_MAP: NONE
+```
+
+
+
+# Сценарии настройки
+
+1. Создание выходного аудиоустройства
+   Можно создать несколько выходных аудиоустройств. Но достаточно создать только одно и все выводить через одно устройство.
+
+   Выходное аудиоустройство создается командой, к-я возвращает номер созданного устройства:
+
+    `CREATE AUDIO_OUTPUT_DEVICE <driver_name>`
+
+   Опционально, может потребоваться выполнить привязку каналов созданного аудио-устройства семплера к каналам аудио-устройства ОС. Например, для JACK:
+
+   `SET AUDIO_OUTPUT_CHANNEL_PARAMETER 0 0 JACK_BINDINGS='system:playback_1'`
+
+2. Создание входного MIDI устройства
+   Можно создать несколько входных устройств. Имеет смысл, если требуется подключить несколько устройств. В простейшем случае достаточно одного
+
+   Входное MIDI-устройство создается командой, к-я возвращает номер созданного устройства:
+
+   `CREATE MIDI_INPUT_DEVICE <driver_name>`
+
+   Далее необходимо привязать порт созданного MIDI-устройства к выходному порту MIDI-устройства в ОС:
+
+   `SET MIDI_INPUT_PORT_PARAMETER <device-id> <port> <key>=<value>`
+
+   например:
+
+   `SET MIDI_INPUT_PORT_PARAMETER 0 0 CORE_MIDI_BINDINGS='vmpk vmpk out'`
+
+3. Создание каналов семплера
+    Необходимо добавить канал, получив в ответ его номер:
+
+    `ADD CHANNEL`
+
+   Далее канал необходимо привязать к выходному аудиоустройству:
+
+   `SET CHANNEL AUDIO_OUTPUT_DEVICE <sampler-channel> <audio-device-id>`
+
+   И привязать к входному MIDI-устройству:
+
+   `SET CHANNEL MIDI_INPUT_DEVICE <sampler-channel> <midi-device-id>`
+
+   Далее настраиваем инструменты. Загружаем движок:
+
+   `LOAD ENGINE sfz <sampler-channel>`
+
+   И загружаем семплы инструментов:
+
+   `LOAD INSTRUMENT '<filename>' <instr-index> <sampler-channel>`
+
+   где <instr-index> - индекс инструмента в файле (файл может содержать много наборов семплов.) Но не совсем понятно, поддерживает ли LinuxSampler несколько инструментов в sfz файле (вроде да: https://bb.linuxsampler.org/viewtopic.php?t=705). Поэтому следует использовать один инструмент в одном файле и указывать instr-index = 0
