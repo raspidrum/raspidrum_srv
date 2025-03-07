@@ -18,7 +18,7 @@ func ParseAudioOutputDevice(deviceId int, multiLineResult []string) (AudioOutput
 
 	for _, v := range multiLineResult {
 		if vl, f := strings.CutPrefix(v, "CHANNELS: "); f {
-			ch, err := ParseInt(vl)
+			ch, err := parseInt(vl)
 			if err != nil {
 				return aud, err
 			}
@@ -29,7 +29,7 @@ func ParseAudioOutputDevice(deviceId int, multiLineResult []string) (AudioOutput
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "SAMPLERATE: "); f {
-			sr, err := ParseInt(vl)
+			sr, err := parseInt(vl)
 			if err != nil {
 				return aud, err
 			}

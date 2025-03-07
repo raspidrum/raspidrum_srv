@@ -87,14 +87,14 @@ func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
 	}
 
 	if f := strings.HasPrefix(ln, "ERR"); f {
-		if err := ParseError(ln, &rs); err != nil {
+		if err := parseError(ln, &rs); err != nil {
 			return rs, err
 		}
 		// it's error got from LinuxSampler
 		return rs, &LscpError{rs.Code, rs.Message}
 	}
 	if f := strings.HasPrefix(ln, "WRN"); f {
-		if err := ParseWarning(ln, &rs); err != nil {
+		if err := parseWarning(ln, &rs); err != nil {
 			return rs, err
 		}
 		// it's warning got from LinuxSampler
@@ -102,7 +102,7 @@ func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
 		return rs, nil
 	}
 	if f := strings.HasPrefix(ln, "OK"); f {
-		if err := ParseOk(ln, &rs); err != nil {
+		if err := parseOk(ln, &rs); err != nil {
 			return rs, err
 		}
 		// it's empty OK result
@@ -145,7 +145,7 @@ func (c *Client) getIntegerList(lscpCmd string) ([]int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed execute: %s : %w", lscpCmd, err)
 	}
-	return ParseIntList(rs.Message)
+	return parseIntList(rs.Message)
 }
 
 // LSCP common commands
@@ -336,7 +336,7 @@ func (c *Client) GetEngineNames() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	ls, err := ParseStringList(rs.Message, ",")
+	ls, err := parseStringList(rs.Message, ",")
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +412,7 @@ func (c *Client) GetVolume() (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return ParseFloat(rs.Message)
+	return parseFloat(rs.Message)
 }
 
 // Sets the global volume of the sampler.

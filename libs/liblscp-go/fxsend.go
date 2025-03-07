@@ -25,21 +25,21 @@ func ParseFxSend(id int, multiLineResult []string) (FxSend, error) {
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "MIDI_CONTROLLER: "); f {
-			fs.MidiController, err = ParseInt(vl)
+			fs.MidiController, err = parseInt(vl)
 			if err != nil {
 				return fs, err
 			}
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "LEVEL: "); f {
-			fs.Level, err = ParseFloat(vl)
+			fs.Level, err = parseFloat(vl)
 			if err != nil {
 				return fs, err
 			}
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "AUDIO_OUTPUT_ROUTING: "); f {
-			fs.AudRouting, err = ParseIntList(vl)
+			fs.AudRouting, err = parseIntList(vl)
 			if err != nil {
 				return fs, err
 			}
@@ -50,7 +50,7 @@ func ParseFxSend(id int, multiLineResult []string) (FxSend, error) {
 				fs.DestChainId = -1
 				fs.DestChainPos = -1
 			} else {
-				i, err := ParseIntList(vl)
+				i, err := parseIntList(vl)
 				if err != nil {
 					return fs, err
 				}

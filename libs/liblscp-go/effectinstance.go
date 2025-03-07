@@ -11,7 +11,7 @@ func ParseEffectInstance(id int, ln []string) (EffectInstance, error) {
 	ei := EffectInstance{Id: id}
 	for _, v := range ln {
 		if vl, f := strings.CutPrefix(v, "INPUT_CONTROLS: "); f {
-			c, err := ParseInt(vl)
+			c, err := parseInt(vl)
 			if err != nil {
 				return ei, err
 			}
@@ -29,7 +29,7 @@ func ParseEffectParameter(ln []string) (Parameter[float64], error) {
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "VALUE: "); f {
-			f, err := ParseFloat(vl)
+			f, err := parseFloat(vl)
 			if err != nil {
 				return prm, err
 			}
@@ -37,7 +37,7 @@ func ParseEffectParameter(ln []string) (Parameter[float64], error) {
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "RANGE_MIN: "); f {
-			f, err := ParseFloat(vl)
+			f, err := parseFloat(vl)
 			if err != nil {
 				return prm, err
 			}
@@ -45,7 +45,7 @@ func ParseEffectParameter(ln []string) (Parameter[float64], error) {
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "RANGE_MAX: "); f {
-			f, err := ParseFloat(vl)
+			f, err := parseFloat(vl)
 			if err != nil {
 				return prm, err
 			}
@@ -53,7 +53,7 @@ func ParseEffectParameter(ln []string) (Parameter[float64], error) {
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "DEFAULT: "); f {
-			f, err := ParseFloat(vl)
+			f, err := parseFloat(vl)
 			if err != nil {
 				return prm, err
 			}
@@ -61,7 +61,7 @@ func ParseEffectParameter(ln []string) (Parameter[float64], error) {
 			continue
 		}
 		if vl, f := strings.CutPrefix(v, "POSSIBILITIES: "); f {
-			ps, err := ParseFloatList(vl)
+			ps, err := parseFloatList(vl)
 			if err != nil {
 				return prm, err
 			}

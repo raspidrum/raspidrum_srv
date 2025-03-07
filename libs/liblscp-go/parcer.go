@@ -21,12 +21,12 @@ type LscpError struct {
 }
 
 func (e *LscpError) Error() string {
-	return fmt.Sprintf("code: $d message: '%s'", e.Code, e.Message)
+	return fmt.Sprintf("code: %d message: '%s'", e.Code, e.Message)
 }
 
 // Parses an integer value.
 // @throws LscpException If the string does not contain valid integer value.
-func ParseInt(s string) (int, error) {
+func parseInt(s string) (int, error) {
 	i, err := strconv.Atoi(s)
 	if err != nil {
 		return 0, fmt.Errorf("not int: %s %w", s, err)
@@ -35,7 +35,7 @@ func ParseInt(s string) (int, error) {
 }
 
 // Parses a float value.
-func ParseFloat(s string) (float64, error) {
+func parseFloat(s string) (float64, error) {
 	i, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return 0, fmt.Errorf("not float: %s %w", s, err)
@@ -44,7 +44,7 @@ func ParseFloat(s string) (float64, error) {
 }
 
 // Parses a comma separated list with boolean values
-func ParceBoolList(list string) ([]bool, error) {
+func parceBoolList(list string) ([]bool, error) {
 	ar := strings.Split(list, ",")
 	bar := make([]bool, len(ar))
 	for i, v := range ar {
@@ -58,7 +58,7 @@ func ParceBoolList(list string) ([]bool, error) {
 }
 
 // Parses a comma separated list with integer values
-func ParseIntList(list string) ([]int, error) {
+func parseIntList(list string) ([]int, error) {
 	ar := strings.Split(list, ",")
 	bar := make([]int, len(ar))
 	for i, v := range ar {
@@ -72,7 +72,7 @@ func ParseIntList(list string) ([]int, error) {
 }
 
 // Parses a comma separated list with float values.
-func ParseFloatList(list string) ([]float64, error) {
+func parseFloatList(list string) ([]float64, error) {
 	ar := strings.Split(list, ",")
 	bar := make([]float64, len(ar))
 	for i, v := range ar {
@@ -86,7 +86,7 @@ func ParseFloatList(list string) ([]float64, error) {
 }
 
 // Parses a comma separated list whose items are encapsulated into curly braces.
-func ParseArray(list string) ([]string, error) {
+func parseArray(list string) ([]string, error) {
 	pattern := regexp.MustCompile(`\{([^}]*)\}`)
 	matches := pattern.FindAllString(list, -1)
 
@@ -100,11 +100,11 @@ func ParseArray(list string) ([]string, error) {
 
 // Parses a comma separated string list, which elements contains escaped sequences.
 func parseEscapedStringListComma(list string) ([]string, error) {
-	return ParseEscapedStringList(list, ",")
+	return parseEscapedStringList(list, ",")
 }
 
 // Parses a string list, which elements contains escaped sequences.
-func ParseEscapedStringList(list string, sep string) ([]string, error) {
+func parseEscapedStringList(list string, sep string) ([]string, error) {
 	unescaped, err := strconv.Unquote(list)
 	if err != nil {
 		return nil, fmt.Errorf("can't unescape: %s %w", list, err)
@@ -113,13 +113,13 @@ func ParseEscapedStringList(list string, sep string) ([]string, error) {
 }
 
 // Parses a list whose items are encapsulated into apostrophes.
-func ParseStringList(list string, sep string) ([]string, error) {
-	return ParseEscapedStringList(list, sep)
+func parseStringList(list string, sep string) ([]string, error) {
+	return parseEscapedStringList(list, sep)
 }
 
 // Gets the type of the parameter represented by the specified result set.
 // resultSet A string array containing the information categories of a multi-line result set.
-func ParseType(resultSet []string) (ParameterType, error) {
+func parseType(resultSet []string) (ParameterType, error) {
 	if resultSet == nil || len(resultSet) == 0 {
 		return ptUnknown, nil
 	}
@@ -152,7 +152,7 @@ func parseMultiplicity(resultSet []string) (bool, error) {
 // Parses an empty result set and returns an appropriate ResultSet object.
 // Notice that the result set may be of type warning or error.
 // ln A <code>String</code> representing the single line result set to be parsed.
-func ParseError(ln string, rs *ResultSet) error {
+func parseError(ln string, rs *ResultSet) error {
 	m, f := strings.CutPrefix(ln, "ERR:")
 	if !f {
 		return fmt.Errorf("not an error result: '%s'", ln)
@@ -195,7 +195,7 @@ func cutIndex(ln string) (index int, found bool, msg string, err error) {
 // Parses warning message.
 // ln The warning message to be parsed.
 // rs A <code>ResultSet</code> instance where the warning must be stored.
-func ParseWarning(ln string, rs *ResultSet) error {
+func parseWarning(ln string, rs *ResultSet) error {
 	_, msg, f := strings.Cut(ln, "WRN")
 	if !f {
 		return fmt.Errorf("not a warning result: '%s'", ln)
@@ -228,7 +228,7 @@ func ParseWarning(ln string, rs *ResultSet) error {
 
 }
 
-func ParseOk(ln string, rs *ResultSet) error {
+func parseOk(ln string, rs *ResultSet) error {
 	_, msg, f := strings.Cut(ln, "OK")
 	if !f {
 		return fmt.Errorf("not an OK result: '%s'", ln)
@@ -248,45 +248,4 @@ func ParseOk(ln string, rs *ResultSet) error {
 	rs.Message = msg
 	// it's "OK" result with index
 	return nil
-}
-
-// Parses an empty result set and returns an appropriate <code>ResultSet</code> object.
-// Notice that the result set may be of type warning or error.
-// n A <code>String</code> representing the single line result set to be parsed.
-// TODO: выпилить эту функцию, т.к. она полностью дублирует Client.getResultSet
-func ParseResultSet(ln string) (ResultSet, error) {
-	rs := ResultSet{}
-
-	msg, f := strings.CutPrefix(ln, "OK")
-	if !f {
-		if f := strings.HasPrefix(ln, "ERR"); f {
-			if err := ParseError(ln, &rs); err != nil {
-				return rs, err
-			}
-			// it's error got from LinuxSampler
-			return rs, &LscpError{rs.Code, rs.Message}
-		}
-		if f := strings.HasPrefix(ln, "WRN"); f {
-			if err := ParseWarning(ln, &rs); err != nil {
-				return rs, err
-			}
-			// it's warning got from LinuxSampler
-			// TODO: log warning
-			return rs, nil
-		}
-	}
-	if len(msg) == 0 {
-		// it's empty "OK" result
-		return rs, nil
-	}
-	idx, f, msg, err := cutIndex(msg)
-	if err != nil {
-		return rs, err
-	}
-	if f {
-		rs.Index = idx
-	}
-	rs.Message = msg
-	// it's "OK" result with index
-	return rs, nil
 }
