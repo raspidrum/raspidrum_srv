@@ -5,8 +5,10 @@ import (
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 )
 
+// Engine - LinuxSampler engine: gig, sfz, sf2
 type LinuxSampler struct {
 	Client lscp.Client
+	Engine string
 }
 
 // Connect
@@ -70,7 +72,7 @@ func (l *LinuxSampler) CreateChannel(audioDevId, midiDevId int, instrumentFile s
 	if err != nil {
 		return
 	}
-	err = l.Client.LoadSamplerEngine("sfz", channelId)
+	err = l.Client.LoadSamplerEngine(l.Engine, channelId)
 	if err != nil {
 		return
 	}
