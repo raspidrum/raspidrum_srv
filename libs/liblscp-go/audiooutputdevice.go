@@ -25,7 +25,6 @@ func ParseAudioOutputDevice(deviceId int, multiLineResult []string) (AudioOutput
 			aud.Channels = Parameter[int]{
 				Name:  "CHANNELS",
 				Value: ch,
-				Type:  ptInt,
 			}
 			continue
 		}
@@ -37,7 +36,6 @@ func ParseAudioOutputDevice(deviceId int, multiLineResult []string) (AudioOutput
 			aud.Samplerate = Parameter[int]{
 				Name:  "SAMPLERATE",
 				Value: sr,
-				Type:  ptInt,
 			}
 			continue
 		}
@@ -49,7 +47,6 @@ func ParseAudioOutputDevice(deviceId int, multiLineResult []string) (AudioOutput
 			aud.Active = Parameter[bool]{
 				Name:  "ACTIVE",
 				Value: a,
-				Type:  ptBool,
 			}
 			continue
 		}
@@ -57,7 +54,6 @@ func ParseAudioOutputDevice(deviceId int, multiLineResult []string) (AudioOutput
 			aud.Driver = Parameter[string]{
 				Name:  "DRIVER",
 				Value: vl,
-				Type:  ptString,
 			}
 			continue
 		}

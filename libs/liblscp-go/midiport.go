@@ -18,7 +18,6 @@ func ParseMidiPort(multiLineResult []string) (MidiPort, error) {
 			mp.Name = Parameter[string]{
 				Name:  "NAME",
 				Value: vl,
-				Type:  ptString,
 			}
 			continue
 		}
@@ -28,7 +27,6 @@ func ParseMidiPort(multiLineResult []string) (MidiPort, error) {
 			pr := Parameter[string]{
 				Name:  bf,
 				Value: vl,
-				Type:  ptString,
 			}
 			mp.Params = append(mp.Params, pr)
 		}

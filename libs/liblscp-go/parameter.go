@@ -35,7 +35,6 @@ var ParameterToType = map[string]ParameterType{
 type Parameter[T any] struct {
 	Name           string
 	Description    string
-	Type           ParameterType
 	Value          T
 	IsMultiplicity bool
 	isMandatory    bool
