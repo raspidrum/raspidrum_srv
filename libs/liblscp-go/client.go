@@ -45,7 +45,7 @@ func (c *Client) Connect() error {
 	}
 	slog.Info("connected to LinuxSampler", slog.String("ver", si.Version))
 
-	defer c.conn.Close()
+	//defer c.conn.Close()
 	return nil
 }
 
@@ -57,7 +57,8 @@ func (c *Client) Disconnect() error {
 }
 
 func (c *Client) retrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, error) {
-	_, err := fmt.Fprintf(c.conn, lscpCmd+"\r\n")
+	cmd := strings.Trim(lscpCmd, " ")
+	_, err := fmt.Fprintf(c.conn, cmd+"\r\n")
 	if err != nil {
 		return ResultSet{}, fmt.Errorf("failed lscp command: %s : %w", lscpCmd, err)
 	}
@@ -171,7 +172,7 @@ func (c *Client) CreateAudioOutputDevice(adrv string, params ...Parameter[any]) 
 	for i, v := range params {
 		plist[i] = fmt.Sprintf("%s=%s", v.Name, v.GetStringValue())
 	}
-	return c.retrieveIndex(fmt.Sprintf("%s %s", cmd, strings.Join(plist, " ")))
+	return c.retrieveIndex(fmt.Sprintf("%s %s %s", cmd, adrv, strings.Join(plist, " ")))
 }
 
 // Gets a list of all created audio output devices.
@@ -241,7 +242,7 @@ func (c *Client) CreateMidiInputDevice(miDriver string, params ...Parameter[any]
 	for i, v := range params {
 		plist[i] = fmt.Sprintf("%s=%s", v.Name, v.GetStringValue())
 	}
-	return c.retrieveIndex(fmt.Sprintf("%s %s", cmd, strings.Join(plist, " ")))
+	return c.retrieveIndex(fmt.Sprintf("%s %s %s", cmd, miDriver, strings.Join(plist, " ")))
 }
 
 // Destroys already created MIDI input device.

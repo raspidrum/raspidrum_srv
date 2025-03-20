@@ -10,7 +10,7 @@ type Param[T ParamType] struct {
 }
 
 type SamplerRepo interface {
-	ConnectAudioOutput(driver string, params []Param[string]) (devId int, err error)
+	ConnectAudioOutput(driver string, params map[int][]Param[string]) (devId int, err error)
 	ConnectMidiInput(driver string, params []Param[string]) (devId int, err error)
 	CreateChannel(audioDevId, midiDevId int, instrumentFile string) (channelId int, err error)
 }

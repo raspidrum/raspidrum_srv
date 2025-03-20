@@ -32,8 +32,8 @@ func InitSampler(sampler repo.SamplerRepo) (audioDevId, midiDevId int, err error
 	return audioId, midiId, nil
 }
 
-func LoadPresetToSampler(sampler repo.SamplerRepo, audDevId, midiDevId int) (chnl int, err error) {
-	chnl, err = sampler.CreateChannel(audDevId, midiDevId, "/TODO")
+func LoadPresetToSampler(sampler repo.SamplerRepo, audDevId, midiDevId int, instrumentFile string) (chnl int, err error) {
+	chnl, err = sampler.CreateChannel(audDevId, midiDevId, instrumentFile)
 	if err != nil {
 		return chnl, fmt.Errorf("failed load preset: %w", err)
 	}
