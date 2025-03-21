@@ -3,75 +3,79 @@ schemas:
   title: Instrument
   description: Raspidrum instrument
   type: object
-  required:
-    - instrumentKey
-    - name
-    - type
-    - subtype
+  required: instrument
   properties:
-    instrumentKey:
-      description: |
-        Unique instrument key in kit. 
-        Must match the name of the main sfz-file, control sfz-file and sample directory.
-      type: string
-    name:
-      description: Short name for display in mixer and other screens
-      type: string
-    fullName:
-      description: Full name for select instrument due configuring custom kit. If absent, the name is used.
-      type: string
-    type:
-      enum:
-        - cymbal
-        - kick
-        - snare
-        - tom
-        - other
-    subtype:
-      type: string
-      description: |
-        # cymbals
-        - ride
-        - crash
-        - china
-        - splash
-        - hi-hat
-        # kick
-        - kick
-        # snare
-        - snare
-        - rimshot
-        - rim
-        - sidestick
-        # toms
-        - tom_hi
-        - tom_mid
-        - tom_low
-        - tom_floor
-        # others - any unenumerated string
-    description:
-      type: string
-    copyright:
-      type: string
-    licence:
-      type: string
-    credits:
-      type: string
-    tags:
-      type: array
-      items:
-        type: string
-    midiKey:
-      type: string
-      description: Variable name in control file for setting midi note to instrument. Default "KEY" if missing.
-    controls:
-      type: array
-      item:
-        $ref: /schemas/control
-    layers:
-      type: array
-      item:
-        $ref: /schemas/layer
+    instrument:
+      type: object
+      required:
+        - instrumentKey
+        - name
+        - type
+        - subtype
+      properties:
+        instrumentKey:
+          description: |
+            Unique instrument key in kit. 
+            Must match the name of the main sfz-file, control sfz-file and sample directory.
+          type: string
+        name:
+          description: Short name for display in mixer and other screens
+          type: string
+        fullName:
+          description: Full name for select instrument due configuring custom kit. If absent, the name is used.
+          type: string
+        type:
+          enum:
+            - cymbal
+            - kick
+            - snare
+            - tom
+            - other
+        subtype:
+          type: string
+          description: |
+            # cymbals
+            - ride
+            - crash
+            - china
+            - splash
+            - hi-hat
+            # kick
+            - kick
+            # snare
+            - snare
+            - rimshot
+            - rim
+            - sidestick
+            # toms
+            - tom_hi
+            - tom_mid
+            - tom_low
+            - tom_floor
+            # others - any unenumerated string
+        description:
+          type: string
+        copyright:
+          type: string
+        licence:
+          type: string
+        credits:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        midiKey:
+          type: string
+          description: Variable name in control file for setting midi note to instrument. Default "KEY" if missing.
+        controls:
+          type: array
+          item:
+            $ref: /schemas/control
+        layers:
+          type: array
+          item:
+            $ref: /schemas/layer
 
 
 - $id: /schemas/layer

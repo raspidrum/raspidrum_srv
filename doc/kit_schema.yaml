@@ -3,26 +3,30 @@ schemas:
   title: Instrument kit
   description: Raspidrum instrument kit
   type: object
-  required:
-    - name
+  required: kit
   properties:
-    name:
-      description: Short name of drum kit
-      type: string
-    description:
-      type: string
-    licence:
-      type: string
-    credits:
-      type: string
-    url:
-      type: url
-    tags:
-      type: array
-      items:
-        type: string
-    instruments:
-      type: array
-      item:
-        type: string
-        description: match "instrumentKey" in instrument file
+    kit:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          description: Short name of drum kit
+          type: string
+        description:
+          type: string
+        licence:
+          type: string
+        credits:
+          type: string
+        url:
+          type: url
+        tags:
+          type: array
+          items:
+            type: string
+        instruments:
+          type: array
+          item:
+            type: string
+            description: match "instrumentKey" in instrument file
