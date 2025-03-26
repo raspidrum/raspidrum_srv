@@ -1,8 +1,8 @@
-
+-- +goose Up
 create table if not exists kit (
   id          integer primary key autoincrement,
   uid         varchar(36) unique not null,
-  name        varchar(128) not null,
+  name        varchar(128) not null unique,
   iscustom    integer,
   description text,
   copyright   text,
@@ -15,6 +15,13 @@ create table if not exists kit (
 create table if not exists kit_tag (
   id          integer primary key autoincrement,
   kit         integer not null,
-  name        varchar(16) not null
-  foreign key (kit) references kit(id) on delete cascade
+  name        varchar(16) not null,
+  foreign key (kit) references kit(id) on delete cascade,
+  unique (kit, name)
 );
+
+
+-- +goose Down
+drop table kit_tag;
+
+drop table kit;

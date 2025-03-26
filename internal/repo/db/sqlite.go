@@ -2,21 +2,25 @@ package db
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/jmoiron/sqlx"
 )
 
-const dbname = "db.sqlite"
+const dbname = "kits.sqlite3"
 
 type Sqlite struct {
 	db *sqlx.DB
 }
 
-func (d *Sqlite) Connect() error {
+func (d *Sqlite) Connect(dbpath string) error {
 	var err error
-	d.db, err = sqlx.Connect("sqlite3", fmt.Sprintf("file:%s?_foreign_keys=true", dbname))
+
+	dbfile := path.Join(dbpath, dbname)
+	constr := fmt.Sprintf("file:%s?_foreign_keys=true", dbfile)
+	d.db, err = sqlx.Connect("sqlite3", constr)
 	if err != nil {
-		return fmt.Errorf("failed connect to db: %w", err)
+		return fmt.Errorf("failed connect to db: %s %w", constr, err)
 	}
 	return nil
 }
