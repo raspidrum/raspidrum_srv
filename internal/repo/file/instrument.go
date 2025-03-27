@@ -1,27 +1,27 @@
 package file
 
 type Instrument struct {
-	InstrumentKey string   `yaml:"instrumentKey"`
-	Name          string   `yaml:"name"`
-	FullName      string   `yaml:"fullName"`
-	Type          string   `yaml:"type"`
-	SubType       string   `yaml:"subType"`
-	Description   string   `yaml:"description"`
-	Copyright     string   `yaml:"copyright"`
-	Licence       string   `yaml:"licence"`
-	Credits       string   `yaml:"credits"`
-	Tags          []string `yaml:"tags"`
-	MidiKey       string   `yaml:"midiKey"`
-	Controls      Controls `yaml:"controls"`
-	Layers        struct {
-		Name     string   `yaml:"name"`
-		MidiKey  string   `yaml:"midiKey"`
-		Controls Controls `yaml:"controls"`
-	}
+	InstrumentKey string     `yaml:"instrumentKey"`
+	Name          string     `yaml:"name"`
+	FullName      string     `yaml:"fullName,omitempty"`
+	Type          string     `yaml:"type"`
+	SubType       string     `yaml:"subtype"`
+	Description   string     `yaml:"description,omitempty"`
+	Copyright     string     `yaml:"copyright,omitempty"`
+	Licence       string     `yaml:"licence,omitempty"`
+	Credits       string     `yaml:"credits,omitempty"`
+	Tags          []string   `yaml:"tags,omitempty"`
+	MidiKey       string     `yaml:"midiKey,omitempty"`
+	Controls      []Controls `yaml:"controls"`
+	Layers        []struct {
+		Name     string     `yaml:"name"`
+		MidiKey  string     `yaml:"midiKey,omitempty"`
+		Controls []Controls `yaml:"controls,omitempty"`
+	} `yaml:"layers,omitempty"`
 }
 
 type Controls struct {
 	Name string `yaml:"name"`
-	Type string `yaml:"type"`
+	Type string `yaml:"type,omitempty"`
 	Key  string `yaml:"key"`
 }

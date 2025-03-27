@@ -54,13 +54,9 @@ func parseYAMLFile(path string) (interface{}, error) {
 
 	switch {
 	case probe.Instrument != nil:
-		var result Instrument
-		err = yaml.Unmarshal(content, &result)
-		return result, err
+		return probe.Instrument, nil
 	case probe.Kit != nil:
-		var result Kit
-		err = yaml.Unmarshal(content, &result)
-		return result, err
+		return probe.Kit, nil
 	default:
 		return nil, fmt.Errorf("unknown YAML format in %s", path)
 	}

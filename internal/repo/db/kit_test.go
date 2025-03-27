@@ -11,7 +11,7 @@ func TestSqlite_ListKits(t *testing.T) {
 
 	d := &Sqlite{}
 
-	dir := getRootPath()
+	dir := getDBPath()
 	err := d.Connect(dir)
 	if err != nil {
 		t.Errorf("%v", err)

@@ -8,7 +8,7 @@ import (
 func TestSqlite_ListInstruments(t *testing.T) {
 	d := &Sqlite{}
 
-	dir := getRootPath()
+	dir := getDBPath()
 	err := d.Connect(dir)
 	if err != nil {
 		t.Errorf("%v", err)
