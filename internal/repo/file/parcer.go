@@ -4,32 +4,36 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	m "github.com/raspidrum-srv/internal/model"
 )
 
 // Parse kit directory with kit and instrument files
-func parseYAMLDir(dir string) (map[string]interface{}, error) {
+func ParseYAMLDir(dir string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(filepath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Пропускаем директории и не-YAML файлы
-		if d.IsDir() || !(strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+		if d.IsDir() || !(strings.HasSuffix(filepath, ".yaml") || strings.HasSuffix(filepath, ".yml")) {
 			return nil
 		}
 
-		parsed, err := parseYAMLFile(path)
+		parsed, err := parseYAMLFile(filepath)
 		if err != nil {
 			return err
 		}
 
-		result[path] = parsed
+		_, file := path.Split(filepath)
+		result[file] = parsed
 		return nil
 	})
 
@@ -45,8 +49,8 @@ func parseYAMLFile(path string) (interface{}, error) {
 
 	// Определяем тип по первому ключу
 	var probe struct {
-		Instrument *Instrument `yaml:"instrument"`
-		Kit        *Kit        `yaml:"kit"`
+		Instrument *m.Instrument `yaml:"instrument"`
+		Kit        *m.Kit        `yaml:"kit"`
 	}
 	if err := yaml.Unmarshal(content, &probe); err != nil {
 		return nil, fmt.Errorf("error parsing YAML in %s: %w", path, err)

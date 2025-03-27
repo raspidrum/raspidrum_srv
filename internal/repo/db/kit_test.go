@@ -17,11 +17,11 @@ func TestSqlite_ListKits(t *testing.T) {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.db.Close()
+	defer d.Db.Close()
 
 	tests := []struct {
 		name    string
-		want    *[]Kit
+		want    *[]KitDb
 		wantLen int
 		wantErr bool
 	}{

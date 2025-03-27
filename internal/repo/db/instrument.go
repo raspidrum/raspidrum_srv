@@ -4,10 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	m "github.com/raspidrum-srv/internal/model"
 )
 
 // Field Tags MUST NOT be used outside of this package
-type Instrument struct {
+type InstrumentDb struct {
 	Id          int64          `db:"id"`
 	Uid         string         `db:"uid"`
 	Key         string         `db:"key"`
@@ -39,10 +41,10 @@ type kitInstrument struct {
 //   - type, subtype
 //   - in (tags)
 //   - kit
-func (d *Sqlite) ListInstruments() (*[]Instrument, error) {
-	ins := []Instrument{}
+func (d *Sqlite) ListInstruments() (*[]InstrumentDb, error) {
+	ins := []InstrumentDb{}
 
-	rows, err := d.db.Queryx(`select i.*, string_agg(t.name, ',') as tags
+	rows, err := d.Db.Queryx(`select i.*, string_agg(t.name, ',') as tags
 	from instrument i left join instrument_tag t on t.instrument = i.id
 	group by i.id, i.uid, i.key, i.name, i.fullname, i.type, i.subtype, i.description, i.copyright, i.licence, i.credits
 	order by i.name, i.id`)
@@ -50,7 +52,7 @@ func (d *Sqlite) ListInstruments() (*[]Instrument, error) {
 		return &ins, fmt.Errorf("failed sql: %w", err)
 	}
 	for rows.Next() {
-		instr := Instrument{}
+		instr := InstrumentDb{}
 		err := rows.StructScan(instr)
 		if err != nil {
 			return &ins, fmt.Errorf("failed sql: %w", err)
@@ -66,17 +68,18 @@ func (d *Sqlite) ListInstruments() (*[]Instrument, error) {
 }
 
 // TODO: ON CONFLICT UPDATE
-func (d *Sqlite) StoreInstrument(kitId int64, instr Instrument) (instrId int64, err error) {
-	sql := `insert into instrument(id, uid, key, name, fullname, type, subtype, description, copyright, licence, credits)
-	values (:id, :uid, :key, :name, :fullname, :type, :subtype, :description, :copyright, :licence, :credits)`
+func (d *Sqlite) StoreInstrument(kitId int64, instr *m.Instrument) (instrId int64, err error) {
+	instrdb := mapInstrumentToDb(instr)
+	sql := `insert into instrument(uid, key, name, fullname, type, subtype, description, copyright, licence, credits)
+	values (:uid, :key, :name, :fullname, :type, :subtype, :description, :copyright, :licence, :credits)`
 
-	tx, err := d.db.Beginx()
+	tx, err := d.Db.Beginx()
 	if err != nil {
 		return 0, fmt.Errorf("failed store instrument: %w", err)
 	}
 
 	// insert instrument
-	res, err := tx.NamedExec(sql, instr)
+	res, err := tx.NamedExec(sql, instrdb)
 	if err != nil {
 		tx.Rollback()
 		return 0, fmt.Errorf("failed store instrument: %w", err)
@@ -95,16 +98,16 @@ func (d *Sqlite) StoreInstrument(kitId int64, instr Instrument) (instrId int64, 
 	}
 
 	// insert tags
-	if len(instr.TagList) != 0 {
-		tags := make([]map[string]interface{}, len(instr.TagList))
-		for i, v := range instr.TagList {
+	if len(instrdb.TagList) != 0 {
+		tags := make([]map[string]interface{}, len(instrdb.TagList))
+		for i, v := range instrdb.TagList {
 			tags[i] = map[string]interface{}{"instrument": instrId, "name": v}
 		}
 
-		res, err = tx.NamedExec("insert into instrument_tag(instrument, name) values(:instr, :name)", tags)
+		res, err = tx.NamedExec("insert into instrument_tag(instrument, name) values(:instrument, :name)", tags)
 		if err != nil {
 			tx.Rollback()
-			return instrId, fmt.Errorf("failed store instrument: %w", err)
+			return instrId, fmt.Errorf("failed store instrument tags: %w", err)
 		}
 	}
 	tx.Commit()

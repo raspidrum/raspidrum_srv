@@ -14,11 +14,11 @@ func TestSqlite_ListInstruments(t *testing.T) {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.db.Close()
+	defer d.Db.Close()
 
 	tests := []struct {
 		name    string
-		want    *[]Instrument
+		want    *[]InstrumentDb
 		wantLen int
 		wantErr bool
 	}{

@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	m "github.com/raspidrum-srv/internal/model"
 )
 
-type Kit struct {
+type KitDb struct {
 	Id          int64          `db:"id"`
 	Uid         string         `db:"uid"`
 	Name        string         `db:"name"`
@@ -30,10 +32,10 @@ type KitTag struct {
 //   - like name
 //   - isCustom
 //   - in (tags)
-func (d *Sqlite) ListKits() (*[]Kit, error) {
-	kits := []Kit{}
+func (d *Sqlite) ListKits() (*[]KitDb, error) {
+	kits := []KitDb{}
 
-	rows, err := d.db.Queryx(`select k.*, string_agg(t.name, ',') as tags
+	rows, err := d.Db.Queryx(`select k.*, string_agg(t.name, ',') as tags
 	from kit k left join kit_tag t on t.kit = k.id
 	group by k.id, k.uid, k.name, k.iscustom, k.description, k.copyright, k.licence, k.credits, k.url
 	order by k.name, k.id
@@ -42,7 +44,7 @@ func (d *Sqlite) ListKits() (*[]Kit, error) {
 		return &kits, fmt.Errorf("failed sql: %w", err)
 	}
 	for rows.Next() {
-		kit := Kit{}
+		kit := KitDb{}
 		err := rows.StructScan(kit)
 		if err != nil {
 			return &kits, fmt.Errorf("failed sql: %w", err)
@@ -56,16 +58,17 @@ func (d *Sqlite) ListKits() (*[]Kit, error) {
 }
 
 // TODO: ON CONFLICT UPDATE
-func (d *Sqlite) StoreKit(kit Kit) (kitId int64, err error) {
+func (d *Sqlite) StoreKit(kit *m.Kit) (kitId int64, err error) {
+	kitdb := mapKitToDb(kit)
 	sql := `insert into kit(uid, name, iscustom, description, copyright, licence, credits, url) values(:uid, :name, :iscustom, :description, :copyright, :licence, :credits, :url)`
 
-	tx, err := d.db.Beginx()
+	tx, err := d.Db.Beginx()
 	if err != nil {
 		return 0, fmt.Errorf("failed store kit: %w", err)
 	}
 
 	// insert kit
-	res, err := tx.NamedExec(sql, kit)
+	res, err := tx.NamedExec(sql, kitdb)
 	if err != nil {
 		tx.Rollback()
 		return 0, fmt.Errorf("failed store kit: %w", err)
@@ -77,9 +80,9 @@ func (d *Sqlite) StoreKit(kit Kit) (kitId int64, err error) {
 	}
 
 	// insert tags
-	if len(kit.TagList) != 0 {
-		tags := make([]map[string]interface{}, len(kit.TagList))
-		for i, v := range kit.TagList {
+	if len(kitdb.TagList) != 0 {
+		tags := make([]map[string]interface{}, len(kitdb.TagList))
+		for i, v := range kitdb.TagList {
 			tags[i] = map[string]interface{}{"kit": kitId, "name": v}
 		}
 

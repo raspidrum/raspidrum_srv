@@ -36,7 +36,7 @@ func Test_parseYAMLDir(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseYAMLDir(tt.args.dir)
+			got, err := ParseYAMLDir(tt.args.dir)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseYAMLDir() error = %v, wantErr %v", err, tt.wantErr)
 				return

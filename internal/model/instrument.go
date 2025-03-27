@@ -1,6 +1,8 @@
 package file
 
 type Instrument struct {
+	Id            int64
+	Uid           string
 	InstrumentKey string     `yaml:"instrumentKey"`
 	Name          string     `yaml:"name"`
 	FullName      string     `yaml:"fullName,omitempty"`
