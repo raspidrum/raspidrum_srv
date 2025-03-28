@@ -8,6 +8,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// TODO: move to config
 const dbname = "kits.sqlite3"
 
 type Sqlite struct {

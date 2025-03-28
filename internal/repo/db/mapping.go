@@ -6,7 +6,7 @@ import (
 	m "github.com/raspidrum-srv/internal/model"
 )
 
-func mapKitToDb(kit *m.Kit) *KitDb {
+func kitToDb(kit *m.Kit) *KitDb {
 	tgl := make([]string, len(kit.Tags))
 	for i := 0; i < len(kit.Tags); i++ {
 		tgl[i] = kit.Tags[i]
@@ -25,12 +25,12 @@ func mapKitToDb(kit *m.Kit) *KitDb {
 	}
 }
 
-func mapInstrumentToDb(instr *m.Instrument) *InstrumentDb {
+func instrumentToDb(instr *m.Instrument) *Instr {
 	tgl := make([]string, len(instr.Tags))
 	for i := 0; i < len(instr.Tags); i++ {
 		tgl[i] = instr.Tags[i]
 	}
-	return &InstrumentDb{
+	return &Instr{
 		Id:          instr.Id,
 		Uid:         instr.Uid,
 		Key:         instr.InstrumentKey,
@@ -42,6 +42,6 @@ func mapInstrumentToDb(instr *m.Instrument) *InstrumentDb {
 		Copyright:   sql.NullString{Valid: true, String: instr.Copyright},
 		Licence:     sql.NullString{Valid: true, String: instr.Licence},
 		Credits:     sql.NullString{Valid: true, String: instr.Credits},
-		TagList:     tgl,
+		tagList:     tgl,
 	}
 }

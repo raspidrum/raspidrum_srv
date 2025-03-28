@@ -9,7 +9,7 @@ import (
 )
 
 // Field Tags MUST NOT be used outside of this package
-type InstrumentDb struct {
+type Instr struct {
 	Id          int64          `db:"id"`
 	Uid         string         `db:"uid"`
 	Key         string         `db:"key"`
@@ -17,23 +17,33 @@ type InstrumentDb struct {
 	Fullname    sql.NullString `db:"fullname"`
 	Type        string         `db:"type"`
 	Subtype     string         `db:"subtype"`
+	MidiKey     sql.NullString `db:"midikey"`
 	Description sql.NullString `db:"description"`
 	Copyright   sql.NullString `db:"copyright"`
 	Licence     sql.NullString `db:"licence"`
 	Credits     sql.NullString `db:"credits"`
 	Tags        sql.NullString `db:"tags"`
-	TagList     []string
+	tagList     []string
+	controls    []Controls
+	Layers      []Layers
 }
 
-type InstrumentTag struct {
+type InstrTag struct {
 	Id         int64  `db:"id"`
 	Instrument int64  `db:"instrument"`
 	Name       string `db:"name"`
 }
 
-type kitInstrument struct {
-	kit        int64 `db:"kit"`
-	instrument int64 `db:"instrument"`
+type Controls struct {
+	Name string         `db:"name"`
+	Type sql.NullString `db:"type,omitempty"`
+	Key  string         `db:"key"`
+}
+
+type Layers struct {
+	Name     string         `db:"name"`
+	MidiKey  sql.NullString `yaml:"midiKey,omitempty"`
+	controls []Controls
 }
 
 // TODO: optional filter by
@@ -41,8 +51,8 @@ type kitInstrument struct {
 //   - type, subtype
 //   - in (tags)
 //   - kit
-func (d *Sqlite) ListInstruments() (*[]InstrumentDb, error) {
-	ins := []InstrumentDb{}
+func (d *Sqlite) ListInstruments() (*[]Instr, error) {
+	ins := []Instr{}
 
 	rows, err := d.Db.Queryx(`select i.*, string_agg(t.name, ',') as tags
 	from instrument i left join instrument_tag t on t.instrument = i.id
@@ -51,14 +61,15 @@ func (d *Sqlite) ListInstruments() (*[]InstrumentDb, error) {
 	if err != nil {
 		return &ins, fmt.Errorf("failed sql: %w", err)
 	}
+	defer rows.Close()
 	for rows.Next() {
-		instr := InstrumentDb{}
+		instr := Instr{}
 		err := rows.StructScan(instr)
 		if err != nil {
 			return &ins, fmt.Errorf("failed sql: %w", err)
 		}
 		if instr.Tags.Valid {
-			instr.TagList = strings.Split(instr.Tags.String, ",")
+			instr.tagList = strings.Split(instr.Tags.String, ",")
 			// Field Tags not usable outside from this package
 			instr.Tags.Valid = false
 		}
@@ -69,7 +80,7 @@ func (d *Sqlite) ListInstruments() (*[]InstrumentDb, error) {
 
 // TODO: ON CONFLICT UPDATE
 func (d *Sqlite) StoreInstrument(kitId int64, instr *m.Instrument) (instrId int64, err error) {
-	instrdb := mapInstrumentToDb(instr)
+	instrdb := instrumentToDb(instr)
 	sql := `insert into instrument(uid, key, name, fullname, type, subtype, description, copyright, licence, credits)
 	values (:uid, :key, :name, :fullname, :type, :subtype, :description, :copyright, :licence, :credits)`
 
@@ -98,9 +109,9 @@ func (d *Sqlite) StoreInstrument(kitId int64, instr *m.Instrument) (instrId int6
 	}
 
 	// insert tags
-	if len(instrdb.TagList) != 0 {
-		tags := make([]map[string]interface{}, len(instrdb.TagList))
-		for i, v := range instrdb.TagList {
+	if len(instrdb.tagList) != 0 {
+		tags := make([]map[string]interface{}, len(instrdb.tagList))
+		for i, v := range instrdb.tagList {
 			tags[i] = map[string]interface{}{"instrument": instrId, "name": v}
 		}
 

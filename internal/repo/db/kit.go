@@ -43,6 +43,7 @@ func (d *Sqlite) ListKits() (*[]KitDb, error) {
 	if err != nil {
 		return &kits, fmt.Errorf("failed sql: %w", err)
 	}
+	defer rows.Close()
 	for rows.Next() {
 		kit := KitDb{}
 		err := rows.StructScan(kit)
@@ -59,7 +60,7 @@ func (d *Sqlite) ListKits() (*[]KitDb, error) {
 
 // TODO: ON CONFLICT UPDATE
 func (d *Sqlite) StoreKit(kit *m.Kit) (kitId int64, err error) {
-	kitdb := mapKitToDb(kit)
+	kitdb := kitToDb(kit)
 	sql := `insert into kit(uid, name, iscustom, description, copyright, licence, credits, url) values(:uid, :name, :iscustom, :description, :copyright, :licence, :credits, :url)`
 
 	tx, err := d.Db.Beginx()

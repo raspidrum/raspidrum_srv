@@ -1,8 +1,4 @@
-
 -- +goose Up
-/* Table doesn't store midikey, controls and layers 
-   because it is not required for UI.
-   These fields can be obtained from a yaml-file */
 create table if not exists instrument (
   id          integer primary key autoincrement,
   uid         varchar(36) unique not null,
@@ -11,6 +7,7 @@ create table if not exists instrument (
   fullname    varchar(512),
   type        varchar(16) not null,
   subtype     varchar(16) not null,
+  midikey     varchar(16),
   description text,
   copyright   text,
   licence     text,

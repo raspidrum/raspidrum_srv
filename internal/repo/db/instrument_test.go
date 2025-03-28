@@ -18,7 +18,7 @@ func TestSqlite_ListInstruments(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		want    *[]InstrumentDb
+		want    *[]Instr
 		wantLen int
 		wantErr bool
 	}{
