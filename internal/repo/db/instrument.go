@@ -22,10 +22,10 @@ type Instr struct {
 	Copyright   sql.NullString `db:"copyright"`
 	Licence     sql.NullString `db:"licence"`
 	Credits     sql.NullString `db:"credits"`
-	Tags        sql.NullString `db:"tags"`
-	tagList     []string
-	controls    []Controls
-	Layers      []Layers
+	Tags        sql.NullString `db:"tags,omitempty"`
+	tagList     []InstrTag
+	Controls    sql.NullString `db:"controls"`
+	Layers      sql.NullString `db:"layers"`
 }
 
 type InstrTag struct {
@@ -34,46 +34,34 @@ type InstrTag struct {
 	Name       string `db:"name"`
 }
 
-type Controls struct {
-	Name string         `db:"name"`
-	Type sql.NullString `db:"type,omitempty"`
-	Key  string         `db:"key"`
-}
-
-type Layers struct {
-	Name     string         `db:"name"`
-	MidiKey  sql.NullString `yaml:"midiKey,omitempty"`
-	controls []Controls
-}
-
 // TODO: optional filter by
 //   - like name
 //   - type, subtype
 //   - in (tags)
 //   - kit
-func (d *Sqlite) ListInstruments() (*[]Instr, error) {
-	ins := []Instr{}
-
+func (d *Sqlite) ListInstruments() (*[]m.Instrument, error) {
 	rows, err := d.Db.Queryx(`select i.*, string_agg(t.name, ',') as tags
 	from instrument i left join instrument_tag t on t.instrument = i.id
 	group by i.id, i.uid, i.key, i.name, i.fullname, i.type, i.subtype, i.description, i.copyright, i.licence, i.credits
 	order by i.name, i.id`)
 	if err != nil {
-		return &ins, fmt.Errorf("failed sql: %w", err)
+		return nil, fmt.Errorf("failed sql: %w", err)
 	}
 	defer rows.Close()
+	ins := []m.Instrument{}
 	for rows.Next() {
 		instr := Instr{}
-		err := rows.StructScan(instr)
+		err := rows.StructScan(&instr)
 		if err != nil {
-			return &ins, fmt.Errorf("failed sql: %w", err)
+			return nil, fmt.Errorf("failed sql: %w", err)
 		}
+		// TODO: move to mapper
 		if instr.Tags.Valid {
-			instr.tagList = strings.Split(instr.Tags.String, ",")
-			// Field Tags not usable outside from this package
-			instr.Tags.Valid = false
+			for v := range strings.SplitSeq(instr.Tags.String, ",") {
+				instr.tagList = append(instr.tagList, InstrTag{Instrument: instr.Id, Name: v})
+			}
 		}
-		ins = append(ins, instr)
+		ins = append(ins, *DbToInstrument(&instr))
 	}
 	return &ins, nil
 }
@@ -81,8 +69,8 @@ func (d *Sqlite) ListInstruments() (*[]Instr, error) {
 // TODO: ON CONFLICT UPDATE
 func (d *Sqlite) StoreInstrument(kitId int64, instr *m.Instrument) (instrId int64, err error) {
 	instrdb := instrumentToDb(instr)
-	sql := `insert into instrument(uid, key, name, fullname, type, subtype, description, copyright, licence, credits)
-	values (:uid, :key, :name, :fullname, :type, :subtype, :description, :copyright, :licence, :credits)`
+	sql := `insert into instrument(uid, key, name, fullname, type, subtype, description, copyright, licence, credits, controls, layers)
+	values (:uid, :key, :name, :fullname, :type, :subtype, :description, :copyright, :licence, :credits, :controls, :layers)`
 
 	tx, err := d.Db.Beginx()
 	if err != nil {
@@ -110,12 +98,11 @@ func (d *Sqlite) StoreInstrument(kitId int64, instr *m.Instrument) (instrId int6
 
 	// insert tags
 	if len(instrdb.tagList) != 0 {
-		tags := make([]map[string]interface{}, len(instrdb.tagList))
-		for i, v := range instrdb.tagList {
-			tags[i] = map[string]interface{}{"instrument": instrId, "name": v}
+		for i := range instrdb.tagList {
+			instrdb.tagList[i].Instrument = instrId
 		}
 
-		res, err = tx.NamedExec("insert into instrument_tag(instrument, name) values(:instrument, :name)", tags)
+		res, err = tx.NamedExec("insert into instrument_tag(instrument, name) values(:instrument, :name)", instrdb.tagList)
 		if err != nil {
 			tx.Rollback()
 			return instrId, fmt.Errorf("failed store instrument tags: %w", err)

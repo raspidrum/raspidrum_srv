@@ -27,7 +27,7 @@ func TestLoadKit(t *testing.T) {
 	}{
 		{
 			name:      "first kit",
-			wantKitId: 0,
+			wantKitId: 1,
 			wantErr:   false,
 		},
 	}

@@ -19,7 +19,7 @@ type KitDb struct {
 	Credits     sql.NullString `db:"credits"`
 	Url         sql.NullString `db:"url"`
 	Tags        sql.NullString `db:"tags"`
-	TagList     []string
+	tagList     []KitTag
 }
 
 type KitTag struct {
@@ -32,28 +32,30 @@ type KitTag struct {
 //   - like name
 //   - isCustom
 //   - in (tags)
-func (d *Sqlite) ListKits() (*[]KitDb, error) {
-	kits := []KitDb{}
-
+func (d *Sqlite) ListKits() (*[]m.Kit, error) {
 	rows, err := d.Db.Queryx(`select k.*, string_agg(t.name, ',') as tags
 	from kit k left join kit_tag t on t.kit = k.id
 	group by k.id, k.uid, k.name, k.iscustom, k.description, k.copyright, k.licence, k.credits, k.url
 	order by k.name, k.id
 	`)
 	if err != nil {
-		return &kits, fmt.Errorf("failed sql: %w", err)
+		return nil, fmt.Errorf("failed sql: %w", err)
 	}
 	defer rows.Close()
+	kits := []m.Kit{}
 	for rows.Next() {
 		kit := KitDb{}
-		err := rows.StructScan(kit)
+		err := rows.StructScan(&kit)
 		if err != nil {
-			return &kits, fmt.Errorf("failed sql: %w", err)
+			return nil, fmt.Errorf("failed sql: %w", err)
 		}
+		// TODO: move to mapper
 		if kit.Tags.Valid {
-			kit.TagList = strings.Split(kit.Tags.String, ",")
+			for v := range strings.SplitSeq(kit.Tags.String, ",") {
+				kit.tagList = append(kit.tagList, KitTag{Kit: kit.Id, Name: v})
+			}
 		}
-		kits = append(kits, kit)
+		kits = append(kits, *DbToKit(&kit))
 	}
 	return &kits, nil
 }
@@ -81,13 +83,12 @@ func (d *Sqlite) StoreKit(kit *m.Kit) (kitId int64, err error) {
 	}
 
 	// insert tags
-	if len(kitdb.TagList) != 0 {
-		tags := make([]map[string]interface{}, len(kitdb.TagList))
-		for i, v := range kitdb.TagList {
-			tags[i] = map[string]interface{}{"kit": kitId, "name": v}
+	if len(kitdb.tagList) != 0 {
+		for i := range kitdb.tagList {
+			kitdb.tagList[i].Kit = kitId
 		}
 
-		res, err = tx.NamedExec("insert into kit_tag(kit, name) values(:kit, :name)", tags)
+		res, err = tx.NamedExec("insert into kit_tag(kit, name) values(:kit, :name)", kitdb.tagList)
 		if err != nil {
 			tx.Rollback()
 			return kitId, fmt.Errorf("failed store kit: %w", err)

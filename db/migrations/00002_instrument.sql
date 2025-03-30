@@ -11,7 +11,9 @@ create table if not exists instrument (
   description text,
   copyright   text,
   licence     text,
-  credits     text
+  credits     text,
+  controls    text,
+  layers      text
 );
 
 create table if not exists instrument_tag (

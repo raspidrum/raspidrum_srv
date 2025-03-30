@@ -15,15 +15,17 @@ type Instrument struct {
 	Tags          []string   `yaml:"tags,omitempty"`
 	MidiKey       string     `yaml:"midiKey,omitempty"`
 	Controls      []Controls `yaml:"controls"`
-	Layers        []struct {
-		Name     string     `yaml:"name"`
-		MidiKey  string     `yaml:"midiKey,omitempty"`
-		Controls []Controls `yaml:"controls,omitempty"`
-	} `yaml:"layers,omitempty"`
+	Layers        []Layer    `yaml:"layers,omitempty"`
 }
 
 type Controls struct {
-	Name string `yaml:"name"`
-	Type string `yaml:"type,omitempty"`
-	Key  string `yaml:"key"`
+	Name string `yaml:"name" json:"name"`
+	Type string `yaml:"type,omitempty" json:"type,omitempty"`
+	Key  string `yaml:"key" json:"key"`
+}
+
+type Layer struct {
+	Name     string     `yaml:"name" json:"name"`
+	MidiKey  string     `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
+	Controls []Controls `yaml:"controls,omitempty" json:"controls,omitempty"`
 }

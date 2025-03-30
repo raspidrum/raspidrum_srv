@@ -28,7 +28,7 @@ func TestSqlite_ListKits(t *testing.T) {
 		{
 			name:    "empty list",
 			want:    nil,
-			wantLen: 0,
+			wantLen: 1,
 			wantErr: false,
 		},
 	}
