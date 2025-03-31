@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -25,4 +26,29 @@ func (d *Sqlite) Connect(dbpath string) error {
 		return fmt.Errorf("failed connect to db: %s %w", constr, err)
 	}
 	return nil
+}
+
+// Where conditions
+type Condition func() (sql string, args []interface{}, err error)
+
+func Eq(field string, inargs ...interface{}) Condition {
+	return func() (sql string, args []interface{}, err error) {
+		return fmt.Sprintf("%s = ?", field), inargs, nil
+	}
+}
+
+func buildConditions(conds ...Condition) (sql string, args []interface{}, err error) {
+	sqls := make([]string, len(conds))
+	for i, cond := range conds {
+		s, a, err := cond()
+		if err != nil {
+			return "", nil, fmt.Errorf("failed construct sql condition: %w", err)
+		}
+		sqls[i] = s
+		args = append(args, a...)
+	}
+	if len(sqls) > 0 {
+		sql = "where " + strings.Join(sqls, " and ")
+	}
+	return
 }

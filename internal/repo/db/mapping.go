@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	m "github.com/raspidrum-srv/internal/model"
 )
@@ -29,9 +30,9 @@ func kitToDb(kit *m.Kit) *KitDb {
 }
 
 func DbToKit(kit *KitDb) *m.Kit {
-	tgl := make([]string, len(kit.tagList))
-	for i, v := range kit.tagList {
-		tgl[i] = v.Name
+	var tgl []string
+	if kit.Tags.Valid {
+		tgl = strings.Split(kit.Tags.String, ",")
 	}
 	res := m.Kit{
 		Id:   kit.Id,
@@ -101,10 +102,11 @@ func instrumentToDb(instr *m.Instrument) *Instr {
 }
 
 func DbToInstrument(ins *Instr) *m.Instrument {
-	tgl := make([]string, len(ins.tagList))
-	for i, v := range ins.tagList {
-		tgl[i] = v.Name
+	var tgl []string
+	if ins.Tags.Valid {
+		tgl = strings.Split(ins.Tags.String, ",")
 	}
+
 	res := m.Instrument{
 		Id:            ins.Id,
 		Uid:           ins.Uid,

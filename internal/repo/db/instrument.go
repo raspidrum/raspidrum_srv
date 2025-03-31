@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	m "github.com/raspidrum-srv/internal/model"
 )
@@ -39,13 +38,24 @@ type InstrTag struct {
 //   - type, subtype
 //   - in (tags)
 //   - kit
-func (d *Sqlite) ListInstruments() (*[]m.Instrument, error) {
-	rows, err := d.Db.Queryx(`select i.*, string_agg(t.name, ',') as tags
-	from instrument i left join instrument_tag t on t.instrument = i.id
-	group by i.id, i.uid, i.key, i.name, i.fullname, i.type, i.subtype, i.description, i.copyright, i.licence, i.credits
-	order by i.name, i.id`)
+func (d *Sqlite) ListInstruments(conds ...Condition) (*[]m.Instrument, error) {
+	sql_select := `select i.*, string_agg(t.name, ',') as tags
+	from instrument i join kit_instrument ki on ki.instrument = i.id
+	     left join instrument_tag t on t.instrument = i.id`
+
+	sql_group := "group by i.id, i.uid, i.key, i.name, i.fullname, i.type, i.subtype, i.description, i.copyright, i.licence, i.credits"
+	sql_order := "order by i.name, i.id"
+
+	sql_where, args, err := buildConditions(conds...)
 	if err != nil {
-		return nil, fmt.Errorf("failed sql: %w", err)
+		return nil, fmt.Errorf("failed ListInstruments: %w", err)
+	}
+
+	sql := fmt.Sprintf("%s %s %s %s", sql_select, sql_where, sql_group, sql_order)
+
+	rows, err := d.Db.Queryx(sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed sqListInstrumentsl: %w", err)
 	}
 	defer rows.Close()
 	ins := []m.Instrument{}
@@ -53,17 +63,15 @@ func (d *Sqlite) ListInstruments() (*[]m.Instrument, error) {
 		instr := Instr{}
 		err := rows.StructScan(&instr)
 		if err != nil {
-			return nil, fmt.Errorf("failed sql: %w", err)
-		}
-		// TODO: move to mapper
-		if instr.Tags.Valid {
-			for v := range strings.SplitSeq(instr.Tags.String, ",") {
-				instr.tagList = append(instr.tagList, InstrTag{Instrument: instr.Id, Name: v})
-			}
+			return nil, fmt.Errorf("failed ListInstruments: %w", err)
 		}
 		ins = append(ins, *DbToInstrument(&instr))
 	}
 	return &ins, nil
+}
+
+func ByKitId(kit int) Condition {
+	return Eq("kit", kit)
 }
 
 // TODO: ON CONFLICT UPDATE

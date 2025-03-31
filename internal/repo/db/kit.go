@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	m "github.com/raspidrum-srv/internal/model"
 )
@@ -48,12 +47,6 @@ func (d *Sqlite) ListKits() (*[]m.Kit, error) {
 		err := rows.StructScan(&kit)
 		if err != nil {
 			return nil, fmt.Errorf("failed sql: %w", err)
-		}
-		// TODO: move to mapper
-		if kit.Tags.Valid {
-			for v := range strings.SplitSeq(kit.Tags.String, ",") {
-				kit.tagList = append(kit.tagList, KitTag{Kit: kit.Id, Name: v})
-			}
 		}
 		kits = append(kits, *DbToKit(&kit))
 	}
