@@ -3,6 +3,8 @@ package db
 import (
 	"fmt"
 	"strings"
+
+	"github.com/jmoiron/sqlx"
 )
 
 // Where conditions
@@ -11,6 +13,12 @@ type Condition func() (sql string, args []interface{}, err error)
 func Eq(field string, inargs ...interface{}) Condition {
 	return func() (sql string, args []interface{}, err error) {
 		return fmt.Sprintf("%s = ?", field), inargs, nil
+	}
+}
+
+func In(field string, inargs ...interface{}) Condition {
+	return func() (sql string, args []interface{}, err error) {
+		return sqlx.In(fmt.Sprintf("%s in (?)", field), inargs)
 	}
 }
 
