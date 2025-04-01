@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	m "github.com/raspidrum-srv/internal/model"
 )
 
@@ -54,24 +55,31 @@ func (d *Sqlite) ListKits() (*[]m.Kit, error) {
 }
 
 // TODO: ON CONFLICT UPDATE
-func (d *Sqlite) StoreKit(kit *m.Kit) (kitId int64, err error) {
+func (d *Sqlite) StoreKit(tx *sqlx.Tx, kit *m.Kit) (kitId int64, err error) {
+	localTx := tx == nil
 	kitdb := kitToDb(kit)
 	sql := `insert into kit(uid, name, iscustom, description, copyright, licence, credits, url) values(:uid, :name, :iscustom, :description, :copyright, :licence, :credits, :url)`
 
-	tx, err := d.Db.Beginx()
-	if err != nil {
-		return 0, fmt.Errorf("failed store kit: %w", err)
+	if localTx {
+		tx, err = d.Db.Beginx()
+		if err != nil {
+			return 0, fmt.Errorf("failed store kit: %w", err)
+		}
 	}
 
 	// insert kit
 	res, err := tx.NamedExec(sql, kitdb)
 	if err != nil {
-		tx.Rollback()
+		if localTx {
+			tx.Rollback()
+		}
 		return 0, fmt.Errorf("failed store kit: %w", err)
 	}
 	kitId, err = res.LastInsertId()
 	if err != nil {
-		tx.Rollback()
+		if localTx {
+			tx.Rollback()
+		}
 		return kitId, fmt.Errorf("failed store kit: %w", err)
 	}
 
@@ -83,11 +91,15 @@ func (d *Sqlite) StoreKit(kit *m.Kit) (kitId int64, err error) {
 
 		res, err = tx.NamedExec("insert into kit_tag(kit, name) values(:kit, :name)", kitdb.tagList)
 		if err != nil {
-			tx.Rollback()
+			if localTx {
+				tx.Rollback()
+			}
 			return kitId, fmt.Errorf("failed store kit: %w", err)
 		}
 	}
-	tx.Commit()
+	if localTx {
+		tx.Commit()
+	}
 
 	return kitId, nil
 }

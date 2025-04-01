@@ -1,9 +1,9 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"path"
-	"strings"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -28,27 +28,23 @@ func (d *Sqlite) Connect(dbpath string) error {
 	return nil
 }
 
-// Where conditions
-type Condition func() (sql string, args []interface{}, err error)
-
-func Eq(field string, inargs ...interface{}) Condition {
-	return func() (sql string, args []interface{}, err error) {
-		return fmt.Sprintf("%s = ?", field), inargs, nil
+func (d *Sqlite) RunInTx(fn func(tx *sqlx.Tx) error) error {
+	tx, err := d.Db.Beginx()
+	if err != nil {
+		return err
 	}
-}
 
-func buildConditions(conds ...Condition) (sql string, args []interface{}, err error) {
-	sqls := make([]string, len(conds))
-	for i, cond := range conds {
-		s, a, err := cond()
-		if err != nil {
-			return "", nil, fmt.Errorf("failed construct sql condition: %w", err)
+	defer func() {
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			err = errors.Join(err, rollbackErr)
 		}
-		sqls[i] = s
-		args = append(args, a...)
+	}()
+
+	err = fn(tx)
+	if err == nil {
+		return tx.Commit()
 	}
-	if len(sqls) > 0 {
-		sql = "where " + strings.Join(sqls, " and ")
-	}
-	return
+
+	return err
 }

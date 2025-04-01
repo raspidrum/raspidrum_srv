@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	m "github.com/raspidrum-srv/internal/model"
 )
 
@@ -75,32 +76,41 @@ func ByKitId(kit int) Condition {
 }
 
 // TODO: ON CONFLICT UPDATE
-func (d *Sqlite) StoreInstrument(kitId int64, instr *m.Instrument) (instrId int64, err error) {
+func (d *Sqlite) StoreInstrument(tx *sqlx.Tx, kitId int64, instr *m.Instrument) (instrId int64, err error) {
+	localTx := tx == nil
 	instrdb := instrumentToDb(instr)
 	sql := `insert into instrument(uid, key, name, fullname, type, subtype, description, copyright, licence, credits, controls, layers)
 	values (:uid, :key, :name, :fullname, :type, :subtype, :description, :copyright, :licence, :credits, :controls, :layers)`
 
-	tx, err := d.Db.Beginx()
-	if err != nil {
-		return 0, fmt.Errorf("failed store instrument: %w", err)
+	if localTx {
+		tx, err = d.Db.Beginx()
+		if err != nil {
+			return 0, fmt.Errorf("failed store kit: %w", err)
+		}
 	}
 
 	// insert instrument
 	res, err := tx.NamedExec(sql, instrdb)
 	if err != nil {
-		tx.Rollback()
+		if localTx {
+			tx.Rollback()
+		}
 		return 0, fmt.Errorf("failed store instrument: %w", err)
 	}
 	instrId, err = res.LastInsertId()
 	if err != nil {
-		tx.Rollback()
+		if localTx {
+			tx.Rollback()
+		}
 		return instrId, fmt.Errorf("failed store instrument: %w", err)
 	}
 
 	// link instrument with kit
 	res, err = tx.Exec("insert into kit_instrument(kit, instrument) values(:kit, :instr)", kitId, instrId)
 	if err != nil {
-		tx.Rollback()
+		if localTx {
+			tx.Rollback()
+		}
 		return instrId, fmt.Errorf("failed store instrument: %w", err)
 	}
 
@@ -112,11 +122,15 @@ func (d *Sqlite) StoreInstrument(kitId int64, instr *m.Instrument) (instrId int6
 
 		res, err = tx.NamedExec("insert into instrument_tag(instrument, name) values(:instrument, :name)", instrdb.tagList)
 		if err != nil {
-			tx.Rollback()
+			if localTx {
+				tx.Rollback()
+			}
 			return instrId, fmt.Errorf("failed store instrument tags: %w", err)
 		}
 	}
-	tx.Commit()
+	if localTx {
+		tx.Commit()
+	}
 
 	return instrId, nil
 }
