@@ -1,4 +1,11 @@
 -- +goose Up
+/*
+  iscustom = false - for kit, loaded with instrument samples. 
+      Not custom kit always includes instruments with samples.
+  iscustom = true - for kit, that uses preloaded kits (non custom) and instrument. 
+      Custom kit doesn't have it's own instrument. 
+      Custom kit is linked to preloaded instrument by preset.
+*/
 create table if not exists kit (
   id          integer primary key autoincrement,
   uid         varchar(36) unique not null,

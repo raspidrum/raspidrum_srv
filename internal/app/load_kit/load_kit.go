@@ -44,12 +44,14 @@ func LoadKit(path string, db *db.Sqlite) (kitId int64, err error) {
 	// store kit and instrument in one transaction
 	err = db.RunInTx(func(tx *sqlx.Tx) error {
 		// store kit
-		uuid, err := u.NewV7()
-		if err != nil {
-			return fmt.Errorf("failed gen uuid for kit: %w", err)
-		}
 		kit := items[kitKey].(*m.Kit)
-		kit.Uid = uuid.String()
+		if len(kit.Uid) == 0 {
+			uuid, err := u.NewV7()
+			if err != nil {
+				return fmt.Errorf("failed gen uuid for kit: %w", err)
+			}
+			kit.Uid = uuid.String()
+		}
 		kitId, err = db.StoreKit(tx, kit)
 		if err != nil {
 			return err
@@ -61,12 +63,14 @@ func LoadKit(path string, db *db.Sqlite) (kitId int64, err error) {
 			if k == kitKey {
 				continue
 			}
-			uuid, err = u.NewV7()
-			if err != nil {
-				return fmt.Errorf("failed gen uuid for instrument: %w", err)
-			}
 			insrt := v.(*m.Instrument)
-			insrt.Uid = uuid.String()
+			if len(insrt.Uid) == 0 {
+				uuid, err := u.NewV7()
+				if err != nil {
+					return fmt.Errorf("failed gen uuid for instrument: %w", err)
+				}
+				insrt.Uid = uuid.String()
+			}
 			_, err = db.StoreInstrument(tx, kitId, insrt)
 			if err != nil {
 				return err

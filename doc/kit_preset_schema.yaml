@@ -1,0 +1,135 @@
+# TODO:
+# + store channel preset: volume, pan, fx
+# - agg instrument controls, if its has same control, e.g. snare and snare rimshot has same mide CC for pan, pitch and decay
+schemas:
+- $id: /schemas/kit_preset
+  title: Kit Preset
+  type: object
+  required: 
+    - uuid
+    - name
+    - kit
+    - instruments
+  properties:
+    uuid:
+      type: string
+    name:
+      type: string
+      description: kit preset name
+    kit: 
+      type: object
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+    channels:
+      type: array
+      item:
+        $ref: /schemas/channel
+    instruments:
+      type: array
+      item: 
+        $ref: /schemas/preset_instrument
+
+- $id: /schemas/channel
+  title: Sampler channel
+  type: object
+  required:
+    - key
+    - name
+    - controls
+  properties:
+    key:
+      type: string
+      description: sampler channel number
+    name:
+      type: string
+      description: user defined name. E.g. "Kick", "Toms", "Cymbals"
+    controls:
+      type: array
+      item:
+        $ref: /schemas/control
+
+
+- $id: /schemas/preset_instrument
+  title: Instrument included to kit preset
+  type: object
+  required:
+    - instrument
+    - name
+    - controls
+  properties:
+    channelKey:
+      type: integer
+      description: |
+        Channel key number. Instruments with same channel key is loaded in same sampler channel. 
+        Instruments without channel key is loaded in one sampler channel.
+    instrument:
+      type: object
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+    name:
+      type: string
+      description: user defined name. May differ from instrument name
+    midiKey:
+      type: string
+      description: midi note number
+    controls:
+      type: array
+      item:
+        $ref: /schemas/control
+    layers:
+      type: array
+      item:
+        $ref: /schemas/layer
+
+- $id: /schemas/layer
+  title: Instrument preset layer
+  required:
+    - name
+  # TODO: for ui model contains key
+  properties:
+    name:
+      type: string
+    midiKey:
+      type: string
+      description: midi note number
+    controls:
+      type: array
+      item:
+        $ref: /schemas/control
+
+# May be:
+#  - real control - Only for one sampler control. Send direct MIDI CC message
+#  - virtual control - One control for many real sampler controls, eg. volume of all layers hi-hat cymbal. 
+#         Calculate value for each layer control and send different MIDI CC message to real sampler controls.
+#  - sampler control - Control events send to sampler api
+# midiCC may be for instrument or layer control. If absent, then control is virtual. It depends on loading instrument in sampler.
+# In example, if two instruments with some layers loaded into one sampler channel, then control volume of one instrument - virtual control.
+# If two instrument with some layers loaded into separate sampler channels, then control volume of one instrument - sampler control.
+- $id: /schemas/control
+  title: Control
+  description: Instrument or layer control
+  type: object
+  required:
+    - name
+    - type
+    - value
+  properties:
+    name:
+      type: string
+    type:
+      enum:
+        - pitch
+        - volume
+        - pan
+        - other
+    midiCC:
+      type: string
+      description: Midi CC number, linked to instrument control key. Absent for virtual controls
+    value:
+      type: float

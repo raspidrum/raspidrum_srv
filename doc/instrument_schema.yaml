@@ -13,6 +13,8 @@ schemas:
         - type
         - subtype
       properties:
+        UUID:
+          type: string
         instrumentKey:
           description: |
             Unique instrument key in kit. 

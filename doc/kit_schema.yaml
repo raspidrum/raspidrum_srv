@@ -10,6 +10,8 @@ schemas:
       required:
         - name
       properties:
+        UUID:
+          type: string
         name:
           description: Short name of drum kit
           type: string

@@ -1,0 +1,297 @@
+uuid: 0195fad1-6bd6-765a-8a25-6be0bd03e9ce
+name: SMDrums 1
+kit:
+  uuid: 0195efff-eb8e-78d9-9be3-bf8dde7bbf0a
+channels:
+  - key: 1
+    name: Kick
+    controls:
+      - name: Volume
+        type: volume
+        value: 1.0
+  - key: 2
+    name: Snare
+    controls:
+      - name: Volume
+        type: volume
+        value: 1.0
+  - key: 3
+    name: Hi-Hat
+    controls:
+      - name: Volume
+        type: volume
+        value: 1.0
+  - key: 4
+    name: Toms
+    controls:
+      - name: Volume
+        type: volume
+        value: 1.0
+  - key: 5
+    name: Cymbals
+    controls:
+      - name: Volume
+        type: volume
+        value: 1.0  
+      
+instruments:
+  # kick
+  - instrument:
+      uuid: 0195efff-eb8f-737a-a31d-195f5cc1586e
+    name: Kick
+    channelKey: 1
+    midiKey: kick1
+    controls:
+      - name: Volume
+        type: volume
+        midiCC: 70
+        value: 95
+      - name: Pitch
+        type: pitch
+        midiCC: 20
+        value: 63
+      - name: Decay
+        type: other
+        midiCC: 21
+        value: 0
+  # snare group instruments
+  - instrument:
+    # snare65reg
+      uuid: 0195efff-eb8f-74ba-9a13-3be6ffa5e666	
+    name: Snare
+    channelKey: 2
+    midiKey: snare
+    controls:
+      - name: Volume
+        type: volume
+        midiCC: 22
+        value: 95
+      - name: Pan
+        type: pan
+        midiCC: 80
+        value: 64
+      - name: Pitch
+        type: pitch
+        midiCC: 36
+        value: 63
+      - name: Decay
+        type: other
+        midiCC: 37
+        value: 0
+  - instrument:
+    # rimshot
+      uuid: 0195efff-eb8f-7639-9e8f-e18356af4a1f	
+    name: Rim Shot
+    channelKey: 2
+    midiKey: snare_rimshot
+    controls:
+      - name: Volume
+        type: volume
+        midiCC: 75
+        value: 95
+      - name: Pan
+        type: pan
+        midiCC: 80
+        value: 64
+      - name: Pitch
+        type: pitch
+        midiCC: 36
+        value: 63
+      - name: Decay
+        type: other
+        midiCC: 37
+        value: 0
+  
+  # toms group
+  - instrument:
+    # tom1
+      uuid: 0195efff-eb8f-74fd-a3ee-9a20a85fdfa7
+    name: Hi Tom
+    channelKey: 4
+    midiKey: tom1
+    controls:
+      - name: Volume
+        type: volume
+        midiCC: 115
+        value: 95
+      - name: Pan
+        type: pan
+        midiCC: 116
+        value: 64
+      - name: Pitch
+        type: pitch
+        midiCC: 56
+        value: 63
+      - name: Decay
+        type: other
+        midiCC: 57
+        value: 0
+  - instrument:
+    # tom2
+      uuid: 0195efff-eb8f-77e3-8da6-dec7da389977
+    name: Mid Tom
+    channelKey: 4
+    midiKey: tom2
+    controls:
+      - name: Volume
+        type: volume
+        midiCC: 113
+        value: 95
+      - name: Pan
+        type: pan
+        midiCC: 114
+        value: 64
+      - name: Pitch
+        type: pitch
+        midiCC: 54
+        value: 63
+      - name: Decay
+        type: other
+        midiCC: 55
+        value: 0
+  - instrument:
+    # tom4
+      uuid: 0195efff-eb8f-7680-9d57-bd078858e72c
+    name: Floor Tom
+    channelKey: 4
+    midiKey: tom4
+    controls:
+      - name: Volume
+        type: volume
+        midiCC: 109
+        value: 95
+      - name: Pan
+        type: pan
+        midiCC: 110
+        value: 64
+      - name: Pitch
+        type: pitch
+        midiCC: 50
+        value: 63
+      - name: Decay
+        type: other
+        midiCC: 51
+        value: 0
+
+  # hi-hat
+  - instrument:
+      uuid: 0195efff-eb8f-72af-847e-e9322cefe203
+    name: Hi-Hat
+    channelKey: 3
+    controls:
+      - name: Pitch
+        type: pitch
+        midiCC: 42
+        value: 64
+      - name: Decay
+        type: other
+        midiCC: 43
+        value: 0
+      - name: Pan
+        type: pan
+        midiCC: 92
+        value: 64 
+    layers:
+      - name: Closed
+        midiKey: hihat_close
+        controls:
+          - name: Volume
+            type: volume
+            midiCC: 81
+            value: 95
+      - name: Open
+        midiKey: hihat_open
+        controls:
+          - name: Volume
+            type: volume
+            midiCC: 85
+            value: 95
+      - name: Loose
+        midiKey: hihat_loose
+        controls:
+          - name: Volume
+            type: volume
+            midiCC: 83
+            value: 95
+      - name: Foot open
+        midiKey: hihat_foot_open
+        controls:
+          - name: Volume
+            type: volume
+            midiCC: 89
+            value: 95
+      - name: Foot
+        midiKey: hihat_foot_close
+        controls:
+          - name: Volume
+            type: volume
+            midiCC: 87
+            value: 95
+      - name: Splash
+        midiKey: hihat_splash
+        controls:
+          - name: Volume
+            type: volume
+            midiCC: 91
+            value: 95       
+
+  # cymbals group
+  - instrument:
+    # ride20
+      uuid: 0195efff-eb8f-758d-9a82-f3179ab6170d
+    name: Ride
+    channelKey: 5
+    controls:
+      - name: Pitch
+        type: pitch
+        midiCC: 16
+        value: 64
+      - name: Decay
+        type: other
+        midiCC: 17
+        value: 0.0
+      - name: Pan
+        type: pan
+        midiCC: 105
+        value: 64
+    layers:
+      - name: Edge
+        midiKey: ride1_edge
+        controls:
+          - name: Volume
+            type: volume
+            midiCC: 103
+            value: 95
+      - name: Bell
+        midiKey: ride1_bell
+        controls:
+          - name: Volume
+            type: volume
+            midiCC: 104
+            value: 95
+  - instrument:
+    # crash15
+      uuid: 0195efff-eb8e-7f3a-8f81-f812b3b01383
+    name: Crash
+    channelKey: 5
+    controls:
+      - name: Volume
+        type: volume
+        midiCC: 93
+        value: 95
+      - name: Pitch
+        type: pitch
+        midiCC: 26
+        value: 64
+      - name: Decay
+        type: other
+        midiCC: 27
+        value: 0.0
+      - name: Pan
+        type: pan
+        midiCC: 94
+        value: 64
+
+          
+
+

@@ -1,8 +1,9 @@
-package file
+package model
 
+// TODO: make maps for Controls and Layers
 type Instrument struct {
 	Id            int64
-	Uid           string
+	Uid           string     `yaml:"UUID"`
 	InstrumentKey string     `yaml:"instrumentKey"`
 	Name          string     `yaml:"name"`
 	FullName      string     `yaml:"fullName,omitempty"`

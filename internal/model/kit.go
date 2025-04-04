@@ -1,8 +1,8 @@
-package file
+package model
 
 type Kit struct {
 	Id          int64
-	Uid         string
+	Uid         string   `yaml:"UUID"`
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description,omitempty"`
 	Copyright   string   `yaml:"copyright,omitempty"`
