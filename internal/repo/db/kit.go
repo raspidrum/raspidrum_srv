@@ -49,7 +49,7 @@ func (d *Sqlite) ListKits() (*[]m.Kit, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed sql: %w", err)
 		}
-		kits = append(kits, *DbToKit(&kit))
+		kits = append(kits, *dbToKit(&kit))
 	}
 	return &kits, nil
 }

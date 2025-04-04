@@ -1,12 +1,15 @@
 package model
 
 type KitPreset struct {
-	Kit struct {
-		Uid string `yaml:"uuid"`
-	} `yaml:"kit"`
+	Uid         string             `yaml:"uuid,omitempty"`
+	Kit         KitRef             `yaml:"kit"`
 	Name        string             `yaml:"name"`
 	Channels    []PresetChannel    `yaml:"channels"`
 	Instruments []PresetInstrument `yaml:"instruments"`
+}
+
+type KitRef struct {
+	Uid string `yaml:"uuid"`
 }
 
 type PresetChannel struct {
@@ -16,9 +19,7 @@ type PresetChannel struct {
 }
 
 type PresetInstrument struct {
-	Instrument struct {
-		Uid string `yaml:"uuid"`
-	} `yaml:"instrument"`
+	Instrument InstrumentRef   `yaml:"instrument"`
 	Name       string          `yaml:"name"`
 	ChannelKey string          `yaml:"channelKey"`
 	MidiKey    string          `yaml:"midiKey,omitempty"`
@@ -26,15 +27,19 @@ type PresetInstrument struct {
 	Layers     []PresetLayer   `yaml:"layers"`
 }
 
+type InstrumentRef struct {
+	Uid string `yaml:"uuid"`
+}
+
 type PresetLayer struct {
-	Name     string          `yaml:"name"`
-	MidiKey  string          `yaml:"midiKey,omitempty"`
-	Controls []PresetControl `yaml:"controls"`
+	Name     string          `yaml:"name" json:"name"`
+	MidiKey  string          `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
+	Controls []PresetControl `yaml:"controls" json:"controls"`
 }
 
 type PresetControl struct {
-	Name   string  `yaml:"name"`
-	Type   string  `yaml:"type"`
-	MidiCC int     `yaml:"midiCC,omitempty"`
-	Value  float32 `yaml:"value"`
+	Name   string  `yaml:"name" json:"name"`
+	Type   string  `yaml:"type" json:"type"`
+	MidiCC int     `yaml:"midiCC,omitempty" json:"midiCC,omitempty"`
+	Value  float32 `yaml:"value" json:"value"`
 }

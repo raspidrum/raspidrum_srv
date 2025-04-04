@@ -66,7 +66,7 @@ func (d *Sqlite) ListInstruments(conds ...Condition) (*[]m.Instrument, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed ListInstruments: %w", err)
 		}
-		ins = append(ins, *DbToInstrument(&instr))
+		ins = append(ins, *dbToInstrument(&instr))
 	}
 	return &ins, nil
 }

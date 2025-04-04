@@ -11,10 +11,11 @@ create table if not exists kit_preset (
 create table if not exists preset_channel (
   id          integer primary key autoincrement,
   preset      integer not null,
-  key         integer not null,
+  key         varchar(16) not null,
   name        varchar(16) not null,
-  controls    text,
-  foreign key (preset) references kit_preset(id) on delete cascade
+  controls    text not null,
+  foreign key (preset) references kit_preset(id) on delete cascade,
+  unique (preset, key)
 );
 
 create table if not exists preset_instrument (
@@ -23,12 +24,13 @@ create table if not exists preset_instrument (
   channel     integer not null,
   instrument  integer not null,
   name        varchar(16) not null,
-  midiKey     varchar(16),
-  controls    text,
+  midikey     varchar(16),
+  controls    text not null,
   layers      text,
   foreign key (preset) references kit_preset(id) on delete cascade,
   foreign key (instrument) references instrument(id) on delete restrict,
-  foreign key (channel) references preset_channel(id) on delete cascade
+  foreign key (channel) references preset_channel(id) on delete cascade,
+  unique (preset, name)
 );
 
 

@@ -5,8 +5,7 @@ schemas:
 - $id: /schemas/kit_preset
   title: Kit Preset
   type: object
-  required: 
-    - uuid
+  required:
     - name
     - kit
     - instruments

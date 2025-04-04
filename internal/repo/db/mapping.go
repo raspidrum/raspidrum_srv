@@ -29,7 +29,7 @@ func kitToDb(kit *m.Kit) *KitDb {
 	}
 }
 
-func DbToKit(kit *KitDb) *m.Kit {
+func dbToKit(kit *KitDb) *m.Kit {
 	var tgl []string
 	if kit.Tags.Valid {
 		tgl = strings.Split(kit.Tags.String, ",")
@@ -101,7 +101,7 @@ func instrumentToDb(instr *m.Instrument) *Instr {
 	return &res
 }
 
-func DbToInstrument(ins *Instr) *m.Instrument {
+func dbToInstrument(ins *Instr) *m.Instrument {
 	var tgl []string
 	if ins.Tags.Valid {
 		tgl = strings.Split(ins.Tags.String, ",")
@@ -133,7 +133,7 @@ func DbToInstrument(ins *Instr) *m.Instrument {
 	}
 
 	if ins.Controls.Valid && len(ins.Controls.String) > 0 {
-		var ctrls []m.Controls
+		var ctrls []m.Control
 		err := json.Unmarshal([]byte(ins.Controls.String), &ctrls)
 		if err != nil {
 			slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument controls from json due loading from db: %w", err)))
@@ -152,4 +152,120 @@ func DbToInstrument(ins *Instr) *m.Instrument {
 
 	return &res
 
+}
+
+func kitPresetToDb(pst *m.KitPreset) *KitPrst {
+	res := KitPrst{
+		Uid:    pst.Uid,
+		KitUid: pst.Kit.Uid,
+		Name:   pst.Name,
+	}
+	// channels
+	chs := make([]PrstChnl, len(pst.Channels))
+	for i, v := range pst.Channels {
+		chs[i] = PrstChnl{
+			Key: v.Name,
+		}
+		// marshal controls to json
+		if len(v.Controls) > 0 {
+			ctrs, err := json.Marshal(v.Controls)
+			if err != nil {
+				slog.Error(fmt.Sprint(fmt.Errorf("failed convert to json channel controls due storing to db: %w", err)))
+			}
+			chs[i].Controls = string(ctrs)
+		}
+	}
+	res.Channels = chs
+
+	// instruments
+	ins := make([]PrtsInstr, len(pst.Instruments))
+	for i, v := range pst.Instruments {
+		ins[i] = PrtsInstr{
+			InstrUid: v.Instrument.Uid,
+			Name:     v.Name,
+		}
+		if len(v.MidiKey) > 0 {
+			ins[i].MidiKey = sql.NullString{Valid: true, String: v.MidiKey}
+		}
+		// marshal controls to json
+		if len(v.Controls) > 0 {
+			ctrs, err := json.Marshal(v.Controls)
+			if err != nil {
+				slog.Error(fmt.Sprint(fmt.Errorf("failed convert to json instrument controls due storing to db: %w", err)))
+			}
+			ins[i].Controls = string(ctrs)
+		}
+		// marshal layers to json
+		if len(v.Controls) > 0 {
+			lrs, err := json.Marshal(v.Layers)
+			if err != nil {
+				slog.Error(fmt.Sprint(fmt.Errorf("failed convert to json instrument layers due storing to db: %w", err)))
+			}
+			ins[i].Layers = sql.NullString{Valid: true, String: string(lrs)}
+		}
+	}
+	res.Instruments = ins
+
+	return &res
+}
+
+func dbToKitPreset(pst *KitPrst) *m.KitPreset {
+	res := m.KitPreset{
+		Uid: pst.Uid,
+		Kit: m.KitRef{
+			Uid: pst.KitUid,
+		},
+		Name: pst.Name,
+	}
+	// channels
+	chs := make([]m.PresetChannel, len(pst.Channels))
+	for i, v := range pst.Channels {
+		chs[i] = m.PresetChannel{
+			Key:  v.Key,
+			Name: v.Name,
+		}
+		if len(v.Controls) > 0 {
+			var ctrls []m.PresetControl
+			err := json.Unmarshal([]byte(v.Controls), &ctrls)
+			if err != nil {
+				slog.Error(fmt.Sprint(fmt.Errorf("failed convert channel controls from json due loading from db: %w", err)))
+			}
+			chs[i].Controls = ctrls
+		}
+	}
+	res.Channels = chs
+
+	//instruments
+	ins := make([]m.PresetInstrument, len(pst.Instruments))
+	for i, v := range pst.Instruments {
+		ins[i] = m.PresetInstrument{
+			Instrument: m.InstrumentRef{
+				Uid: v.InstrUid,
+			},
+			Name:       v.Name,
+			ChannelKey: v.ChannelKey,
+		}
+		if v.MidiKey.Valid {
+			ins[i].MidiKey = v.MidiKey.String
+		}
+		if len(v.Controls) > 0 {
+			var ctrls []m.PresetControl
+			err := json.Unmarshal([]byte(v.Controls), &ctrls)
+			if err != nil {
+				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument controls from json due loading from db: %w", err)))
+			}
+			ins[i].Controls = ctrls
+		}
+		if v.Layers.Valid && len(v.Layers.String) > 0 {
+			var lrs []m.PresetLayer
+			err := json.Unmarshal([]byte(v.Layers.String), &lrs)
+			if err != nil {
+				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument layers from json due loading from db: %w", err)))
+			}
+			ins[i].Layers = lrs
+		}
+	}
+	res.Instruments = ins
+
+	return &res
 }
