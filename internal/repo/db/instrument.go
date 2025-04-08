@@ -134,3 +134,89 @@ func (d *Sqlite) StoreInstrument(tx *sqlx.Tx, kitId int64, instr *m.Instrument) 
 
 	return instrId, nil
 }
+
+func (d *Sqlite) getInstrumentsByUid(tx *sqlx.Tx, uids []string, fields ...string) (*map[string]Instr, error) {
+	fs := mapInstrFields(fields)
+	// add required fields
+	fs["uid"] = void{}
+	fs["id"] = void{}
+
+	var err error
+	localTx := tx == nil
+	if localTx {
+		tx, err = d.Db.Beginx()
+		if err != nil {
+			return nil, fmt.Errorf("failed getInstrumentsByUid: %w", err)
+		}
+	}
+
+	sql := fmt.Sprintf("select %s from instrument where uid in (?)", flatFieldMap(fs))
+	sql, args, err := sqlx.In(sql, uids)
+	if err != nil {
+		if localTx {
+			tx.Rollback()
+		}
+		return nil, fmt.Errorf("failed getInstrumentsByUid: %w", err)
+	}
+	rows, err := tx.Queryx(sql, args...)
+	if err != nil {
+		if localTx {
+			tx.Rollback()
+		}
+		return nil, fmt.Errorf("failed getInstrumentsByUid: %w", err)
+	}
+	var dberr error
+	defer func() {
+		rows.Close()
+		if localTx {
+			if dberr != nil {
+				tx.Rollback()
+			} else {
+				tx.Commit()
+			}
+		}
+	}()
+
+	res := make(map[string]Instr, 0)
+	for rows.Next() {
+		instr := Instr{}
+		dberr = rows.StructScan(&instr)
+		if dberr != nil {
+			return nil, fmt.Errorf("failed getInstrumentsByUid: %w", err)
+		}
+		res[instr.Uid] = instr
+	}
+
+	return &res, nil
+}
+
+// map field name to real field name in db
+// must be used for prevent sql-injection
+func mapInstrFields(fields []string) fieldMap {
+	// key: logical field name
+	// value: real db field name
+	dbFields := map[string]string{
+		"id":          "id",
+		"uuid":        "uid",
+		"key":         "key",
+		"name":        "name",
+		"fullname":    "fullname",
+		"type":        "type",
+		"subtype":     "subtype",
+		"midikey":     "midikey",
+		"description": "description",
+		"copyright":   "copyright",
+		"licence":     "licence",
+		"credits":     "credits",
+		"controls":    "controls",
+		"layers":      "layers",
+	}
+	// input fields may be incorrect (missing in map). That's why res init with 0 length
+	res := make(map[string]void, 0)
+	for _, v := range fields {
+		if vr, ok := dbFields[v]; ok {
+			res[vr] = void{}
+		}
+	}
+	return res
+}

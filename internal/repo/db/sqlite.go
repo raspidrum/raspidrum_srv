@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -11,6 +12,9 @@ import (
 
 // TODO: move to config
 const dbname = "kits.sqlite3"
+
+type void struct{}
+type fieldMap map[string]void
 
 type Sqlite struct {
 	Db *sqlx.DB
@@ -47,4 +51,14 @@ func (d *Sqlite) RunInTx(fn func(tx *sqlx.Tx) error) error {
 	}
 
 	return err
+}
+
+func flatFieldMap(fs fieldMap) string {
+	fss := make([]string, len(fs))
+	i := 0
+	for k, _ := range fs {
+		fss[i] = k
+		i++
+	}
+	return strings.Join(fss, ",")
 }
