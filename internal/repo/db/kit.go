@@ -103,3 +103,79 @@ func (d *Sqlite) StoreKit(tx *sqlx.Tx, kit *m.Kit) (kitId int64, err error) {
 
 	return kitId, nil
 }
+
+func (d *Sqlite) getKitByUid(tx *sqlx.Tx, uids []string, fields ...string) (*map[string]KitDb, error) {
+	fs := mapInstrFields(fields)
+	// add required fields
+	fs["uid"] = void{}
+	fs["id"] = void{}
+
+	var err error
+	localTx := tx == nil
+	if localTx {
+		tx, err = d.Db.Beginx()
+		if err != nil {
+			return nil, fmt.Errorf("failed getKitByUid: %w", err)
+		}
+	}
+
+	sql := fmt.Sprintf("select %s from kit where uid in (?)", flatFieldMap(fs))
+	sql, args, err := sqlx.In(sql, uids)
+	if err != nil {
+		if localTx {
+			tx.Rollback()
+		}
+		return nil, fmt.Errorf("failed getKitByUid: %w", err)
+	}
+	rows, err := tx.Queryx(sql, args...)
+	if err != nil {
+		if localTx {
+			tx.Rollback()
+		}
+		return nil, fmt.Errorf("failed getKitByUid: %w", err)
+	}
+	var dberr error
+	defer func() {
+		rows.Close()
+		if localTx {
+			if dberr != nil {
+				tx.Rollback()
+			} else {
+				tx.Commit()
+			}
+		}
+	}()
+
+	res := make(map[string]KitDb, 0)
+	for rows.Next() {
+		kit := KitDb{}
+		dberr = rows.StructScan(&kit)
+		if dberr != nil {
+			return nil, fmt.Errorf("failed getKitByUid: %w", err)
+		}
+		res[kit.Uid] = kit
+	}
+
+	return &res, nil
+}
+
+func mapKitFields(fields []string) fieldMap {
+	dbFields := map[string]string{
+		"id":          "id",
+		"uuid":        "uid",
+		"name":        "name",
+		"iscustom":    "iscustom",
+		"description": "description",
+		"copyright":   "copyright",
+		"licence":     "licence",
+		"credits":     "credits",
+		"url":         "url",
+	}
+	res := make(fieldMap, 0)
+	for _, v := range fields {
+		if vr, ok := dbFields[v]; ok {
+			res[vr] = void{}
+		}
+	}
+	return res
+}

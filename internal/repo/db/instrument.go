@@ -212,7 +212,7 @@ func mapInstrFields(fields []string) fieldMap {
 		"layers":      "layers",
 	}
 	// input fields may be incorrect (missing in map). That's why res init with 0 length
-	res := make(map[string]void, 0)
+	res := make(fieldMap, 0)
 	for _, v := range fields {
 		if vr, ok := dbFields[v]; ok {
 			res[vr] = void{}
