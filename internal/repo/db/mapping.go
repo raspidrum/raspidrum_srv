@@ -164,7 +164,8 @@ func kitPresetToDb(pst *m.KitPreset) *KitPrst {
 	chs := make([]PrstChnl, len(pst.Channels))
 	for i, v := range pst.Channels {
 		chs[i] = PrstChnl{
-			Key: v.Name,
+			Key:  v.Key,
+			Name: v.Name,
 		}
 		// marshal controls to json
 		if len(v.Controls) > 0 {
@@ -181,8 +182,9 @@ func kitPresetToDb(pst *m.KitPreset) *KitPrst {
 	ins := make([]PrtsInstr, len(pst.Instruments))
 	for i, v := range pst.Instruments {
 		ins[i] = PrtsInstr{
-			InstrUid: v.Instrument.Uid,
-			Name:     v.Name,
+			InstrUid:   v.Instrument.Uid,
+			Name:       v.Name,
+			ChannelKey: v.ChannelKey,
 		}
 		if len(v.MidiKey) > 0 {
 			ins[i].MidiKey = sql.NullString{Valid: true, String: v.MidiKey}
@@ -196,7 +198,7 @@ func kitPresetToDb(pst *m.KitPreset) *KitPrst {
 			ins[i].Controls = string(ctrs)
 		}
 		// marshal layers to json
-		if len(v.Controls) > 0 {
+		if len(v.Layers) > 0 {
 			lrs, err := json.Marshal(v.Layers)
 			if err != nil {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert to json instrument layers due storing to db: %w", err)))

@@ -105,7 +105,7 @@ func (d *Sqlite) StoreKit(tx *sqlx.Tx, kit *m.Kit) (kitId int64, err error) {
 }
 
 func (d *Sqlite) getKitByUid(tx *sqlx.Tx, uids []string, fields ...string) (*map[string]KitDb, error) {
-	fs := mapInstrFields(fields)
+	fs := mapKitFields(fields)
 	// add required fields
 	fs["uid"] = void{}
 	fs["id"] = void{}

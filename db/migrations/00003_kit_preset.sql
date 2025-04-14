@@ -37,4 +37,6 @@ create table if not exists preset_instrument (
 -- +goose Down
 drop table preset_instrument;
 
+drop table preset_channel;
+
 drop table kit_preset;

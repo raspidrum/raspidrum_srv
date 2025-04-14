@@ -27,7 +27,7 @@ func ParseYAMLDir(dir string) (map[string]interface{}, error) {
 			return nil
 		}
 
-		parsed, err := parseYAMLFile(filepath)
+		parsed, err := parseKitInstrument(filepath)
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ func ParseYAMLDir(dir string) (map[string]interface{}, error) {
 }
 
 // Parse yaml file with kit or instrument
-func parseYAMLFile(path string) (interface{}, error) {
+func parseKitInstrument(path string) (interface{}, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file %s: %w", path, err)
