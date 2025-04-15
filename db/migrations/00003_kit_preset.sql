@@ -5,7 +5,8 @@ create table if not exists kit_preset (
   kit         integer not null,
   name        varchar(128) not null,
   foreign key (kit) references kit(id) on delete cascade,
-  unique (kit, name)
+  unique (kit, name),
+  unique (kit, uid)
 );
 
 create table if not exists preset_channel (

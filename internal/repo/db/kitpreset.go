@@ -94,31 +94,43 @@ func (d *Sqlite) StorePreset(tx *sqlx.Tx, preset *m.KitPreset) (presetId int64, 
 	}
 
 	// store kit preset
-	sql := `insert into kit_preset(uid, kit, name) values(:uid, :kit, :name)`
-	res, err := tx.NamedExec(sql, pstDb)
+	sql := `insert into kit_preset(uid, kit, name) values(:uid, :kit, :name)
+	on conflict (id) do update set name = excluded.name, uid = excluded.uid
+	on conflict (uid) do update set name = excluded.name
+	returning id`
+	rows, err := tx.NamedQuery(sql, pstDb)
 	if err != nil {
 		return presetId, fmt.Errorf("failed store kit preset: %w", err)
 	}
-	presetId, err = res.LastInsertId()
-	if err != nil {
-		return presetId, fmt.Errorf("failed store kit preset: %w", err)
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&presetId)
+		if err != nil {
+			return presetId, fmt.Errorf("failed store kit preset: %w", err)
+		}
 	}
 
 	// store preset channels
-	sql = `insert into preset_channel(preset, key, name, controls) values(:preset, :key, :name, :controls)`
+	sql = `insert into preset_channel(preset, key, name, controls) values(:preset, :key, :name, :controls) 
+	on conflict (id) do update set preset = excluded.preset, key = excluded.key, name = excluded.name, controls = excluded.controls
+	on conflict (preset, key) do update set name = excluded.name, controls = excluded.controls
+	returning id`
 	chnls := make(map[string]int64, len(pstDb.Channels))
 	for i, v := range pstDb.Channels {
 		pstDb.Channels[i].PresetId = presetId
-		res, err = tx.NamedExec(sql, pstDb.Channels[i])
+		rows, err := tx.NamedQuery(sql, pstDb.Channels[i])
 		if err != nil {
 			return presetId, fmt.Errorf("failed store channel with key: %s of kit preset: %w", v.Key, err)
 		}
-		chnlId, err := res.LastInsertId()
-		if err != nil {
-			return presetId, fmt.Errorf("failed store channel with key: %s of kit preset: %w", v.Key, err)
+		defer rows.Close()
+		for rows.Next() {
+			var chnId int64
+			err := rows.Scan(&chnId)
+			if err != nil {
+				return presetId, fmt.Errorf("failed store channel with key: %s of kit preset: %w", v.Key, err)
+			}
+			chnls[v.Key] = chnId
 		}
-		//pstDb.Channels[i].Id = chnlId
-		chnls[v.Key] = chnlId
 	}
 
 	// store preset instruments
@@ -130,8 +142,10 @@ func (d *Sqlite) StorePreset(tx *sqlx.Tx, preset *m.KitPreset) (presetId int64, 
 		}
 		pstDb.Instruments[i].ChannelId = chnlId
 	}
-	sql = `insert into preset_instrument(preset, channel, instrument, name, midikey, controls, layers) values(:preset, :channel, :instrument, :name, :midikey, :controls, :layers)`
-	res, err = tx.NamedExec(sql, pstDb.Instruments)
+	sql = `insert into preset_instrument(preset, channel, instrument, name, midikey, controls, layers) 
+	values(:preset, :channel, :instrument, :name, :midikey, :controls, :layers)
+	on conflict (preset, name) do update set channel = excluded.channel, instrument = excluded.instrument, midikey = excluded.midikey, controls = excluded.controls, layers = excluded.layers`
+	_, err = tx.NamedExec(sql, pstDb.Instruments)
 	if err != nil {
 		return presetId, fmt.Errorf("failed store instruments of kit preset: %w", err)
 	}
