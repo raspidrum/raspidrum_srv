@@ -9,7 +9,10 @@ type KitPreset struct {
 }
 
 type KitRef struct {
-	Uid string `yaml:"uuid"`
+	Id       int64  `yaml:"-"`
+	Uid      string `yaml:"uuid"`
+	Name     string `yaml:"-"`
+	IsCustom bool   `yaml:"-"`
 }
 
 type PresetChannel struct {
@@ -28,7 +31,13 @@ type PresetInstrument struct {
 }
 
 type InstrumentRef struct {
-	Uid string `yaml:"uuid"`
+	Id       int64     `yaml:"-"`
+	Uid      string    `yaml:"uuid"`
+	Key      string    `yaml:"-"`
+	Name     string    `yaml:"-"`
+	MidiKey  string    `yaml:"-"`
+	Controls []Control `yaml:"-"`
+	Layers   []Layer   `yaml:"-"`
 }
 
 type PresetLayer struct {

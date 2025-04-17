@@ -274,6 +274,7 @@ instruments:
       uuid: 0195efff-eb8e-7f3a-8f81-f812b3b01383
     name: Crash
     channelKey: 5
+    midiKey: crash1
     controls:
       - name: Volume
         type: volume

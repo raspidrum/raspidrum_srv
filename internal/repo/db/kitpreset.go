@@ -9,11 +9,16 @@ import (
 	m "github.com/raspidrum-srv/internal/model"
 )
 
+type KitBase struct {
+	KitId       int64  `db:"kit"`
+	KitUid      string `db:"kit_uid"`
+	KitName     string `db:"kit_name"`
+	KitIsCustom int    `db:"kit_iscustom"`
+}
 type KitPrst struct {
+	KitBase
 	Id          int64  `db:"id"`
 	Uid         string `db:"uid"`
-	KitUid      string
-	KitId       int64  `db:"kit"`
 	Name        string `db:"name"`
 	Channels    []PrstChnl
 	Instruments []PrtsInstr
@@ -27,13 +32,22 @@ type PrstChnl struct {
 	Controls string `db:"controls"`
 }
 
+type InstrBase struct {
+	InstrId       int64          `db:"instrument"`
+	InstrUid      string         `db:"instrument_uid"`
+	InstrKey      string         `db:"instrument_key"`
+	InstrName     string         `db:"instrument_name"`
+	InstrMidiKey  sql.NullString `db:"instrument_midikey"`
+	InstrControls sql.NullString `db:"instrument_controls"`
+	InstrLayers   sql.NullString `db:"instrument_layers"`
+}
+
 type PrtsInstr struct {
-	Id         int64  `db:"id"`
-	PresetId   int64  `db:"preset"`
-	ChannelId  int64  `db:"channel"`
-	ChannelKey string `db:"channel_key"`
-	InstrId    int64  `db:"instrument"`
-	InstrUid   string
+	InstrBase
+	Id         int64          `db:"id"`
+	PresetId   int64          `db:"preset"`
+	ChannelId  int64          `db:"channel"`
+	ChannelKey string         `db:"channel_key"`
 	Name       string         `db:"name"`
 	MidiKey    sql.NullString `db:"midikey"`
 	Controls   string         `db:"controls"`
@@ -154,4 +168,71 @@ func (d *Sqlite) StorePreset(tx *sqlx.Tx, preset *m.KitPreset) (presetId int64, 
 		tx.Commit()
 	}
 	return presetId, err
+}
+
+// Return minimal list of Kit Presets with minimal info
+func (d *Sqlite) ListPresets(conds ...Condition) (*[]m.KitPreset, error) {
+	sql_select := `select * from v_kit_preset`
+	sql_order := `order by name`
+	sql_where, args, err := buildConditions(conds...)
+	if err != nil {
+		return nil, fmt.Errorf("failed ListPresets: %w", err)
+	}
+	sql := fmt.Sprintf("%s %s %s", sql_select, sql_where, sql_order)
+	rows, err := d.Db.Queryx(sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed ListPresets: %w", err)
+	}
+	defer rows.Close()
+	psts := []m.KitPreset{}
+	for rows.Next() {
+		pst := KitPrst{}
+		err := rows.StructScan(&pst)
+		if err != nil {
+			return nil, fmt.Errorf("failed ListPresets: %w", err)
+		}
+		psts = append(psts, *dbToKitPreset(&pst))
+	}
+	return &psts, nil
+}
+
+func (d *Sqlite) GetPreset(conds ...Condition) (*m.KitPreset, error) {
+	if len(conds) == 0 {
+		return nil, fmt.Errorf("empty conditions")
+	}
+	// Get Preset overall info
+	sql_select := `select * from v_kit_preset`
+	sql_where, args, err := buildConditions(conds...)
+	if err != nil {
+		return nil, fmt.Errorf("failed GetPreset: %w", err)
+	}
+	sqlstmn := fmt.Sprintf("%s %s", sql_select, sql_where)
+
+	pst := KitPrst{}
+	err = d.Db.Get(&pst, sqlstmn, args...)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		} else {
+			return nil, fmt.Errorf("failed GetPreset: %w", err)
+		}
+	}
+
+	// Get Preset channels
+	sqlstmn = `select * from preset_channel where preset = :preset`
+	pst.Channels = []PrstChnl{}
+	err = d.Db.Select(&pst.Channels, sqlstmn, &pst.Id)
+	if err != nil {
+		return nil, fmt.Errorf("failed GetPreset: %w", err)
+	}
+
+	// Get Preset instruments
+	sqlstmn = `select * from v_preset_instrument where preset = :preset`
+	pst.Instruments = []PrtsInstr{}
+	err = d.Db.Select(&pst.Instruments, sqlstmn, &pst.Id)
+	if err != nil {
+		return nil, fmt.Errorf("failed GetPreset: %w", err)
+	}
+
+	return dbToKitPreset(&pst), nil
 }

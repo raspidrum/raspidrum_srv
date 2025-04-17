@@ -68,11 +68,12 @@ func instrumentToDb(instr *m.Instrument) *Instr {
 	res := Instr{
 		Id:          instr.Id,
 		Uid:         instr.Uid,
-		Key:         instr.InstrumentKey,
+		Key:         instr.Key,
 		Name:        instr.Name,
 		Fullname:    sql.NullString{Valid: true, String: instr.FullName},
 		Type:        instr.Type,
 		Subtype:     instr.SubType,
+		MidiKey:     sql.NullString{Valid: true, String: instr.MidiKey},
 		Description: sql.NullString{Valid: true, String: instr.Description},
 		Copyright:   sql.NullString{Valid: true, String: instr.Copyright},
 		Licence:     sql.NullString{Valid: true, String: instr.Licence},
@@ -108,16 +109,19 @@ func dbToInstrument(ins *Instr) *m.Instrument {
 	}
 
 	res := m.Instrument{
-		Id:            ins.Id,
-		Uid:           ins.Uid,
-		InstrumentKey: ins.Key,
-		Name:          ins.Name,
-		Type:          ins.Type,
-		SubType:       ins.Subtype,
-		Tags:          tgl,
+		Id:      ins.Id,
+		Uid:     ins.Uid,
+		Key:     ins.Key,
+		Name:    ins.Name,
+		Type:    ins.Type,
+		SubType: ins.Subtype,
+		Tags:    tgl,
 	}
 	if ins.Fullname.Valid {
 		res.FullName = ins.Fullname.String
+	}
+	if ins.MidiKey.Valid {
+		res.MidiKey = ins.MidiKey.String
 	}
 	if ins.Description.Valid {
 		res.Description = ins.Description.String
@@ -156,9 +160,11 @@ func dbToInstrument(ins *Instr) *m.Instrument {
 
 func kitPresetToDb(pst *m.KitPreset) *KitPrst {
 	res := KitPrst{
-		Uid:    pst.Uid,
-		KitUid: pst.Kit.Uid,
-		Name:   pst.Name,
+		Uid: pst.Uid,
+		KitBase: KitBase{
+			KitUid: pst.Kit.Uid,
+		},
+		Name: pst.Name,
 	}
 	// channels
 	chs := make([]PrstChnl, len(pst.Channels))
@@ -182,7 +188,9 @@ func kitPresetToDb(pst *m.KitPreset) *KitPrst {
 	ins := make([]PrtsInstr, len(pst.Instruments))
 	for i, v := range pst.Instruments {
 		ins[i] = PrtsInstr{
-			InstrUid:   v.Instrument.Uid,
+			InstrBase: InstrBase{
+				InstrUid: v.Instrument.Uid,
+			},
 			Name:       v.Name,
 			ChannelKey: v.ChannelKey,
 		}
@@ -215,7 +223,10 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 	res := m.KitPreset{
 		Uid: pst.Uid,
 		Kit: m.KitRef{
-			Uid: pst.KitUid,
+			Id:       pst.KitId,
+			Uid:      pst.KitUid,
+			Name:     pst.KitName,
+			IsCustom: pst.KitIsCustom == 1,
 		},
 		Name: pst.Name,
 	}
@@ -242,7 +253,10 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 	for i, v := range pst.Instruments {
 		ins[i] = m.PresetInstrument{
 			Instrument: m.InstrumentRef{
-				Uid: v.InstrUid,
+				Id:   v.InstrId,
+				Uid:  v.InstrUid,
+				Key:  v.InstrKey,
+				Name: v.InstrName,
 			},
 			Name:       v.Name,
 			ChannelKey: v.ChannelKey,
@@ -265,6 +279,27 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument layers from json due loading from db: %w", err)))
 			}
 			ins[i].Layers = lrs
+		}
+		if v.InstrMidiKey.Valid {
+			ins[i].Instrument.MidiKey = v.InstrMidiKey.String
+		}
+		// Instrument Controls
+		if v.InstrControls.Valid && len(v.InstrControls.String) > 0 {
+			var ictrls []m.Control
+			err := json.Unmarshal([]byte(v.InstrControls.String), &ictrls)
+			if err != nil {
+				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument controls ref from json due loading from db: %w", err)))
+			}
+			ins[i].Instrument.Controls = ictrls
+		}
+		// instrument Layers
+		if v.InstrLayers.Valid && len(v.InstrLayers.String) > 0 {
+			var ilrs []m.Layer
+			err := json.Unmarshal([]byte(v.InstrLayers.String), &ilrs)
+			if err != nil {
+				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument layers ref from json due loading from db: %w", err)))
+			}
+			ins[i].Instrument.Layers = ilrs
 		}
 	}
 	res.Instruments = ins

@@ -34,8 +34,23 @@ create table if not exists preset_instrument (
   unique (preset, name)
 );
 
+create view v_kit_preset as
+select p.*, k.uid as kit_uid, k.name as kit_name, k.iscustom as kit_iscustom
+  from kit_preset p
+  join kit k on p.kit = p.id;
+
+create view v_preset_instrument as
+select pi.*, chn.key as channel_key, 
+			 i.uid as instrument_uid, i.key as instrument_key, i.name as instrument_name,
+       i.midikey as instrument_midikey,
+			 i.controls as instrument_controls, i.layers as instrument_layers
+	from preset_instrument pi
+	join preset_channel chn on chn.preset = pi.preset and chn.id = pi.channel
+	join instrument i on i.id = pi.instrument;
 
 -- +goose Down
+drop view v_preset_instrument;
+
 drop table preset_instrument;
 
 drop table preset_channel;

@@ -10,6 +10,23 @@ import (
 // Where conditions
 type Condition func() (sql string, args []interface{}, err error)
 
+/*
+	 Can be used with:
+		ListInstruments
+		ListPresets
+*/
+func ByKitId(kit int64) Condition {
+	return Eq("kit", kit)
+}
+
+func ById(id int64) Condition {
+	return Eq("id", id)
+}
+
+func ByUid(uuid string) Condition {
+	return Eq("uid", uuid)
+}
+
 func Eq(field string, inargs ...interface{}) Condition {
 	return func() (sql string, args []interface{}, err error) {
 		return fmt.Sprintf("%s = ?", field), inargs, nil

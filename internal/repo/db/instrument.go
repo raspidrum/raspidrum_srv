@@ -71,16 +71,12 @@ func (d *Sqlite) ListInstruments(conds ...Condition) (*[]m.Instrument, error) {
 	return &ins, nil
 }
 
-func ByKitId(kit int) Condition {
-	return Eq("kit", kit)
-}
-
 // TODO: ON CONFLICT UPDATE
 func (d *Sqlite) StoreInstrument(tx *sqlx.Tx, kitId int64, instr *m.Instrument) (instrId int64, err error) {
 	localTx := tx == nil
 	instrdb := instrumentToDb(instr)
-	sql := `insert into instrument(uid, key, name, fullname, type, subtype, description, copyright, licence, credits, controls, layers)
-	values (:uid, :key, :name, :fullname, :type, :subtype, :description, :copyright, :licence, :credits, :controls, :layers)`
+	sql := `insert into instrument(uid, key, name, fullname, type, subtype, midikey, description, copyright, licence, credits, controls, layers)
+	values (:uid, :key, :name, :fullname, :type, :subtype, :midikey, :description, :copyright, :licence, :credits, :controls, :layers)`
 
 	if localTx {
 		tx, err = d.Db.Beginx()
