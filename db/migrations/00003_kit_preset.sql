@@ -49,6 +49,8 @@ select pi.*, chn.key as channel_key,
 	join instrument i on i.id = pi.instrument;
 
 -- +goose Down
+drop view v_kit_preset;
+
 drop view v_preset_instrument;
 
 drop table preset_instrument;

@@ -1,15 +1,9 @@
 package loadkit
 
 import (
-	"fmt"
-	"log/slog"
-	"os"
-	p "path"
 	"strings"
 
-	"github.com/goccy/go-yaml"
 	m "github.com/raspidrum-srv/internal/model"
-	f "github.com/raspidrum-srv/internal/repo/file"
 )
 
 /* Временное решение по преобразованию массивов controls и layers в map
@@ -96,87 +90,87 @@ type NewLayer struct {
 	ControlsMap map[string]m.Control `yaml:"controls,omitempty" json:"controls,omitempty"`
 }
 
-func TransformKitFormat(path string) error {
-	slog.Info("parse dir: " + path)
-	items, err := f.ParseYAMLDir(path)
-	if err != nil {
-		return fmt.Errorf("failed load kit files: %w", err)
-	}
+// func TransformKitFormat(path string) error {
+// 	slog.Info("parse dir: " + path)
+// 	items, err := f.ParseYAMLDir(path)
+// 	if err != nil {
+// 		return fmt.Errorf("failed load kit files: %w", err)
+// 	}
 
-	newdir := p.Join(path, "new")
-	if err := os.Mkdir(newdir, os.ModePerm); err != nil {
-		slog.Error(fmt.Sprintln(fmt.Errorf("failed create dir: %w", err)))
-	}
+// 	newdir := p.Join(path, "new")
+// 	if err := os.Mkdir(newdir, os.ModePerm); err != nil {
+// 		slog.Error(fmt.Sprintln(fmt.Errorf("failed create dir: %w", err)))
+// 	}
 
-	for k, v := range items {
-		switch v.(type) {
-		case *m.Instrument:
-			break
-		case *m.Kit:
-			continue
-		default:
-			continue
-		}
+// 	for k, v := range items {
+// 		switch v.(type) {
+// 		case *m.Instrument:
+// 			break
+// 		case *m.Kit:
+// 			continue
+// 		default:
+// 			continue
+// 		}
 
-		oldi := items[k].(*m.Instrument)
-		slog.Info(fmt.Sprintf("process: %s", oldi.Key))
+// 		oldi := items[k].(*m.Instrument)
+// 		slog.Info(fmt.Sprintf("process: %s", oldi.Key))
 
-		newi := NewInstrument{
-			Id:          oldi.Id,
-			Uid:         oldi.Uid,
-			Key:         oldi.Key,
-			Name:        oldi.Name,
-			FullName:    oldi.FullName,
-			Type:        oldi.Type,
-			SubType:     oldi.SubType,
-			Description: oldi.Description,
-			Copyright:   oldi.Copyright,
-			Licence:     oldi.Licence,
-			Credits:     oldi.Credits,
-			Tags:        oldi.Tags,
-			MidiKey:     oldi.MidiKey,
-		}
+// 		newi := NewInstrument{
+// 			Id:          oldi.Id,
+// 			Uid:         oldi.Uid,
+// 			Key:         oldi.Key,
+// 			Name:        oldi.Name,
+// 			FullName:    oldi.FullName,
+// 			Type:        oldi.Type,
+// 			SubType:     oldi.SubType,
+// 			Description: oldi.Description,
+// 			Copyright:   oldi.Copyright,
+// 			Licence:     oldi.Licence,
+// 			Credits:     oldi.Credits,
+// 			Tags:        oldi.Tags,
+// 			MidiKey:     oldi.MidiKey,
+// 		}
 
-		// transform instrument controls
-		mctrls := trnsformControls(&oldi.Controls)
-		newi.ControlsMap = mctrls
+// 		// transform instrument controls
+// 		mctrls := trnsformControls(&oldi.Controls)
+// 		newi.ControlsMap = mctrls
 
-		// transform layers
-		mlrs := make(map[string]NewLayer, len(oldi.Layers))
-		for _, lv := range oldi.Layers {
-			lkey := strings.TrimSpace(strings.ToLower(lv.Name))
-			var lname string
-			if strings.Contains(lkey, " ") {
-				lkey = strings.Replace(lkey, " ", "_", -1)
-				lname = lv.Name
-			}
-			nlr := NewLayer{
-				MidiKey: lv.MidiKey,
-			}
-			if len(lname) > 0 {
-				nlr.Name = lname
-			}
-			nlr.ControlsMap = trnsformControls(&lv.Controls)
-			mlrs[lkey] = nlr
-		}
-		newi.LayersMap = mlrs
+// 		// transform layers
+// 		mlrs := make(map[string]NewLayer, len(oldi.Layers))
+// 		for _, lv := range oldi.Layers {
+// 			lkey := strings.TrimSpace(strings.ToLower(lv.Name))
+// 			var lname string
+// 			if strings.Contains(lkey, " ") {
+// 				lkey = strings.Replace(lkey, " ", "_", -1)
+// 				lname = lv.Name
+// 			}
+// 			nlr := NewLayer{
+// 				MidiKey: lv.MidiKey,
+// 			}
+// 			if len(lname) > 0 {
+// 				nlr.Name = lname
+// 			}
+// 			nlr.ControlsMap = trnsformControls(&lv.Controls)
+// 			mlrs[lkey] = nlr
+// 		}
+// 		newi.LayersMap = mlrs
 
-		// write to file
-		data, err := yaml.Marshal(&newi)
-		if err != nil {
-			slog.Error(fmt.Sprintln(fmt.Errorf("failed marshal to yaml: %w", err)))
-		}
+// 		// write to file
+// 		data, err := yaml.Marshal(&newi)
+// 		if err != nil {
+// 			slog.Error(fmt.Sprintln(fmt.Errorf("failed marshal to yaml: %w", err)))
+// 		}
 
-		filename := p.Join(newdir, newi.Key+".yaml")
-		err = os.WriteFile(filename, data, 0644)
-		if err != nil {
-			slog.Error(fmt.Sprintln(fmt.Errorf("failed writing to file: %s %w", filename, err)))
-		}
+// 		filename := p.Join(newdir, newi.Key+".yaml")
+// 		err = os.WriteFile(filename, data, 0644)
+// 		if err != nil {
+// 			slog.Error(fmt.Sprintln(fmt.Errorf("failed writing to file: %s %w", filename, err)))
+// 		}
 
-	}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func trnsformControls(ctrls *[]m.Control) map[string]m.Control {
 	res := make(map[string]m.Control, len(*ctrls))

@@ -137,7 +137,7 @@ func dbToInstrument(ins *Instr) *m.Instrument {
 	}
 
 	if ins.Controls.Valid && len(ins.Controls.String) > 0 {
-		var ctrls []m.Control
+		var ctrls map[string]m.Control
 		err := json.Unmarshal([]byte(ins.Controls.String), &ctrls)
 		if err != nil {
 			slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument controls from json due loading from db: %w", err)))
@@ -146,7 +146,7 @@ func dbToInstrument(ins *Instr) *m.Instrument {
 	}
 
 	if ins.Layers.Valid && len(ins.Layers.String) > 0 {
-		var lrs []m.Layer
+		var lrs map[string]m.Layer
 		err := json.Unmarshal([]byte(ins.Layers.String), &lrs)
 		if err != nil {
 			slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument layers from json due loading from db: %w", err)))
