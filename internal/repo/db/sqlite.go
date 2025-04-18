@@ -56,7 +56,7 @@ func (d *Sqlite) RunInTx(fn func(tx *sqlx.Tx) error) error {
 func flatFieldMap(fs fieldMap) string {
 	fss := make([]string, len(fs))
 	i := 0
-	for k, _ := range fs {
+	for k := range fs {
 		fss[i] = k
 		i++
 	}

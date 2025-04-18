@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/goccy/go-yaml"
 	m "github.com/raspidrum-srv/internal/model"
-	"gopkg.in/yaml.v3"
 )
 
 func ParsePreset(path string) (*m.KitPreset, error) {
