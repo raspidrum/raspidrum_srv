@@ -36,14 +36,14 @@ func main() {
 	lsClient := lscp.NewClient("localhost", "8888", "1s")
 	err = lsClient.Connect()
 	if err != nil {
-		slog.Error(fmt.Sprintln(fmt.Errorf("Failed connect to LinuxSampler: %v", err)))
+		slog.Error(fmt.Sprintln(fmt.Errorf("Failed connect to LinuxSampler: %w", err)))
 		os.Exit(1)
 	}
 
 	// start GRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))
 	if err != nil {
-		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to listen: %v", err)))
+		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to listen: %w", err)))
 		os.Exit(1)
 	}
 	var opts []grpc.ServerOption
@@ -52,7 +52,7 @@ func main() {
 	pb.RegisterChannelControlServer(s, server)
 	slog.Info("Server is running", slog.Int("port:", cfg.Host.Port))
 	if err := s.Serve(lis); err != nil {
-		slog.Error(fmt.Sprintln(fmt.Errorf("Server error: %v", err)))
+		slog.Error(fmt.Sprintln(fmt.Errorf("Server error: %w", err)))
 		os.Exit(1)
 	}
 }
