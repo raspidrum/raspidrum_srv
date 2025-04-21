@@ -238,7 +238,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 			Name: v.Name,
 		}
 		if len(v.Controls) > 0 {
-			var ctrls []m.PresetControl
+			var ctrls map[string]m.PresetControl
 			err := json.Unmarshal([]byte(v.Controls), &ctrls)
 			if err != nil {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert channel controls from json due loading from db: %w", err)))
@@ -265,7 +265,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 			ins[i].MidiKey = v.MidiKey.String
 		}
 		if len(v.Controls) > 0 {
-			var ctrls []m.PresetControl
+			var ctrls map[string]m.PresetControl
 			err := json.Unmarshal([]byte(v.Controls), &ctrls)
 			if err != nil {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument controls from json due loading from db: %w", err)))
@@ -273,7 +273,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 			ins[i].Controls = ctrls
 		}
 		if v.Layers.Valid && len(v.Layers.String) > 0 {
-			var lrs []m.PresetLayer
+			var lrs map[string]m.PresetLayer
 			err := json.Unmarshal([]byte(v.Layers.String), &lrs)
 			if err != nil {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument layers from json due loading from db: %w", err)))
@@ -285,7 +285,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 		}
 		// Instrument Controls
 		if v.InstrControls.Valid && len(v.InstrControls.String) > 0 {
-			var ictrls []m.Control
+			var ictrls map[string]m.Control
 			err := json.Unmarshal([]byte(v.InstrControls.String), &ictrls)
 			if err != nil {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument controls ref from json due loading from db: %w", err)))
@@ -294,7 +294,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 		}
 		// instrument Layers
 		if v.InstrLayers.Valid && len(v.InstrLayers.String) > 0 {
-			var ilrs []m.Layer
+			var ilrs map[string]m.Layer
 			err := json.Unmarshal([]byte(v.InstrLayers.String), &ilrs)
 			if err != nil {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument layers ref from json due loading from db: %w", err)))

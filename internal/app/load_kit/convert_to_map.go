@@ -53,7 +53,7 @@ import (
           type: volume
           key: HATFOV
 ```
-TODO:
+DONE:
  - преобразование (Layer|Control).name в key:
 		- приведение к нижнему регистру
 		- замена " " на "_"
