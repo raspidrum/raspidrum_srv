@@ -281,7 +281,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 			ins[i].Layers = lrs
 		}
 		if v.InstrMidiKey.Valid {
-			ins[i].Instrument.MidiKey = v.InstrMidiKey.String
+			ins[i].Instrument.CfgMidiKey = v.InstrMidiKey.String
 		}
 		// Instrument Controls
 		if v.InstrControls.Valid && len(v.InstrControls.String) > 0 {

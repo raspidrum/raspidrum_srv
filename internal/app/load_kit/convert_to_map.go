@@ -182,8 +182,8 @@ func trnsformControls(ctrls *[]m.Control) map[string]m.Control {
 			cname = cv.Name
 		}
 		ctrl := m.Control{
-			Type: cv.Type,
-			Key:  cv.Key,
+			Type:   cv.Type,
+			CfgKey: cv.CfgKey,
 		}
 		if len(cname) > 0 {
 			ctrl.Name = cname

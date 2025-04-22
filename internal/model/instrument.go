@@ -19,13 +19,13 @@ type Instrument struct {
 }
 
 type Control struct {
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-	Type string `yaml:"type,omitempty" json:"type,omitempty"`
-	Key  string `yaml:"key" json:"key"`
+	Name   string `yaml:"name,omitempty" json:"name,omitempty"`
+	Type   string `yaml:"type,omitempty" json:"type,omitempty"`
+	CfgKey string `yaml:"key" json:"key"`
 }
 
 type Layer struct {
-	Name     string             `yaml:"name,omitempty" json:"name,omitempty"`
-	MidiKey  string             `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
-	Controls map[string]Control `yaml:"controls,omitempty" json:"controls,omitempty"`
+	Name       string             `yaml:"name,omitempty" json:"name,omitempty"`
+	CfgMidiKey string             `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
+	Controls   map[string]Control `yaml:"controls,omitempty" json:"controls,omitempty"`
 }

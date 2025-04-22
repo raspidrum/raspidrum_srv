@@ -31,24 +31,27 @@ type PresetInstrument struct {
 }
 
 type InstrumentRef struct {
-	Id       int64              `yaml:"-"`
-	Uid      string             `yaml:"uuid"`
-	Key      string             `yaml:"-"`
-	Name     string             `yaml:"-"`
-	MidiKey  string             `yaml:"-"`
-	Controls map[string]Control `yaml:"-"`
-	Layers   map[string]Layer   `yaml:"-"`
+	Id         int64              `yaml:"-"`
+	Uid        string             `yaml:"uuid"`
+	Key        string             `yaml:"-"`
+	Name       string             `yaml:"-"`
+	CfgMidiKey string             `yaml:"-"`
+	Controls   map[string]Control `yaml:"-"`
+	Layers     map[string]Layer   `yaml:"-"`
 }
 
 type PresetLayer struct {
-	Name     string                   `yaml:"name,omitempty" json:"name,omitempty"`
-	MidiKey  string                   `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
-	Controls map[string]PresetControl `yaml:"controls" json:"controls"`
+	Name       string                   `yaml:"name,omitempty" json:"name,omitempty"`
+	MidiKey    string                   `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
+	CfgMidiKey string                   `yaml:"-" json:"-"`
+	Controls   map[string]PresetControl `yaml:"controls" json:"controls"`
 }
 
+// CfgKey - sfz-variable key, same value as Instrument.Controls
 type PresetControl struct {
 	Name   string  `yaml:"name,omitempty" json:"name,omitempty"`
 	Type   string  `yaml:"type" json:"type"`
 	MidiCC int     `yaml:"midiCC,omitempty" json:"midiCC,omitempty"`
+	CfgKey string  `yaml:"-" json:"-"`
 	Value  float32 `yaml:"value" json:"value"`
 }
