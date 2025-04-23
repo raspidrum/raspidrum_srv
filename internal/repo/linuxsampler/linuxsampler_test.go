@@ -2,16 +2,19 @@ package linuxsampler
 
 import (
 	"fmt"
+	"io/fs"
+	"path"
 	"reflect"
 	"testing"
 
 	midi "github.com/raspidrum-srv/internal/app/mididevice"
 	m "github.com/raspidrum-srv/internal/model"
+	"github.com/raspidrum-srv/internal/repo/file"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 	"github.com/spf13/afero"
 )
 
-func TestLinuxSampler_LoadPreset(t *testing.T) {
+func TestLinuxSampler_genPresetFiles(t *testing.T) {
 	type fields struct {
 		Client lscp.Client
 		Engine string
@@ -22,6 +25,7 @@ func TestLinuxSampler_LoadPreset(t *testing.T) {
 		fs       afero.Fs
 	}
 	type res struct {
+		dir   string
 		files map[string][]string
 	}
 	tests := []struct {
@@ -61,12 +65,13 @@ func TestLinuxSampler_LoadPreset(t *testing.T) {
 				fs: afero.NewMemMapFs(),
 			},
 			want: res{
+				dir: path.Join(presetRoot, presetDir),
 				files: map[string][]string{
 					"simple_ctrl.sfz": {
 						"<control>",
-						"default_path=samples/simple",
+						"default_path=samples/1111-ffff/simple",
 						"#define $KEY1 36",
-						`#include "instruments/simple.sfz"`,
+						`#include "instruments/1111-ffff/simple.sfz"`,
 					},
 				},
 			},
@@ -78,32 +83,75 @@ func TestLinuxSampler_LoadPreset(t *testing.T) {
 				Client: tt.fields.Client,
 				Engine: tt.fields.Engine,
 			}
-			if err := l.LoadPreset(tt.args.preset, tt.args.mididevs, tt.args.fs); (err != nil) != tt.wantErr {
+			if err := l.genPresetFiles(tt.args.preset, tt.args.mididevs, tt.args.fs); (err != nil) != tt.wantErr {
 				t.Errorf("LinuxSampler.LoadPreset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			// get files from MemFs
-
+			cont, err := readResultFiles(tt.want.dir, tt.args.fs)
+			if err != nil {
+				t.Errorf("LinuxSampler.LoadPreset() error = failed get generated ctrl files: %v", err)
+			}
 			// compare result with want
+			errs := map[string][]string{}
+			for k, v := range tt.want.files {
+				gotCont, ok := cont[k]
+				if !ok {
+					errs[k] = []string{fmt.Sprintf("absent file %s", k)}
+					continue
+				}
+				diff := compareLines(v, gotCont)
+				if len(diff) > 0 {
+					errs[k] = diff
+				}
+			}
+			// TODO: loop for files in result and check existance in want.files
+
+			if len(errs) > 0 {
+				t.Errorf(`LinuxSampler.LoadPreset() error = files content diff: %v`, errs)
+			}
 		})
 	}
 }
 
-func compareLines(a []string, b []string) []string {
+func readResultFiles(dname string, afs afero.Fs) (map[string][]string, error) {
+	if ok, err := afero.DirExists(afs, dname); !ok {
+		return nil, fmt.Errorf(`dir "%s" absent: %w`, dname, err)
+	}
+	res := make(map[string][]string)
+	err := afero.Walk(afs, dname, func(filepath string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		fcont, err := file.ReadLines(filepath, afs)
+		if err != nil {
+			return err
+		}
+		_, fname := path.Split(filepath)
+		res[fname] = fcont
+		return nil
+	})
+	return res, err
+}
+
+func compareLines(want []string, got []string) []string {
 	res := []string{}
-	a_len := len(a)
-	b_len := len(b)
-	for i, v := range a {
+	a_len := len(want)
+	b_len := len(got)
+	for i, v := range want {
 		if i > b_len-1 {
 			res = append(res, fmt.Sprintf(`want: "%s"\n got:""`, v))
 			continue
 		}
-		if v != b[i] {
-			res = append(res, fmt.Sprintf(`want: "%s"\n got:"%s"`, v, b[i]))
+		if v != got[i] {
+			res = append(res, fmt.Sprintf(`want: "%s"\n got:"%s"`, v, got[i]))
 		}
 	}
 	if a_len < b_len {
 		for i := a_len; i < a_len+b_len-a_len; i++ {
-			res = append(res, fmt.Sprintf(`want: ""\n got:"%s"`, b[i]))
+			res = append(res, fmt.Sprintf(`want: ""\n got:"%s"`, got[i]))
 		}
 	}
 	return res

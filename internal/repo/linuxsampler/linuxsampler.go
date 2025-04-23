@@ -1,7 +1,6 @@
 package linuxsampler
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path"
@@ -9,15 +8,18 @@ import (
 	midi "github.com/raspidrum-srv/internal/app/mididevice"
 	m "github.com/raspidrum-srv/internal/model"
 	repo "github.com/raspidrum-srv/internal/repo"
+	"github.com/raspidrum-srv/internal/repo/file"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 	"github.com/spf13/afero"
 )
+
+var presetDir = "current"
+var dirPermission os.FileMode = 0644
 
 // TODO: move to cfg
 var sampleRoot = "samples"
 var presetRoot = "presets"
 var instrumentRoot = "instruments"
-var dirPermission os.FileMode = 0644
 
 // Engine - LinuxSampler engine: gig, sfz, sf2
 type LinuxSampler struct {
@@ -96,26 +98,36 @@ func (l *LinuxSampler) CreateChannel(audioDevId, midiDevId int, instrumentFile s
 
 func (l *LinuxSampler) LoadPreset(preset *m.KitPreset, mididevs []*midi.MIDIDevice, fs afero.Fs) error {
 
+	err := l.genPresetFiles(preset, mididevs, fs)
+	if err != nil {
+		return fmt.Errorf("failed prepare instrument control files for preset: %w", err)
+	}
+
+	// load sfz control files and samples
 	// Init "instruments-channel index". Map key - KitPreset.Channel.Key, value - KitPreset.Instruments
 	chnlInstr := make(map[string][]int, len(preset.Channels))
 	for _, v := range preset.Channels {
 		chnlInstr[v.Key] = []int{}
 	}
-
-	// make sfz control files
-	presetDir, err := preparePresetDir(presetRoot, preset.Uid, fs)
-	if err != nil {
-		return err
-	}
-	// make file for one instrument
 	for i, v := range preset.Instruments {
 		// add instrument array index to "instruments-channel index"
 		chnlInstr[v.ChannelKey] = append(chnlInstr[v.ChannelKey], i)
+	}
 
+	return nil
+}
+
+// make sfz control files
+func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []*midi.MIDIDevice, fs afero.Fs) error {
+	presetDir, err := preparePresetDir(presetRoot, fs)
+	if err != nil {
+		return err
+	}
+	for _, v := range preset.Instruments {
+		// make one file for each instrument
 		fcontent := []string{}
 		fcontent = append(fcontent, "<control>")
-		// TODO: add instrument UUID between sampleRoot and key path parts
-		fcontent = append(fcontent, "default_path="+path.Join(sampleRoot, v.Instrument.Key))
+		fcontent = append(fcontent, "default_path="+path.Join(sampleRoot, v.Instrument.Uid, v.Instrument.Key))
 		// instrument MIDI Key
 		if len(v.MidiKey) > 0 {
 			mkeyid, err := mapMidiKey(v.MidiKey, mididevs)
@@ -147,18 +159,15 @@ func (l *LinuxSampler) LoadPreset(preset *m.KitPreset, mididevs []*midi.MIDIDevi
 			}
 		}
 
-		// TODO: add instrument UUID between instrumentRoot and key path parts
-		intrDir := path.Join(instrumentRoot, v.Instrument.Key)
+		intrDir := path.Join(instrumentRoot, v.Instrument.Uid, v.Instrument.Key)
 		fcontent = append(fcontent, fmt.Sprintf(`#include "%s.sfz"`, intrDir))
 		// save to file
-		err = writeInstrCtrlFile(fcontent, presetDir, v.Instrument.Key, fs)
+		fname := path.Join(presetDir, v.Instrument.Key+"_ctrl.sfz")
+		err = file.WriteLines(fcontent, fname, fs)
 		if err != nil {
 			return err
 		}
 	}
-
-	// 5th step: load sfz control files and samples
-
 	return nil
 }
 
@@ -178,8 +187,8 @@ func mapMidiKey(mkey string, mdevs []*midi.MIDIDevice) (int, error) {
 	return 0, fmt.Errorf("MIDI devices %s doen't have mapping for MIDI Key %s", devlist, mkey)
 }
 
-func preparePresetDir(fpath string, presetUid string, fs afero.Fs) (string, error) {
-	dr := path.Join(fpath, presetUid)
+func preparePresetDir(fpath string, fs afero.Fs) (string, error) {
+	dr := path.Join(fpath, presetDir)
 	err := fs.RemoveAll(dr)
 	if err != nil {
 		return dr, fmt.Errorf("failed to prepare preset directory %s: %w", dr, err)
@@ -189,25 +198,4 @@ func preparePresetDir(fpath string, presetUid string, fs afero.Fs) (string, erro
 		return dr, fmt.Errorf("failed to prepare preset directory %s: %w", dr, err)
 	}
 	return dr, nil
-}
-
-func writeInstrCtrlFile(cont []string, fpath string, instrKey string, fs afero.Fs) error {
-	fname := path.Join(fpath, instrKey+"_ctrl.sfz")
-	f, err := fs.Create(fname)
-	if err != nil {
-		return fmt.Errorf("failed create file %s: %w", fname, err)
-	}
-	defer f.Close()
-
-	buf := bufio.NewWriter(f)
-	for _, ln := range cont {
-		_, err := buf.WriteString(ln + "\n")
-		if err != nil {
-			return fmt.Errorf("failed write to file %s: %w", fname, err)
-		}
-	}
-	if err := buf.Flush(); err != nil {
-		return fmt.Errorf("failed write to file %s: %w", fname, err)
-	}
-	return nil
 }
