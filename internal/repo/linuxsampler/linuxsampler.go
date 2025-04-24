@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 
-	midi "github.com/raspidrum-srv/internal/app/mididevice"
 	m "github.com/raspidrum-srv/internal/model"
 	repo "github.com/raspidrum-srv/internal/repo"
 	"github.com/raspidrum-srv/internal/repo/file"
@@ -96,29 +95,23 @@ func (l *LinuxSampler) CreateChannel(audioDevId, midiDevId int, instrumentFile s
 	return
 }
 
-func (l *LinuxSampler) LoadPreset(preset *m.KitPreset, mididevs []midi.MIDIDevice, fs afero.Fs) error {
+func (l *LinuxSampler) LoadPreset(preset *m.KitPreset, fs afero.Fs) error {
 
-	err := l.genPresetFiles(preset, mididevs, fs)
+	err := l.genPresetFiles(preset, fs)
 	if err != nil {
 		return fmt.Errorf("failed prepare instrument control files for preset: %w", err)
 	}
 
-	// load sfz control files and samples
-	// Init "instruments-channel index". Map key - KitPreset.Channel.Key, value - KitPreset.Instruments
-	chnlInstr := make(map[string][]int, len(preset.Channels))
-	for _, v := range preset.Channels {
-		chnlInstr[v.Key] = []int{}
+	// load sfz control files and samples in sampler
+	err = l.loadToSampler(preset)
+	if err != nil {
+		return fmt.Errorf("failed load instrument config and samples to sampler: %w", err)
 	}
-	for i, v := range preset.Instruments {
-		// add instrument array index to "instruments-channel index"
-		chnlInstr[v.ChannelKey] = append(chnlInstr[v.ChannelKey], i)
-	}
-
 	return nil
 }
 
 // make sfz control files
-func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []midi.MIDIDevice, fs afero.Fs) error {
+func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) error {
 	presetDir, err := preparePresetDir(presetRoot, fs)
 	if err != nil {
 		return err
@@ -130,11 +123,7 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []midi.MIDID
 		fcontent = append(fcontent, "default_path="+path.Join(sampleRoot, v.Instrument.Uid, v.Instrument.Key))
 		// instrument MIDI Key
 		if len(v.MidiKey) > 0 {
-			mkeyid, err := mapMidiKey(v.MidiKey, mididevs)
-			if err != nil {
-				return err
-			}
-			fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", v.Instrument.CfgMidiKey, mkeyid))
+			fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", v.Instrument.CfgMidiKey, v.MidiNote))
 		}
 		// instrument Controls
 		for _, cv := range v.Controls {
@@ -146,11 +135,7 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []midi.MIDID
 		for _, lv := range v.Layers {
 			// layer MIDI Key
 			if len(lv.MidiKey) > 0 {
-				mkeyid, err := mapMidiKey(lv.MidiKey, mididevs)
-				if err != nil {
-					return err
-				}
-				fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", lv.CfgMidiKey, mkeyid))
+				fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", lv.CfgMidiKey, lv.MidiNote))
 			}
 			// layer controls
 			for _, lcv := range lv.Controls {
@@ -171,22 +156,6 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []midi.MIDID
 	return nil
 }
 
-func mapMidiKey(mkey string, mdevs []midi.MIDIDevice) (int, error) {
-	devlist := make([]string, len(mdevs))
-	for i, d := range mdevs {
-		kmap, err := d.GetKeysMapping()
-		if err != nil {
-			return 0, fmt.Errorf("failed get MIDI Keys mapping for device %s: %w", d.Name(), err)
-		}
-		devlist[i] = d.Name()
-		midiId, ok := kmap[mkey]
-		if ok {
-			return midiId, nil
-		}
-	}
-	return 0, fmt.Errorf("MIDI devices %s doen't have mapping for MIDI Key %s", devlist, mkey)
-}
-
 func preparePresetDir(fpath string, fs afero.Fs) (string, error) {
 	dr := path.Join(fpath, presetDir)
 	err := fs.RemoveAll(dr)
@@ -198,4 +167,26 @@ func preparePresetDir(fpath string, fs afero.Fs) (string, error) {
 		return dr, fmt.Errorf("failed to prepare preset directory %s: %w", dr, err)
 	}
 	return dr, nil
+}
+
+func (l *LinuxSampler) loadToSampler(preset *m.KitPreset) error {
+	// Init "instruments-channel index". Map key - KitPreset.Channel.Key, value - KitPreset.Instruments
+	chnlInstr := make(map[string][]int, len(preset.Channels))
+	for _, v := range preset.Channels {
+		chnlInstr[v.Key] = []int{}
+	}
+	for i, v := range preset.Instruments {
+		// add instrument array index to "instruments-channel index"
+		chnlInstr[v.ChannelKey] = append(chnlInstr[v.ChannelKey], i)
+	}
+
+	//TODO: loading instruments
+	//for ck, cins := range chnlInstr {
+	// TODO: create channel
+
+	// TODO: load instruments to channel
+
+	//}
+
+	return nil
 }

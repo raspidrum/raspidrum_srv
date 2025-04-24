@@ -29,7 +29,7 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 	}
 
 	// 2nd step: augment channels and layers info from instrument and instrument preset
-	err = augmentFromInstrument(pst)
+	err = augmentFromInstrument(pst, midiDevices)
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +46,17 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 }
 
 // Augment preset controls and layers with data from instrument
-func augmentFromInstrument(pst *m.KitPreset) error {
+func augmentFromInstrument(pst *m.KitPreset, mididevs []midi.MIDIDevice) error {
 	for i, v := range pst.Instruments {
 
+		// instrument MIDI Key
+		if len(v.MidiKey) > 0 {
+			mkeyid, err := mapMidiKey(v.MidiKey, mididevs)
+			if err != nil {
+				return err
+			}
+			pst.Instruments[i].MidiNote = mkeyid
+		}
 		// copy instrument control.key to instrument preset
 		for kc, vc := range v.Controls {
 			ictrl, ok := v.Instrument.Controls[kc]
@@ -61,6 +69,14 @@ func augmentFromInstrument(pst *m.KitPreset) error {
 
 		// copy instrument layer MidiKey to instrument preset
 		for kl, vl := range v.Layers {
+			if len(vl.MidiKey) > 0 {
+				mkeyid, err := mapMidiKey(vl.MidiKey, mididevs)
+				if err != nil {
+					return err
+				}
+				vl.MidiNote = mkeyid
+			}
+
 			ilrs, ok := v.Instrument.Layers[kl]
 			if !ok {
 				return fmt.Errorf("not found layer '%s' in instrument '%s'", kl, v.Instrument.Key)
@@ -79,4 +95,20 @@ func augmentFromInstrument(pst *m.KitPreset) error {
 		}
 	}
 	return nil
+}
+
+func mapMidiKey(mkey string, mdevs []midi.MIDIDevice) (int, error) {
+	devlist := make([]string, len(mdevs))
+	for i, d := range mdevs {
+		kmap, err := d.GetKeysMapping()
+		if err != nil {
+			return 0, fmt.Errorf("failed get MIDI Keys mapping for device %s: %w", d.Name(), err)
+		}
+		devlist[i] = d.Name()
+		midiId, ok := kmap[mkey]
+		if ok {
+			return midiId, nil
+		}
+	}
+	return 0, fmt.Errorf("MIDI devices %s doen't have mapping for MIDI Key %s", devlist, mkey)
 }

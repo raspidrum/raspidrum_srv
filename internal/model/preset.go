@@ -26,6 +26,7 @@ type PresetInstrument struct {
 	Name       string                   `yaml:"name"`
 	ChannelKey string                   `yaml:"channelKey"`
 	MidiKey    string                   `yaml:"midiKey,omitempty"`
+	MidiNote   int                      `yaml:"-"`
 	Controls   map[string]PresetControl `yaml:"controls"`
 	Layers     map[string]PresetLayer   `yaml:"layers"`
 }
@@ -44,6 +45,7 @@ type PresetLayer struct {
 	Name       string                   `yaml:"name,omitempty" json:"name,omitempty"`
 	MidiKey    string                   `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
 	CfgMidiKey string                   `yaml:"-" json:"-"`
+	MidiNote   int                      `yaml:"-"`
 	Controls   map[string]PresetControl `yaml:"controls" json:"controls"`
 }
 

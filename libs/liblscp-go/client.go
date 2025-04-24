@@ -13,7 +13,7 @@ type Client struct {
 	host       string
 	port       string
 	conTimeout string
-	conn       net.Conn
+	Conn       net.Conn
 }
 
 func NewClient(host, port string, timeout string) Client {
@@ -30,11 +30,11 @@ func (c *Client) Connect() error {
 		return fmt.Errorf("failed parse timeout duration: '%s' %w", c.conTimeout, err)
 	}
 
-	if c.conn != nil {
-		c.conn.Close()
+	if c.Conn != nil {
+		c.Conn.Close()
 	}
 
-	c.conn, err = net.DialTimeout("tcp", net.JoinHostPort(c.host, c.port), t)
+	c.Conn, err = net.DialTimeout("tcp", net.JoinHostPort(c.host, c.port), t)
 	if err != nil {
 		return fmt.Errorf("failed connect to: '%s:%s' %w", c.host, c.port, err)
 	}
@@ -50,7 +50,7 @@ func (c *Client) Connect() error {
 }
 
 func (c *Client) Disconnect() error {
-	if err := c.conn.Close(); err != nil {
+	if err := c.Conn.Close(); err != nil {
 		return fmt.Errorf("failed disconnect from LinuxSampler: %w", err)
 	}
 	return nil
@@ -58,7 +58,7 @@ func (c *Client) Disconnect() error {
 
 func (c *Client) retrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, error) {
 	cmd := strings.Trim(lscpCmd, " ")
-	_, err := fmt.Fprintf(c.conn, cmd+"\r\n")
+	_, err := fmt.Fprintf(c.Conn, "%s\r\n", cmd)
 	if err != nil {
 		return ResultSet{}, fmt.Errorf("failed lscp command: %s : %w", lscpCmd, err)
 	}
@@ -80,7 +80,7 @@ func (c *Client) retrieveIndex(lscpCmd string) (int, error) {
 
 func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
 	rs := ResultSet{}
-	rd := bufio.NewReader(c.conn)
+	rd := bufio.NewReader(c.Conn)
 
 	ln, err := c.getLine(rd)
 	if err != nil {

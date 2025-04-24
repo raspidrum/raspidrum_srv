@@ -3,36 +3,18 @@ package linuxsampler
 import (
 	"fmt"
 	"io/fs"
+	"net"
 	"path"
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
-	midi "github.com/raspidrum-srv/internal/app/mididevice"
 	m "github.com/raspidrum-srv/internal/model"
 	"github.com/raspidrum-srv/internal/repo/file"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 	"github.com/spf13/afero"
 )
-
-type MockMMIDIDevice struct{}
-
-func (m *MockMMIDIDevice) Name() string {
-	return "Dummy"
-}
-
-func (m *MockMMIDIDevice) DevID() string {
-	return "0:0"
-}
-
-func (m *MockMMIDIDevice) GetKeysMapping() (map[string]int, error) {
-	return map[string]int{
-		"kick1":      36,
-		"snare":      38,
-		"ride1_edge": 51,
-		"ride1_bell": 53,
-	}, nil
-}
 
 func TestLinuxSampler_genPresetFiles(t *testing.T) {
 	type fields struct {
@@ -40,17 +22,12 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 		Engine string
 	}
 	type args struct {
-		preset   *m.KitPreset
-		mididevs []midi.MIDIDevice
-		fs       afero.Fs
+		preset *m.KitPreset
+		fs     afero.Fs
 	}
 	type res struct {
 		dir   string
 		files map[string][]string
-	}
-
-	var mdevs = []midi.MIDIDevice{
-		midi.MIDIDevice(&MockMMIDIDevice{}),
 	}
 
 	tests := []struct {
@@ -72,12 +49,12 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 								Key:        "simple",
 								CfgMidiKey: "KEY1",
 							},
-							MidiKey: "kick1",
+							MidiKey:  "kick1",
+							MidiNote: 36,
 						},
 					},
 				},
-				mididevs: mdevs,
-				fs:       afero.NewMemMapFs(),
+				fs: afero.NewMemMapFs(),
 			},
 			orderImportant: true,
 			want: res{
@@ -103,7 +80,8 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 								Key:        "kick",
 								CfgMidiKey: "KEYKICK",
 							},
-							MidiKey: "kick1",
+							MidiKey:  "kick1",
+							MidiNote: 36,
 						},
 						{
 							Instrument: m.InstrumentRef{
@@ -111,7 +89,8 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 								Key:        "snare",
 								CfgMidiKey: "KEYSNARE",
 							},
-							MidiKey: "snare",
+							MidiKey:  "snare",
+							MidiNote: 38,
 							Controls: map[string]m.PresetControl{
 								"volume": {
 									CfgKey: "S65NRV",
@@ -127,8 +106,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 						},
 					},
 				},
-				mididevs: mdevs,
-				fs:       afero.NewMemMapFs(),
+				fs: afero.NewMemMapFs(),
 			},
 			orderImportant: false,
 			want: res{
@@ -167,6 +145,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 								"bell": {
 									CfgMidiKey: "RI17BKEY",
 									MidiKey:    "ride1_bell",
+									MidiNote:   53,
 									Controls: map[string]m.PresetControl{
 										"volume": {
 											CfgKey: "RI17BV",
@@ -178,6 +157,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 								"edge": {
 									CfgMidiKey: "RI17EKEY",
 									MidiKey:    "ride1_edge",
+									MidiNote:   51,
 									Controls: map[string]m.PresetControl{
 										"volume": {
 											CfgKey: "RI17EV",
@@ -194,7 +174,8 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 								Key:        "snare",
 								CfgMidiKey: "KEYSNARE",
 							},
-							MidiKey: "snare",
+							MidiKey:  "snare",
+							MidiNote: 38,
 							Controls: map[string]m.PresetControl{
 								"volume": {
 									CfgKey: "S65NRV",
@@ -210,8 +191,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 						},
 					},
 				},
-				mididevs: mdevs,
-				fs:       afero.NewMemMapFs(),
+				fs: afero.NewMemMapFs(),
 			},
 			orderImportant: false,
 			want: res{
@@ -248,7 +228,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 				Client: tt.fields.Client,
 				Engine: tt.fields.Engine,
 			}
-			if err := l.genPresetFiles(tt.args.preset, tt.args.mididevs, tt.args.fs); (err != nil) != tt.wantErr {
+			if err := l.genPresetFiles(tt.args.preset, tt.args.fs); (err != nil) != tt.wantErr {
 				t.Errorf("LinuxSampler.LoadPreset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			// get files from MemFs
@@ -420,6 +400,66 @@ func Test_compareLines(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := compareLines(tt.args.a, tt.args.b); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("compareLines() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLinuxSampler_loadToSampler(t *testing.T) {
+	type fields struct {
+		Client lscp.Client
+		Engine string
+	}
+	type args struct {
+		preset *m.KitPreset
+	}
+
+	// Создаем in-memory соединение
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	// Создаем и запускаем mock-сервер
+	mockServer := startMockPipeServer(serverConn)
+	defer mockServer.stop()
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "one channel, one instrument",
+			fields: fields{
+				Client: lscp.NewClient("pipe", "0", "1s"),
+				Engine: "sfz",
+			},
+			args: args{
+				//TODO:
+			},
+			want: []string{
+				//TODO:
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.fields.Client.Conn = clientConn
+			l := &LinuxSampler{
+				Client: tt.fields.Client,
+				Engine: tt.fields.Engine,
+			}
+			if err := l.loadToSampler(tt.args.preset); (err != nil) != tt.wantErr {
+				t.Errorf("LinuxSampler.loadToSampler() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			// Даем время на обработку и останавливаем сервер
+			time.Sleep(100 * time.Millisecond)
+			mockServer.stop()
+			if !reflect.DeepEqual(mockServer.getMessages(), tt.want) {
+				t.Errorf("Expected %v, got %v", tt.want, mockServer.getMessages())
 			}
 		})
 	}
