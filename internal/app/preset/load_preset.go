@@ -12,11 +12,9 @@ import (
 )
 
 // TODO: init MIDI device on connect/reconnect (and startup)
-var midiDevices []*midi.MIDIDevice = []*midi.MIDIDevice{
-	{
-		DevId: "0:0",
-		Name:  "Dummy",
-	},
+var mdev = midi.NewUSBMIDIDevice("0:0", "Dummy")
+var midiDevices = []midi.MIDIDevice{
+	midi.MIDIDevice(&mdev),
 }
 
 var osFs = afero.NewOsFs()

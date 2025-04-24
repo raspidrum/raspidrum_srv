@@ -1,11 +1,32 @@
 package mididevice
 
-type MIDIDevice struct {
+type MIDIDevice interface {
+	DevID() string
+	Name() string
+	GetKeysMapping() (map[string]int, error)
+}
+
+type USBMIDIDevice struct {
 	// MIDI Device ID
 	// Example, for ALSA: "24:0"
-	DevId string
+	devId string
 	// Device Name
-	Name string
+	name string
+}
+
+func NewUSBMIDIDevice(devId string, name string) USBMIDIDevice {
+	return USBMIDIDevice{
+		devId: devId,
+		name:  name,
+	}
+}
+
+func (m *USBMIDIDevice) Name() string {
+	return m.name
+}
+
+func (m *USBMIDIDevice) DevID() string {
+	return m.devId
 }
 
 // Get MIDI key mapping in format:
@@ -14,10 +35,10 @@ type MIDIDevice struct {
 //
 //	hihat_close : 42
 //	tom1 : 48
-func (m *MIDIDevice) GetKeysMapping() (map[string]int, error) {
+func (m *USBMIDIDevice) GetKeysMapping() (map[string]int, error) {
 	// TODO: get mapping from repo
 	return map[string]int{
-		"kick":             36,
+		"kick1":            36,
 		"snare":            38,
 		"snare_rimshot":    39,
 		"tom1":             48,

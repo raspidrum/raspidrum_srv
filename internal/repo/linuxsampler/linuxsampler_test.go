@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"path"
 	"reflect"
+	"slices"
 	"testing"
 
 	midi "github.com/raspidrum-srv/internal/app/mididevice"
@@ -14,6 +15,25 @@ import (
 	"github.com/spf13/afero"
 )
 
+type MockMMIDIDevice struct{}
+
+func (m *MockMMIDIDevice) Name() string {
+	return "Dummy"
+}
+
+func (m *MockMMIDIDevice) DevID() string {
+	return "0:0"
+}
+
+func (m *MockMMIDIDevice) GetKeysMapping() (map[string]int, error) {
+	return map[string]int{
+		"kick1":      36,
+		"snare":      38,
+		"ride1_edge": 51,
+		"ride1_bell": 53,
+	}, nil
+}
+
 func TestLinuxSampler_genPresetFiles(t *testing.T) {
 	type fields struct {
 		Client lscp.Client
@@ -21,28 +41,30 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 	}
 	type args struct {
 		preset   *m.KitPreset
-		mididevs []*midi.MIDIDevice
+		mididevs []midi.MIDIDevice
 		fs       afero.Fs
 	}
 	type res struct {
 		dir   string
 		files map[string][]string
 	}
+
+	var mdevs = []midi.MIDIDevice{
+		midi.MIDIDevice(&MockMMIDIDevice{}),
+	}
+
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    res
-		wantErr bool
+		name           string
+		fields         fields
+		args           args
+		want           res
+		orderImportant bool
+		wantErr        bool
 	}{
 		{
-			name: "one instrument w/o layers, w/o controls in one channel",
+			name: "one instrument w/o layers, w/o controls",
 			args: args{
 				preset: &m.KitPreset{
-					Uid: "aaaa-bbbb-cccc-dddd",
-					Channels: []m.PresetChannel{
-						{Key: "1"},
-					},
 					Instruments: []m.PresetInstrument{
 						{
 							Instrument: m.InstrumentRef{
@@ -50,20 +72,14 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 								Key:        "simple",
 								CfgMidiKey: "KEY1",
 							},
-							ChannelKey: "1",
-							MidiKey:    "kick",
+							MidiKey: "kick1",
 						},
 					},
 				},
-				mididevs: []*midi.MIDIDevice{
-					// TODO: mock GetKeysMapping
-					{
-						DevId: "0:0",
-						Name:  "Dummy",
-					},
-				},
-				fs: afero.NewMemMapFs(),
+				mididevs: mdevs,
+				fs:       afero.NewMemMapFs(),
 			},
+			orderImportant: true,
 			want: res{
 				dir: path.Join(presetRoot, presetDir),
 				files: map[string][]string{
@@ -72,6 +88,155 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 						"default_path=samples/1111-ffff/simple",
 						"#define $KEY1 36",
 						`#include "instruments/1111-ffff/simple.sfz"`,
+					},
+				},
+			},
+		},
+		{
+			name: "two instruments w/o layers, with controls",
+			args: args{
+				preset: &m.KitPreset{
+					Instruments: []m.PresetInstrument{
+						{
+							Instrument: m.InstrumentRef{
+								Uid:        "1111-ffff",
+								Key:        "kick",
+								CfgMidiKey: "KEYKICK",
+							},
+							MidiKey: "kick1",
+						},
+						{
+							Instrument: m.InstrumentRef{
+								Uid:        "2222-ffff",
+								Key:        "snare",
+								CfgMidiKey: "KEYSNARE",
+							},
+							MidiKey: "snare",
+							Controls: map[string]m.PresetControl{
+								"volume": {
+									CfgKey: "S65NRV",
+									MidiCC: 22,
+									Value:  95.0,
+								},
+								"pan": {
+									CfgKey: "S65NRP",
+									MidiCC: 80,
+									Value:  64.0,
+								},
+							},
+						},
+					},
+				},
+				mididevs: mdevs,
+				fs:       afero.NewMemMapFs(),
+			},
+			orderImportant: false,
+			want: res{
+				dir: path.Join(presetRoot, presetDir),
+				files: map[string][]string{
+					"kick_ctrl.sfz": {
+						"<control>",
+						"default_path=samples/1111-ffff/kick",
+						"#define $KEYKICK 36",
+						`#include "instruments/1111-ffff/kick.sfz"`,
+					},
+					"snare_ctrl.sfz": {
+						"<control>",
+						"default_path=samples/2222-ffff/snare",
+						"#define $KEYSNARE 38",
+						"#define $S65NRV 22",
+						"set_cc$S65NRV=95.0",
+						"#define $S65NRP 80",
+						"set_cc$S65NRP=64.0",
+						`#include "instruments/2222-ffff/snare.sfz"`,
+					},
+				},
+			},
+		},
+		{
+			name: "two instruments with layers, with controls",
+			args: args{
+				preset: &m.KitPreset{
+					Instruments: []m.PresetInstrument{
+						{
+							Instrument: m.InstrumentRef{
+								Uid: "1111-ffff",
+								Key: "ride",
+							},
+							Layers: map[string]m.PresetLayer{
+								"bell": {
+									CfgMidiKey: "RI17BKEY",
+									MidiKey:    "ride1_bell",
+									Controls: map[string]m.PresetControl{
+										"volume": {
+											CfgKey: "RI17BV",
+											MidiCC: 104,
+											Value:  95.0,
+										},
+									},
+								},
+								"edge": {
+									CfgMidiKey: "RI17EKEY",
+									MidiKey:    "ride1_edge",
+									Controls: map[string]m.PresetControl{
+										"volume": {
+											CfgKey: "RI17EV",
+											MidiCC: 103,
+											Value:  95.0,
+										},
+									},
+								},
+							},
+						},
+						{
+							Instrument: m.InstrumentRef{
+								Uid:        "2222-ffff",
+								Key:        "snare",
+								CfgMidiKey: "KEYSNARE",
+							},
+							MidiKey: "snare",
+							Controls: map[string]m.PresetControl{
+								"volume": {
+									CfgKey: "S65NRV",
+									MidiCC: 22,
+									Value:  95.0,
+								},
+								"pan": {
+									CfgKey: "S65NRP",
+									MidiCC: 80,
+									Value:  64.0,
+								},
+							},
+						},
+					},
+				},
+				mididevs: mdevs,
+				fs:       afero.NewMemMapFs(),
+			},
+			orderImportant: false,
+			want: res{
+				dir: path.Join(presetRoot, presetDir),
+				files: map[string][]string{
+					"ride_ctrl.sfz": {
+						"<control>",
+						"default_path=samples/1111-ffff/ride",
+						"#define $RI17BKEY 53",
+						"#define $RI17BV 104",
+						"set_cc$RI17BV=95.0",
+						"#define $RI17EKEY 51",
+						"#define $RI17EV 103",
+						"set_cc$RI17EV=95.0",
+						`#include "instruments/1111-ffff/ride.sfz"`,
+					},
+					"snare_ctrl.sfz": {
+						"<control>",
+						"default_path=samples/2222-ffff/snare",
+						"#define $KEYSNARE 38",
+						"#define $S65NRV 22",
+						"set_cc$S65NRV=95.0",
+						"#define $S65NRP 80",
+						"set_cc$S65NRP=64.0",
+						`#include "instruments/2222-ffff/snare.sfz"`,
 					},
 				},
 			},
@@ -99,12 +264,26 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 					errs[k] = []string{fmt.Sprintf("absent file %s", k)}
 					continue
 				}
-				diff := compareLines(v, gotCont)
+				var diff []string
+				if tt.orderImportant {
+					diff = compareLines(v, gotCont)
+				} else {
+					slices.Sort(v)
+					slices.Sort(gotCont)
+					diff = compareLines(v, gotCont)
+				}
 				if len(diff) > 0 {
 					errs[k] = diff
 				}
 			}
-			// TODO: loop for files in result and check existance in want.files
+			//find files in result that absent in want.files
+			for k := range cont {
+				_, ok := tt.want.files[k]
+				if ok { // file has been processed in loop above
+					continue
+				}
+				errs[k] = []string{fmt.Sprintf(`got file "%s" but not wanted`, k)}
+			}
 
 			if len(errs) > 0 {
 				t.Errorf(`LinuxSampler.LoadPreset() error = files content diff: %v`, errs)

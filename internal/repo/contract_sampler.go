@@ -19,5 +19,5 @@ type SamplerRepo interface {
 	ConnectAudioOutput(driver string, params map[int][]Param[string]) (devId int, err error)
 	ConnectMidiInput(driver string, params []Param[string]) (devId int, err error)
 	CreateChannel(audioDevId, midiDevId int, instrumentFile string) (channelId int, err error)
-	LoadPreset(preset *m.KitPreset, mididevs []*midi.MIDIDevice, fs afero.Fs) error
+	LoadPreset(preset *m.KitPreset, mididevs []midi.MIDIDevice, fs afero.Fs) error
 }

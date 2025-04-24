@@ -96,7 +96,7 @@ func (l *LinuxSampler) CreateChannel(audioDevId, midiDevId int, instrumentFile s
 	return
 }
 
-func (l *LinuxSampler) LoadPreset(preset *m.KitPreset, mididevs []*midi.MIDIDevice, fs afero.Fs) error {
+func (l *LinuxSampler) LoadPreset(preset *m.KitPreset, mididevs []midi.MIDIDevice, fs afero.Fs) error {
 
 	err := l.genPresetFiles(preset, mididevs, fs)
 	if err != nil {
@@ -118,7 +118,7 @@ func (l *LinuxSampler) LoadPreset(preset *m.KitPreset, mididevs []*midi.MIDIDevi
 }
 
 // make sfz control files
-func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []*midi.MIDIDevice, fs afero.Fs) error {
+func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []midi.MIDIDevice, fs afero.Fs) error {
 	presetDir, err := preparePresetDir(presetRoot, fs)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []*midi.MIDI
 		// instrument Controls
 		for _, cv := range v.Controls {
 			fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", cv.CfgKey, cv.MidiCC))
-			fcontent = append(fcontent, fmt.Sprintf("set_cc$%s=%f", cv.CfgKey, cv.Value))
+			fcontent = append(fcontent, fmt.Sprintf("set_cc$%s=%.1f", cv.CfgKey, cv.Value))
 		}
 
 		// instrument layers
@@ -155,7 +155,7 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []*midi.MIDI
 			// layer controls
 			for _, lcv := range lv.Controls {
 				fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", lcv.CfgKey, lcv.MidiCC))
-				fcontent = append(fcontent, fmt.Sprintf("set_cc$%s=%f", lcv.CfgKey, lcv.Value))
+				fcontent = append(fcontent, fmt.Sprintf("set_cc$%s=%.1f", lcv.CfgKey, lcv.Value))
 			}
 		}
 
@@ -171,14 +171,14 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, mididevs []*midi.MIDI
 	return nil
 }
 
-func mapMidiKey(mkey string, mdevs []*midi.MIDIDevice) (int, error) {
+func mapMidiKey(mkey string, mdevs []midi.MIDIDevice) (int, error) {
 	devlist := make([]string, len(mdevs))
 	for i, d := range mdevs {
 		kmap, err := d.GetKeysMapping()
 		if err != nil {
-			return 0, fmt.Errorf("failed get MIDI Keys mapping for device %s: %w", d.Name, err)
+			return 0, fmt.Errorf("failed get MIDI Keys mapping for device %s: %w", d.Name(), err)
 		}
-		devlist[i] = d.Name
+		devlist[i] = d.Name()
 		midiId, ok := kmap[mkey]
 		if ok {
 			return midiId, nil
