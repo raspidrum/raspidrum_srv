@@ -37,8 +37,14 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 	// 3rd step: substitute ids of MIDI Keys and MIDI CC
 	// skipped: substitute MIDI Keys needed only for generation sfz-ctrl files. MIDI CC stored in db and not needed for substitute
 
-	// 4rd step: load to sampler
-	err = sampler.LoadPreset(pst, midiDevices, fs)
+	// 4rd step: init sampler
+	audioDevId, midiDevId, err := InitSampler(sampler)
+	if err != nil {
+		return nil, fmt.Errorf("failed init sampler: %w", err)
+	}
+
+	// 5th step: load to sampler
+	err = sampler.LoadPreset(audioDevId, midiDevId, pst, fs)
 	if err != nil {
 		return nil, fmt.Errorf("failed load preset to sampler: %w", err)
 	}

@@ -2,6 +2,7 @@ package linuxsampler
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"sync"
 )
@@ -12,6 +13,7 @@ type MockPipeServer struct {
 	receivedMessages []string
 	mu               sync.Mutex
 	done             chan struct{}
+	channelIdx       int
 }
 
 func startMockPipeServer(conn net.Conn) *MockPipeServer {
@@ -25,7 +27,7 @@ func startMockPipeServer(conn net.Conn) *MockPipeServer {
 }
 
 func (m *MockPipeServer) listen() {
-	defer m.conn.Close()
+	//defer m.conn.Close()
 
 	scanner := bufio.NewScanner(m.conn)
 	for {
@@ -38,18 +40,43 @@ func (m *MockPipeServer) listen() {
 			}
 
 			m.mu.Lock()
-			m.receivedMessages = append(m.receivedMessages, scanner.Text())
+			req := scanner.Text()
 			m.mu.Unlock()
+			m.receivedMessages = append(m.receivedMessages, req)
+			var resp string
+			switch {
+			case req == "ADD CHANNEL":
+				resp = fmt.Sprintf("OK[%d]\n\r", m.channelIdx)
+				m.channelIdx++
+			default:
+				// SET CHANNEL ...
+				// LOAD LOAD ENGINE ...
+				// LOAD INSTRUMENT ...
+				resp = "OK\n\r"
+			}
+			m.conn.Write([]byte(resp))
 		}
 	}
 }
 
 func (m *MockPipeServer) stop() {
-	close(m.done)
+	if !IsClosed(m.done) {
+		close(m.done)
+	}
+	m.channelIdx = 0
 }
 
 func (m *MockPipeServer) getMessages() []string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.receivedMessages
+}
+
+func IsClosed(ch <-chan struct{}) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+	return false
 }

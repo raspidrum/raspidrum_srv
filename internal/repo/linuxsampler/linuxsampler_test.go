@@ -228,7 +228,8 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 				Client: tt.fields.Client,
 				Engine: tt.fields.Engine,
 			}
-			if err := l.genPresetFiles(tt.args.preset, tt.args.fs); (err != nil) != tt.wantErr {
+			// TODO: get and check generated instrument files map
+			if _, err := l.genPresetFiles(tt.args.preset, tt.args.fs); (err != nil) != tt.wantErr {
 				t.Errorf("LinuxSampler.LoadPreset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			// get files from MemFs
@@ -406,28 +407,29 @@ func Test_compareLines(t *testing.T) {
 }
 
 func TestLinuxSampler_loadToSampler(t *testing.T) {
+	// Создаем in-memory соединение
+	//clientConn, serverConn := net.Pipe()
+	//defer clientConn.Close()
+	//defer serverConn.Close()
+
 	type fields struct {
 		Client lscp.Client
 		Engine string
 	}
 	type args struct {
-		preset *m.KitPreset
+		preset          *m.KitPreset
+		instrumentFiles map[string]string
 	}
-
-	// Создаем in-memory соединение
-	clientConn, serverConn := net.Pipe()
-	defer clientConn.Close()
-	defer serverConn.Close()
-
-	// Создаем и запускаем mock-сервер
-	mockServer := startMockPipeServer(serverConn)
-	defer mockServer.stop()
+	type res struct {
+		lscpCommands []string
+		channels     map[string]int
+	}
 
 	tests := []struct {
 		name    string
 		fields  fields
 		args    args
-		want    []string
+		want    res
 		wantErr bool
 	}{
 		{
@@ -437,30 +439,177 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 				Engine: "sfz",
 			},
 			args: args{
-				//TODO:
+				preset: &m.KitPreset{
+					Channels: []m.PresetChannel{
+						{Key: "1",
+							Controls: map[string]m.PresetControl{
+								"volume": {
+									Type:  "volume",
+									Value: 1.0,
+								},
+							},
+						},
+					},
+					Instruments: []m.PresetInstrument{
+						{
+							Instrument: m.InstrumentRef{
+								Uid: "1111-ffff",
+								Key: "simple",
+							},
+							ChannelKey: "1",
+						},
+					},
+				},
+				instrumentFiles: map[string]string{
+					"1111-ffff": path.Join(presetRoot, presetDir, "simple_ctrl.sfz"),
+				},
 			},
-			want: []string{
-				//TODO:
+			want: res{
+				lscpCommands: []string{
+					"ADD CHANNEL",
+					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
+					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
+					"LOAD ENGINE sfz 0",
+					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "simple_ctrl.sfz") + "' 0 0",
+					"SET CHANNEL VOLUME 0 1.00",
+				},
+				channels: map[string]int{
+					"1": 0,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "one channel, two instrument",
+			fields: fields{
+				Client: lscp.NewClient("pipe", "0", "1s"),
+				Engine: "sfz",
+			},
+			args: args{
+				preset: &m.KitPreset{
+					Channels: []m.PresetChannel{
+						{Key: "1"},
+					},
+					Instruments: []m.PresetInstrument{
+						{
+							Instrument: m.InstrumentRef{
+								Uid: "1111-ffff",
+								Key: "kick",
+							},
+							ChannelKey: "1",
+						},
+						{
+							Instrument: m.InstrumentRef{
+								Uid: "2222-ffff",
+								Key: "snare",
+							},
+							ChannelKey: "1",
+						},
+					},
+				},
+				instrumentFiles: map[string]string{
+					"1111-ffff": path.Join(presetRoot, presetDir, "kick_ctrl.sfz"),
+					"2222-ffff": path.Join(presetRoot, presetDir, "snare_ctrl.sfz"),
+				},
+			},
+			want: res{
+				lscpCommands: []string{
+					"ADD CHANNEL",
+					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
+					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
+					"LOAD ENGINE sfz 0",
+					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "kick_ctrl.sfz") + "' 0 0",
+					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "snare_ctrl.sfz") + "' 0 0",
+				},
+				channels: map[string]int{
+					"1": 0,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "two channel, two instrument",
+			fields: fields{
+				Client: lscp.NewClient("pipe", "0", "1s"),
+				Engine: "sfz",
+			},
+			args: args{
+				preset: &m.KitPreset{
+					Channels: []m.PresetChannel{
+						{Key: "1"},
+						{Key: "2"},
+					},
+					Instruments: []m.PresetInstrument{
+						{
+							Instrument: m.InstrumentRef{
+								Uid: "1111-ffff",
+								Key: "kick",
+							},
+							ChannelKey: "2",
+						},
+						{
+							Instrument: m.InstrumentRef{
+								Uid: "2222-ffff",
+								Key: "snare",
+							},
+							ChannelKey: "1",
+						},
+					},
+				},
+				instrumentFiles: map[string]string{
+					"1111-ffff": path.Join(presetRoot, presetDir, "kick_ctrl.sfz"),
+					"2222-ffff": path.Join(presetRoot, presetDir, "snare_ctrl.sfz"),
+				},
+			},
+			want: res{
+				lscpCommands: []string{
+					"ADD CHANNEL",
+					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
+					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
+					"LOAD ENGINE sfz 0",
+					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "snare_ctrl.sfz") + "' 0 0",
+					"ADD CHANNEL",
+					"SET CHANNEL AUDIO_OUTPUT_DEVICE 1 0",
+					"SET CHANNEL MIDI_INPUT_DEVICE 1 0",
+					"LOAD ENGINE sfz 1",
+					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "kick_ctrl.sfz") + "' 0 1",
+				},
+				channels: map[string]int{
+					"1": 0,
+					"2": 1,
+				},
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// start mock server
+			clientConn, serverConn := net.Pipe()
 			tt.fields.Client.Conn = clientConn
+			mockServer := startMockPipeServer(serverConn)
 			l := &LinuxSampler{
 				Client: tt.fields.Client,
 				Engine: tt.fields.Engine,
 			}
-			if err := l.loadToSampler(tt.args.preset); (err != nil) != tt.wantErr {
+
+			gotChannels, err := l.loadToSampler(0, 0, tt.args.preset, tt.args.instrumentFiles)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("LinuxSampler.loadToSampler() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			// Даем время на обработку и останавливаем сервер
+			// Let some time for finish processing and then stop
 			time.Sleep(100 * time.Millisecond)
 			mockServer.stop()
-			if !reflect.DeepEqual(mockServer.getMessages(), tt.want) {
-				t.Errorf("Expected %v, got %v", tt.want, mockServer.getMessages())
+			// compare lscp commends
+			if !reflect.DeepEqual(mockServer.getMessages(), tt.want.lscpCommands) {
+				t.Errorf("diff lscp commands: %v", compareLines(tt.want.lscpCommands, mockServer.getMessages()))
 			}
+			// compare channels
+			if !reflect.DeepEqual(gotChannels, tt.want.channels) {
+				t.Errorf("Expected %v, got %v", tt.want.channels, gotChannels)
+			}
+			clientConn.Close()
+			serverConn.Close()
 		})
 	}
 }

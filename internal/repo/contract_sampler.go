@@ -1,7 +1,6 @@
 package repo
 
 import (
-	midi "github.com/raspidrum-srv/internal/app/mididevice"
 	m "github.com/raspidrum-srv/internal/model"
 	"github.com/spf13/afero"
 )
@@ -18,6 +17,8 @@ type Param[T ParamType] struct {
 type SamplerRepo interface {
 	ConnectAudioOutput(driver string, params map[int][]Param[string]) (devId int, err error)
 	ConnectMidiInput(driver string, params []Param[string]) (devId int, err error)
-	CreateChannel(audioDevId, midiDevId int, instrumentFile string) (channelId int, err error)
-	LoadPreset(preset *m.KitPreset, mididevs []midi.MIDIDevice, fs afero.Fs) error
+	CreateChannel(audioDevId, midiDevId int) (channelId int, err error)
+	LoadInstrument(instrumentFile string, instrIdx int, channelId int) error
+	LoadPreset(audioDevId, midiDevId int, preset *m.KitPreset, fs afero.Fs) error
+	SetChannelVolume(samplerChn int, volume float64) error
 }

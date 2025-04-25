@@ -1,15 +1,10 @@
 package linuxsampler
 
 import (
-	"fmt"
 	"os"
-	"path"
 
-	m "github.com/raspidrum-srv/internal/model"
 	repo "github.com/raspidrum-srv/internal/repo"
-	"github.com/raspidrum-srv/internal/repo/file"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
-	"github.com/spf13/afero"
 )
 
 var presetDir = "current"
@@ -74,7 +69,7 @@ func (l *LinuxSampler) ConnectMidiInput(driver string, params []repo.Param[strin
 	return
 }
 
-func (l *LinuxSampler) CreateChannel(audioDevId, midiDevId int, instrumentFile string) (channelId int, err error) {
+func (l *LinuxSampler) CreateChannel(audioDevId, midiDevId int) (channelId int, err error) {
 	channelId, err = l.Client.AddSamplerChannel()
 	if err != nil {
 		return
@@ -91,102 +86,13 @@ func (l *LinuxSampler) CreateChannel(audioDevId, midiDevId int, instrumentFile s
 	if err != nil {
 		return
 	}
-	err = l.Client.LoadInstrument(instrumentFile, 0, channelId)
 	return
 }
 
-func (l *LinuxSampler) LoadPreset(preset *m.KitPreset, fs afero.Fs) error {
-
-	err := l.genPresetFiles(preset, fs)
-	if err != nil {
-		return fmt.Errorf("failed prepare instrument control files for preset: %w", err)
-	}
-
-	// load sfz control files and samples in sampler
-	err = l.loadToSampler(preset)
-	if err != nil {
-		return fmt.Errorf("failed load instrument config and samples to sampler: %w", err)
-	}
-	return nil
+func (l *LinuxSampler) LoadInstrument(instrumentFile string, instrIdx int, channelId int) error {
+	return l.Client.LoadInstrument(instrumentFile, 0, channelId)
 }
 
-// make sfz control files
-func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) error {
-	presetDir, err := preparePresetDir(presetRoot, fs)
-	if err != nil {
-		return err
-	}
-	for _, v := range preset.Instruments {
-		// make one file for each instrument
-		fcontent := []string{}
-		fcontent = append(fcontent, "<control>")
-		fcontent = append(fcontent, "default_path="+path.Join(sampleRoot, v.Instrument.Uid, v.Instrument.Key))
-		// instrument MIDI Key
-		if len(v.MidiKey) > 0 {
-			fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", v.Instrument.CfgMidiKey, v.MidiNote))
-		}
-		// instrument Controls
-		for _, cv := range v.Controls {
-			fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", cv.CfgKey, cv.MidiCC))
-			fcontent = append(fcontent, fmt.Sprintf("set_cc$%s=%.1f", cv.CfgKey, cv.Value))
-		}
-
-		// instrument layers
-		for _, lv := range v.Layers {
-			// layer MIDI Key
-			if len(lv.MidiKey) > 0 {
-				fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", lv.CfgMidiKey, lv.MidiNote))
-			}
-			// layer controls
-			for _, lcv := range lv.Controls {
-				fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", lcv.CfgKey, lcv.MidiCC))
-				fcontent = append(fcontent, fmt.Sprintf("set_cc$%s=%.1f", lcv.CfgKey, lcv.Value))
-			}
-		}
-
-		intrDir := path.Join(instrumentRoot, v.Instrument.Uid, v.Instrument.Key)
-		fcontent = append(fcontent, fmt.Sprintf(`#include "%s.sfz"`, intrDir))
-		// save to file
-		fname := path.Join(presetDir, v.Instrument.Key+"_ctrl.sfz")
-		err = file.WriteLines(fcontent, fname, fs)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func preparePresetDir(fpath string, fs afero.Fs) (string, error) {
-	dr := path.Join(fpath, presetDir)
-	err := fs.RemoveAll(dr)
-	if err != nil {
-		return dr, fmt.Errorf("failed to prepare preset directory %s: %w", dr, err)
-	}
-	err = fs.MkdirAll(dr, dirPermission)
-	if err != nil {
-		return dr, fmt.Errorf("failed to prepare preset directory %s: %w", dr, err)
-	}
-	return dr, nil
-}
-
-func (l *LinuxSampler) loadToSampler(preset *m.KitPreset) error {
-	// Init "instruments-channel index". Map key - KitPreset.Channel.Key, value - KitPreset.Instruments
-	chnlInstr := make(map[string][]int, len(preset.Channels))
-	for _, v := range preset.Channels {
-		chnlInstr[v.Key] = []int{}
-	}
-	for i, v := range preset.Instruments {
-		// add instrument array index to "instruments-channel index"
-		chnlInstr[v.ChannelKey] = append(chnlInstr[v.ChannelKey], i)
-	}
-
-	//TODO: loading instruments
-	//for ck, cins := range chnlInstr {
-	// TODO: create channel
-
-	// TODO: load instruments to channel
-
-	//}
-
-	return nil
+func (l *LinuxSampler) SetChannelVolume(samplerChn int, volume float64) error {
+	return l.Client.SetChannelVolume(samplerChn, volume)
 }
