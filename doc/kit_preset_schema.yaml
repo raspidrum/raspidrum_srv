@@ -1,6 +1,7 @@
 # TODO:
 # + store channel preset: volume, pan, fx
 # - agg instrument controls, if its has same control, e.g. snare and snare rimshot has same mide CC for pan, pitch and decay
+# - add channel mute/solo
 schemas:
 - $id: /schemas/kit_preset
   title: Kit Preset
