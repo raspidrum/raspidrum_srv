@@ -2,12 +2,21 @@ package linuxsampler
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	m "github.com/raspidrum-srv/internal/model"
 	"github.com/raspidrum-srv/internal/repo/file"
 	"github.com/spf13/afero"
 )
+
+var presetDir = "current"
+var dirPermission os.FileMode = os.ModePerm
+
+// TODO: move to cfg
+var sampleRoot = "samples"
+var presetRoot = "presets"
+var instrumentRoot = "instruments"
 
 func (l *LinuxSampler) LoadPreset(audioDevId, midiDevId int, preset *m.KitPreset, fs afero.Fs) error {
 
@@ -28,15 +37,16 @@ func (l *LinuxSampler) LoadPreset(audioDevId, midiDevId int, preset *m.KitPreset
 // return map instrument.uid : filename with path
 func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) (map[string]string, error) {
 	instrFiles := map[string]string{}
-	presetDir, err := preparePresetDir(fs)
+	presetDir, err := preparePresetDir(l.DataDir, fs)
 	if err != nil {
 		return nil, err
 	}
+	sampleDir := path.Join(l.DataDir, sampleRoot)
 	for _, v := range preset.Instruments {
 		// make one file for each instrument
 		fcontent := []string{}
 		fcontent = append(fcontent, "<control>")
-		fcontent = append(fcontent, "default_path="+path.Join(sampleRoot, v.Instrument.Uid, v.Instrument.Key))
+		fcontent = append(fcontent, "default_path="+path.Join(sampleDir, v.Instrument.Uid, v.Instrument.Key)+"/")
 		// instrument MIDI Key
 		if len(v.MidiKey) > 0 {
 			fcontent = append(fcontent, fmt.Sprintf("#define $%s %d", v.Instrument.CfgMidiKey, v.MidiNote))
@@ -60,7 +70,7 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) (map[str
 			}
 		}
 
-		intrDir := path.Join(instrumentRoot, v.Instrument.Uid, v.Instrument.Key)
+		intrDir := path.Join(l.DataDir, instrumentRoot, v.Instrument.Uid, v.Instrument.Key)
 		fcontent = append(fcontent, fmt.Sprintf(`#include "%s.sfz"`, intrDir))
 		// save to file
 		fname := path.Join(presetDir, v.Instrument.Key+"_ctrl.sfz")
@@ -74,8 +84,8 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) (map[str
 }
 
 // recreate dir with instrument control files (<instrument>_ctrl.sfz)
-func preparePresetDir(fs afero.Fs) (string, error) {
-	dr := path.Join(presetRoot, presetDir)
+func preparePresetDir(rootDir string, fs afero.Fs) (string, error) {
+	dr := path.Join(rootDir, presetRoot, presetDir)
 	err := fs.RemoveAll(dr)
 	if err != nil {
 		return dr, fmt.Errorf("failed to prepare preset directory %s: %w", dr, err)

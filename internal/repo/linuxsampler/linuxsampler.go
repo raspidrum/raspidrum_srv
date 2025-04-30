@@ -1,24 +1,15 @@
 package linuxsampler
 
 import (
-	"os"
-
 	repo "github.com/raspidrum-srv/internal/repo"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 )
 
-var presetDir = "current"
-var dirPermission os.FileMode = 0644
-
-// TODO: move to cfg
-var sampleRoot = "samples"
-var presetRoot = "presets"
-var instrumentRoot = "instruments"
-
 // Engine - LinuxSampler engine: gig, sfz, sf2
 type LinuxSampler struct {
-	Client lscp.Client
-	Engine string
+	Client  lscp.Client
+	Engine  string
+	DataDir string // root dir for sfz-files, samples and presets
 }
 
 // Connect

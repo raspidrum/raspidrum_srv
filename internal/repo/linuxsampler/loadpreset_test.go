@@ -30,6 +30,8 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 		files map[string][]string
 	}
 
+	rootDir := ""
+
 	tests := []struct {
 		name           string
 		fields         fields
@@ -58,7 +60,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 			},
 			orderImportant: true,
 			want: res{
-				dir: path.Join(presetRoot, presetDir),
+				dir: path.Join(rootDir, presetRoot, presetDir),
 				files: map[string][]string{
 					"simple_ctrl.sfz": {
 						"<control>",
@@ -110,7 +112,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 			},
 			orderImportant: false,
 			want: res{
-				dir: path.Join(presetRoot, presetDir),
+				dir: path.Join(rootDir, presetRoot, presetDir),
 				files: map[string][]string{
 					"kick_ctrl.sfz": {
 						"<control>",
@@ -195,7 +197,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 			},
 			orderImportant: false,
 			want: res{
-				dir: path.Join(presetRoot, presetDir),
+				dir: path.Join(rootDir, presetRoot, presetDir),
 				files: map[string][]string{
 					"ride_ctrl.sfz": {
 						"<control>",
@@ -225,8 +227,9 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			l := &LinuxSampler{
-				Client: tt.fields.Client,
-				Engine: tt.fields.Engine,
+				Client:  tt.fields.Client,
+				Engine:  tt.fields.Engine,
+				DataDir: rootDir,
 			}
 			// TODO: get and check generated instrument files map
 			if _, err := l.genPresetFiles(tt.args.preset, tt.args.fs); (err != nil) != tt.wantErr {
@@ -411,7 +414,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 	//clientConn, serverConn := net.Pipe()
 	//defer clientConn.Close()
 	//defer serverConn.Close()
-
+	rootDir := ""
 	type fields struct {
 		Client lscp.Client
 		Engine string
@@ -461,7 +464,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					},
 				},
 				instrumentFiles: map[string]string{
-					"1111-ffff": path.Join(presetRoot, presetDir, "simple_ctrl.sfz"),
+					"1111-ffff": path.Join(rootDir, presetRoot, presetDir, "simple_ctrl.sfz"),
 				},
 			},
 			want: res{
@@ -470,7 +473,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
 					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
 					"LOAD ENGINE sfz 0",
-					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "simple_ctrl.sfz") + "' 0 0",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "simple_ctrl.sfz") + "' 0 0",
 					"SET CHANNEL VOLUME 0 1.00",
 				},
 				channels: map[string]int{
@@ -508,8 +511,8 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					},
 				},
 				instrumentFiles: map[string]string{
-					"1111-ffff": path.Join(presetRoot, presetDir, "kick_ctrl.sfz"),
-					"2222-ffff": path.Join(presetRoot, presetDir, "snare_ctrl.sfz"),
+					"1111-ffff": path.Join(rootDir, presetRoot, presetDir, "kick_ctrl.sfz"),
+					"2222-ffff": path.Join(rootDir, presetRoot, presetDir, "snare_ctrl.sfz"),
 				},
 			},
 			want: res{
@@ -518,8 +521,8 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
 					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
 					"LOAD ENGINE sfz 0",
-					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "kick_ctrl.sfz") + "' 0 0",
-					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "snare_ctrl.sfz") + "' 0 0",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "kick_ctrl.sfz") + "' 0 0",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "snare_ctrl.sfz") + "' 0 0",
 				},
 				channels: map[string]int{
 					"1": 0,
@@ -557,8 +560,8 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					},
 				},
 				instrumentFiles: map[string]string{
-					"1111-ffff": path.Join(presetRoot, presetDir, "kick_ctrl.sfz"),
-					"2222-ffff": path.Join(presetRoot, presetDir, "snare_ctrl.sfz"),
+					"1111-ffff": path.Join(rootDir, presetRoot, presetDir, "kick_ctrl.sfz"),
+					"2222-ffff": path.Join(rootDir, presetRoot, presetDir, "snare_ctrl.sfz"),
 				},
 			},
 			want: res{
@@ -567,12 +570,12 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
 					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
 					"LOAD ENGINE sfz 0",
-					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "snare_ctrl.sfz") + "' 0 0",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "snare_ctrl.sfz") + "' 0 0",
 					"ADD CHANNEL",
 					"SET CHANNEL AUDIO_OUTPUT_DEVICE 1 0",
 					"SET CHANNEL MIDI_INPUT_DEVICE 1 0",
 					"LOAD ENGINE sfz 1",
-					"LOAD INSTRUMENT '" + path.Join(presetRoot, presetDir, "kick_ctrl.sfz") + "' 0 1",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "kick_ctrl.sfz") + "' 0 1",
 				},
 				channels: map[string]int{
 					"1": 0,
@@ -589,8 +592,9 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 			tt.fields.Client.Conn = clientConn
 			mockServer := startMockPipeServer(serverConn)
 			l := &LinuxSampler{
-				Client: tt.fields.Client,
-				Engine: tt.fields.Engine,
+				Client:  tt.fields.Client,
+				Engine:  tt.fields.Engine,
+				DataDir: rootDir,
 			}
 
 			gotChannels, err := l.loadToSampler(0, 0, tt.args.preset, tt.args.instrumentFiles)

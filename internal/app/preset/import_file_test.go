@@ -2,23 +2,10 @@ package preset
 
 import (
 	"path"
-	"runtime"
 	"testing"
 
 	"github.com/raspidrum-srv/internal/repo/db"
 )
-
-func getDBPath() string {
-	_, f, _, _ := runtime.Caller(0)
-	dir := path.Join(path.Dir(f), "../../../db/")
-	return dir
-}
-
-func getProjectPath() string {
-	_, f, _, _ := runtime.Caller(0)
-	dir := path.Join(path.Dir(f), "../../../")
-	return dir
-}
 
 func TestImportPresetFromFile(t *testing.T) {
 	d := &db.Sqlite{}

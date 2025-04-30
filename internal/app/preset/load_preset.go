@@ -17,8 +17,6 @@ var midiDevices = []midi.MIDIDevice{
 	midi.MIDIDevice(&mdev),
 }
 
-var osFs = afero.NewOsFs()
-
 // Loads the specified preset into the sampler and returns information about the loaded preset
 func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) (*m.KitPreset, error) {
 
@@ -117,4 +115,14 @@ func mapMidiKey(mkey string, mdevs []midi.MIDIDevice) (int, error) {
 		}
 	}
 	return 0, fmt.Errorf("MIDI devices %s doen't have mapping for MIDI Key %s", devlist, mkey)
+}
+
+// deprecated
+// old func for testing load one instrument-file in new sampler channel
+func LoadPresetToSampler(sampler repo.SamplerRepo, audDevId, midiDevId int, instrumentFile string) (chnl int, err error) {
+	chnl, err = sampler.CreateChannel(audDevId, midiDevId)
+	if err != nil {
+		return chnl, fmt.Errorf("failed load preset: %w", err)
+	}
+	return chnl, sampler.LoadInstrument(instrumentFile, 0, chnl)
 }
