@@ -46,6 +46,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 				preset: &m.KitPreset{
 					Instruments: []m.PresetInstrument{
 						{
+							ChannelKey: "1",
 							Instrument: m.InstrumentRef{
 								Uid:        "1111-ffff",
 								Key:        "simple",
@@ -54,6 +55,9 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 							MidiKey:  "kick1",
 							MidiNote: 36,
 						},
+					},
+					Channels: []m.PresetChannel{
+						{Key: "1"},
 					},
 				},
 				fs: afero.NewMemMapFs(),
@@ -64,9 +68,12 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 				files: map[string][]string{
 					"simple_ctrl.sfz": {
 						"<control>",
-						"default_path=samples/1111-ffff/simple",
+						"default_path=samples/1111-ffff/simple/",
 						"#define $KEY1 36",
 						`#include "instruments/1111-ffff/simple.sfz"`,
+					},
+					"channel_1.sfz": {
+						`#include "simple_ctrl.sfz"`,
 					},
 				},
 			},
@@ -75,8 +82,13 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 			name: "two instruments w/o layers, with controls",
 			args: args{
 				preset: &m.KitPreset{
+					Channels: []m.PresetChannel{
+						{Key: "1"},
+						{Key: "2"},
+					},
 					Instruments: []m.PresetInstrument{
 						{
+							ChannelKey: "1",
 							Instrument: m.InstrumentRef{
 								Uid:        "1111-ffff",
 								Key:        "kick",
@@ -86,6 +98,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 							MidiNote: 36,
 						},
 						{
+							ChannelKey: "2",
 							Instrument: m.InstrumentRef{
 								Uid:        "2222-ffff",
 								Key:        "snare",
@@ -116,19 +129,25 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 				files: map[string][]string{
 					"kick_ctrl.sfz": {
 						"<control>",
-						"default_path=samples/1111-ffff/kick",
+						"default_path=samples/1111-ffff/kick/",
 						"#define $KEYKICK 36",
 						`#include "instruments/1111-ffff/kick.sfz"`,
 					},
 					"snare_ctrl.sfz": {
 						"<control>",
-						"default_path=samples/2222-ffff/snare",
+						"default_path=samples/2222-ffff/snare/",
 						"#define $KEYSNARE 38",
 						"#define $S65NRV 22",
 						"set_cc$S65NRV=95.0",
 						"#define $S65NRP 80",
 						"set_cc$S65NRP=64.0",
 						`#include "instruments/2222-ffff/snare.sfz"`,
+					},
+					"channel_1.sfz": {
+						`#include "kick_ctrl.sfz"`,
+					},
+					"channel_2.sfz": {
+						`#include "snare_ctrl.sfz"`,
 					},
 				},
 			},
@@ -137,8 +156,12 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 			name: "two instruments with layers, with controls",
 			args: args{
 				preset: &m.KitPreset{
+					Channels: []m.PresetChannel{
+						{Key: "1"},
+					},
 					Instruments: []m.PresetInstrument{
 						{
+							ChannelKey: "1",
 							Instrument: m.InstrumentRef{
 								Uid: "1111-ffff",
 								Key: "ride",
@@ -171,6 +194,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 							},
 						},
 						{
+							ChannelKey: "1",
 							Instrument: m.InstrumentRef{
 								Uid:        "2222-ffff",
 								Key:        "snare",
@@ -201,7 +225,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 				files: map[string][]string{
 					"ride_ctrl.sfz": {
 						"<control>",
-						"default_path=samples/1111-ffff/ride",
+						"default_path=samples/1111-ffff/ride/",
 						"#define $RI17BKEY 53",
 						"#define $RI17BV 104",
 						"set_cc$RI17BV=95.0",
@@ -212,13 +236,17 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 					},
 					"snare_ctrl.sfz": {
 						"<control>",
-						"default_path=samples/2222-ffff/snare",
+						"default_path=samples/2222-ffff/snare/",
 						"#define $KEYSNARE 38",
 						"#define $S65NRV 22",
 						"set_cc$S65NRV=95.0",
 						"#define $S65NRP 80",
 						"set_cc$S65NRP=64.0",
 						`#include "instruments/2222-ffff/snare.sfz"`,
+					},
+					"channel_1.sfz": {
+						`#include "ride_ctrl.sfz"`,
+						`#include "snare_ctrl.sfz"`,
 					},
 				},
 			},
@@ -410,10 +438,6 @@ func Test_compareLines(t *testing.T) {
 }
 
 func TestLinuxSampler_loadToSampler(t *testing.T) {
-	// Создаем in-memory соединение
-	//clientConn, serverConn := net.Pipe()
-	//defer clientConn.Close()
-	//defer serverConn.Close()
 	rootDir := ""
 	type fields struct {
 		Client lscp.Client
@@ -465,6 +489,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 				},
 				instrumentFiles: map[string]string{
 					"1111-ffff": path.Join(rootDir, presetRoot, presetDir, "simple_ctrl.sfz"),
+					"channel_1": path.Join(rootDir, presetRoot, presetDir, "channel_1.sfz"),
 				},
 			},
 			want: res{
@@ -473,7 +498,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
 					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
 					"LOAD ENGINE sfz 0",
-					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "simple_ctrl.sfz") + "' 0 0",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "channel_1.sfz") + "' 0 0",
 					"SET CHANNEL VOLUME 0 1.00",
 				},
 				channels: map[string]int{
@@ -513,6 +538,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 				instrumentFiles: map[string]string{
 					"1111-ffff": path.Join(rootDir, presetRoot, presetDir, "kick_ctrl.sfz"),
 					"2222-ffff": path.Join(rootDir, presetRoot, presetDir, "snare_ctrl.sfz"),
+					"channel_1": path.Join(rootDir, presetRoot, presetDir, "channel_1.sfz"),
 				},
 			},
 			want: res{
@@ -521,8 +547,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
 					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
 					"LOAD ENGINE sfz 0",
-					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "kick_ctrl.sfz") + "' 0 0",
-					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "snare_ctrl.sfz") + "' 0 0",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "channel_1.sfz") + "' 0 0",
 				},
 				channels: map[string]int{
 					"1": 0,
@@ -562,6 +587,8 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 				instrumentFiles: map[string]string{
 					"1111-ffff": path.Join(rootDir, presetRoot, presetDir, "kick_ctrl.sfz"),
 					"2222-ffff": path.Join(rootDir, presetRoot, presetDir, "snare_ctrl.sfz"),
+					"channel_1": path.Join(rootDir, presetRoot, presetDir, "channel_1.sfz"),
+					"channel_2": path.Join(rootDir, presetRoot, presetDir, "channel_2.sfz"),
 				},
 			},
 			want: res{
@@ -570,12 +597,12 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"SET CHANNEL AUDIO_OUTPUT_DEVICE 0 0",
 					"SET CHANNEL MIDI_INPUT_DEVICE 0 0",
 					"LOAD ENGINE sfz 0",
-					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "snare_ctrl.sfz") + "' 0 0",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "channel_1.sfz") + "' 0 0",
 					"ADD CHANNEL",
 					"SET CHANNEL AUDIO_OUTPUT_DEVICE 1 0",
 					"SET CHANNEL MIDI_INPUT_DEVICE 1 0",
 					"LOAD ENGINE sfz 1",
-					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "kick_ctrl.sfz") + "' 0 1",
+					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "channel_2.sfz") + "' 0 1",
 				},
 				channels: map[string]int{
 					"1": 0,

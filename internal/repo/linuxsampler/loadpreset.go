@@ -36,12 +36,19 @@ func (l *LinuxSampler) LoadPreset(audioDevId, midiDevId int, preset *m.KitPreset
 // make sfz control files
 // return map instrument.uid : filename with path
 func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) (map[string]string, error) {
-	instrFiles := map[string]string{}
+	presetFiles := map[string]string{}
 	presetDir, err := preparePresetDir(l.DataDir, fs)
 	if err != nil {
 		return nil, err
 	}
 	sampleDir := path.Join(l.DataDir, sampleRoot)
+
+	//content for channel files - used to load many instrument files in one sampler channel
+	chnlFiles := make(map[string][]string, len(preset.Channels))
+	for _, v := range preset.Channels {
+		chnlFiles[v.Key] = []string{}
+	}
+
 	for _, v := range preset.Instruments {
 		// make one file for each instrument
 		fcontent := []string{}
@@ -73,14 +80,29 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) (map[str
 		intrDir := path.Join(l.DataDir, instrumentRoot, v.Instrument.Uid, v.Instrument.Key)
 		fcontent = append(fcontent, fmt.Sprintf(`#include "%s.sfz"`, intrDir))
 		// save to file
-		fname := path.Join(presetDir, v.Instrument.Key+"_ctrl.sfz")
-		instrFiles[v.Instrument.Uid] = fname
+		instrName := v.Instrument.Key + "_ctrl.sfz"
+		fname := path.Join(presetDir, instrName)
+		presetFiles[v.Instrument.Uid] = fname
 		err = file.WriteLines(fcontent, fname, fs)
 		if err != nil {
 			return nil, err
 		}
+
+		chnlFiles[v.ChannelKey] = append(chnlFiles[v.ChannelKey], fmt.Sprintf(`#include "%s"`, instrName))
 	}
-	return instrFiles, nil
+
+	// write channel files
+	for k, v := range chnlFiles {
+		chnlName := "channel_" + k
+		fname := path.Join(presetDir, fmt.Sprintf("%s.sfz", chnlName))
+		err = file.WriteLines(v, fname, fs)
+		if err != nil {
+			return nil, err
+		}
+		presetFiles[chnlName] = fname
+	}
+
+	return presetFiles, nil
 }
 
 // recreate dir with instrument control files (<instrument>_ctrl.sfz)
@@ -103,14 +125,14 @@ func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPrese
 	channels := map[string]int{}
 
 	// Init "instruments-channel index". Map key - KitPreset.Channel.Key, value - KitPreset.Instruments index
-	chnlInstr := make(map[string][]int, len(preset.Channels))
-	for _, v := range preset.Channels {
-		chnlInstr[v.Key] = []int{}
-	}
-	for i, v := range preset.Instruments {
-		// add instrument array index to "instruments-channel index"
-		chnlInstr[v.ChannelKey] = append(chnlInstr[v.ChannelKey], i)
-	}
+	//chnlInstr := make(map[string][]int, len(preset.Channels))
+	//for _, v := range preset.Channels {
+	//	chnlInstr[v.Key] = []int{}
+	//}
+	//for i, v := range preset.Instruments {
+	//	// add instrument array index to "instruments-channel index"
+	//	chnlInstr[v.ChannelKey] = append(chnlInstr[v.ChannelKey], i)
+	//}
 
 	//loading instruments
 	for _, cv := range preset.Channels {
@@ -120,20 +142,29 @@ func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPrese
 			return nil, fmt.Errorf("failed create sampler channel: %w", err)
 		}
 		channels[cv.Key] = chnlId
-		cins := chnlInstr[cv.Key]
+		//cins := chnlInstr[cv.Key]
 
 		// load instruments to channel
-		for _, iidx := range cins {
-			instr := preset.Instruments[iidx]
-			fname, ok := instrfiles[instr.Instrument.Uid]
-			if !ok {
-				return nil, fmt.Errorf("failed load instrument: not found filename for instrument %s", instr.Instrument.Key)
-			}
-			err = l.LoadInstrument(fname, 0, chnlId)
-			if err != nil {
-				return nil, fmt.Errorf("failed load instrument %s to sampler: %w", instr.Instrument.Key, err)
-			}
+		chnlName := "channel_" + cv.Key
+		fname, ok := instrfiles[chnlName]
+		if !ok {
+			return nil, fmt.Errorf("failed load instrument: not found filename for channel instruments file %s", chnlName)
 		}
+		err = l.LoadInstrument(fname, 0, chnlId)
+		if err != nil {
+			return nil, fmt.Errorf("failed load instruments %s to sampler: %w", chnlName, err)
+		}
+		//for _, iidx := range cins {
+		//	instr := preset.Instruments[iidx]
+		//	fname, ok := instrfiles[instr.Instrument.Uid]
+		//	if !ok {
+		//		return nil, fmt.Errorf("failed load instrument: not found filename for instrument %s", instr.Instrument.Key)
+		//	}
+		//	err = l.LoadInstrument(fname, 0, chnlId)
+		//	if err != nil {
+		//		return nil, fmt.Errorf("failed load instrument %s to sampler: %w", instr.Instrument.Key, err)
+		//	}
+		//}
 
 		// set channel controls
 		for _, ccv := range cv.Controls {
