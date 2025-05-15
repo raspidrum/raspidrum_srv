@@ -36,7 +36,7 @@ Fx - эффект. Может содержать цепочку эффектов
       - pitch - может быть только для всех слоев инструмента сразу, иначе получится "каша"
       - ??? (eq, reverb - некторые движки и семплеры поддерживают)
 
-## Пресеты
+# Пресеты
 
 Для использования кита необходим пресет.
 В пресете настраивается:
@@ -346,3 +346,126 @@ channels:
     - HH
     - CYMBALS (crash, ride и пр.)
     - TOMS
+
+
+
+
+#### Ограничения 
+1. в instrument.controls.volume|pan может отсутсововать midiCC, а в instrument.layers.controls.volume|pan midiCC обязателен.
+2. если в канале несколько инструментов,  и у инструмента есть слои, то у инструмента должен быть instrument.controls.volume|pan
+3. если в канале несколько инструментов, то у инструмента без слоев volume|pan обязательно должен быть с midiCC 
+
+
+#### Отличия моделей в srv и UI
+
+##### Preset
+- `key`: в UI есть поле key, а в srv uuid (Uid)
+  - **решение**: поле обязательное, но не используется
+    - в srv использовать uuid и передавать его в значении key
+- `description`: в srv нет description
+  - **решение**: поле не обязательное, не используется
+    - удалить из модели UI и перегенерить freezed
+    - удалить из документации UI /doc/complete_class.mmd
+
+##### Preset.Channel
+- `type`: в srv нет type, т.к. в текущей реализации все каналы - это каналы семплера. Но в модели UI это каналы `instrument`. В UI модели также есть канал `sampler`, к-й явялется глобальным для всего семплера. Такой канал может быть только один. Канал `sampler` может содержать fx. Для linuxsampler, это наверно задаетсяс помощью FX_SEND.
+  - решение:
+    - генерить один канал типа `sampler`, содержащий глобальную громкость linuxsampler
+      - TODO: можно ли в linuxsampler глобально регулировать pan?
+    - каждый канал srv выдавать в API с типом `instrument`
+
+- `pan`, `level`: в UI расположены прямо в канале, а в srv расположены в controls. В srv `volume` может быть как в самом канале, так и в `instrument.controls`. `pan` же располагается только в `instrument.controls`. В одном канале srv может располагаться несколько инструментов как с одинаковым кодом midiCC для Pan, так и различным. Также в srv для инструмента может быть слой, в котором регулируется `volume` и `pan`
+  - **решение**:
+    - `level`:
+      - переименовать в UI `level` в `volume`
+      - если в канале несколько инструментов, то регулируется `channel.controls.volume`
+        - *Примечание: отдельный инструмент регулируется через `instrument.controls.volume` при наличии*
+      - если в канале один инструмент 
+        - в инструменте есть `volume` c midiCC, то реулируется `instrument.controls.volume` через отправку команды MIDI CC
+          - в UI регулировка указывается в канале, в инструменте не указывается
+        - в инструменте нет `volume` или есть `volume` но без midiCC, то регулируется `channel.controls.volume`
+          - в UI регулировка указывается в канале, в инструменте не указывается
+    - `pan`: логика полностью аналогична `level`
+  
+- `fxs`: пока не реализовано в srv
+
+
+##### Preset.Channel.Instrument
+- `key`: отсутствует в srv, но в srv есть uid. Нельзя использовать srv.uid в качестве key, т.к. srv.uid - это uid используемого инструмента (семплов). Может быть кейс, например, использования одного инструмента (семплов) для tom1 и tom2 с разным pitch.
+  - **решение**: 
+    - вариант 1. Использовать midiKey в качестве key, т.к. midiKey должен быть уникальным в пресете (хотя такого ограничния явно нет)
+    - **вариант 2.** Использовать PK из БД.
+      - добавить поле Id в модель PresetInstrument
+      - маппить PresetInstrument.Id на UI Instrument.key
+
+- `pan`, `level`: в UI расположены прямо в инструменте, а в srv расположены в controls.
+  - В канале один инструмент
+      - В UI отсутствует `pan`, `level`. В этом случае регулировка выполняется в канале. Это не зависит от наличия `layers` у инструмента.
+  - В канале несколько инструментов
+    - В UI может отсутствовать `pan`, `level`, если у инструмента есть layers.
+  - **решение**:
+    - переименовать в UI `level` в `volume`
+    - в канале один инструмент
+      - в UI регулировка указывается в канале, в инструменте не указывается
+    - в канале несколько инструментов
+      - в UI регулировка указывается в `Instrument`, если она присутствует в `PresetInstrument`
+      - в инструменте с `volume` без midiCC регулировка инструмента виртуальная - пересчитываются значения в слоях и отправляются команды MIDI CC в слоях. При этом в модели srv в слоях не меняется значение `volume` (в БД сохраняется изменение только `volume` инструмента). 
+        *Примечание: при отсутствии midiCC у `volume` инструмента валидация в srv гарантирует наличие слоев*
+
+- `pitch`, `decay` и прочие регулировки: в UI располагается в `Instrument.tunes`. В srv располагается в `PresetInstrument.Controls`.
+  - **решение:** все `PresetInstrument.Controls` кроме `volume` и `pan` помещаются в `Instrument.tunes`.
+  
+
+
+##### Preset.Channel.Instrument.Layer
+- `key`: Использовать ключ мапы модели srv PresetInstrument
+  
+- `pan`, `level`: В UI всегда присутствует, но по модели UI оба необязательны. В srv всегда присутствует только `volume`, может опционально присутствовать `pan`.
+  - **решение**:
+    - переименовать в UI `level` в `volume`
+  
+- `tunes`: в UI отсутствует, но в srv может присутствовать регулировки, отличные от `volume` и `pan`. Но по факту, сейчас содержит только `volume`.
+  - решение: не формируем. Если в srv в layers есть controls, отличные от `volume` и `pan`, то игнорим их и пишем warning в log.
+    - #TODO: подумать как выровнять модель, чтобы не пришлось писать warning
+      - вариант 1. В srv валидировать типы controls для Layer: только `volume` и `pan`. Остальное может располагаться только в `fxs`, к-й реализовать отдельной моделью в srv.
+      - **вариант 2**. Добавить в UI для layer `tunes`, куда помещать регулировки кроме `volume` и `pan`. Пока UI не поддерживает их будет игнорить
+      - вариант 3. В srv явно разделить основные регулировки и прочие. В основные должны попасть только `volume` и `pan`, в прочие - все остальные.
+  
+- `fxs`: в srv не реализовано
+
+
+## Map UI, srv and db fields for preset
+
+| UI<br>Preset        | UI<br>required | srv<br>KitPreset                     | db                         | Notes           |
+| ------------------- | :------------: | ------------------------------------ | -------------------------- | --------------- |
+| .key                |       Y        | .Uid                                 | kit_preset.uid             |                 |
+| **.channels**       |       Y        | .Channels or LinuxSampler            | preset_channel or none     |                 |
+| ..key               |       Y        | .Channels.Key                        | preset_channel.key         |                 |
+| ..name              |       Y        | .Channels.Name                       | preset_channel.name        |                 |
+| ..type[@sampler]    |       Y        |                                      | -                          | *1              |
+| ..type[@instrument] |       Y        | .Channels                            | preset_channel             |                 |
+| ..volume            |       Y        | .Channels.Controls[@type==volume]    | preset_channel.controls    | *2              |
+| ..volume            |       Y        | .Instruments.Controls[@type==volume] | preset_instrument.controls | *3              |
+| ..pan               |       Y        | .Channels.Controls[@type==pan]       | preset_channel.controls    | *2              |
+| ..pan               |       Y        | .Instruments.Controls[@type==pan]    | preset_instrument.controls | *3              |
+| ..fxs               |                | -                                    | -                          | not implemented |
+| **..instruments**   |       Y        | .Instruments                         | preset_instrument          |                 |
+| ..key               |       Y        | .Instruments.Id                      | preset_instrument.id       |                 |
+| ..name              |       Y        | .Instruments.Name                    | preset_instrument.name     |                 |
+| ..volume            |                | .Instruments.Controls[@type==volume] | preset_instrument.controls | *4              |
+| ..pan               |                | .Instruments.Controls[@type==pan]    | preset_instrument.controls |                 |
+| ..tunes             |                | .Instruments.Controls                | preset_instrument.controls | *5              |
+| **..layers**        |                | ..Layers                             | preset_instrument.layers   |                 |
+| ..key               |       Y        | ..Layers[@key]                       |                            |                 |
+| ..name              |       Y        | ..Layers.Name                        |                            |                 |
+| ..volume            |                | ..Layers.Controls[@type==volume]     |                            |                 |
+| ..pan               |                | ..Layers.Controls[@type==pan]        |                            |                 |
+| ..fxs               |                | -                                    | -                          | not implemented |
+
+
+
+*1 LinuxSampler global volume. Doesn't store to db in preset.
+*2 In case of many instruments in channel or one instrument, but volume|pan doesn't have midiCC
+*3 In case of one instrument in channel and instrument volume|pan has midiCC
+*4 Doesn't form UI instrument control in case of one instrument in channel. See *3
+*5 Except volume and pan
