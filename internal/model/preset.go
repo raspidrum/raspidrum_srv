@@ -23,6 +23,7 @@ type PresetChannel struct {
 
 type PresetInstrument struct {
 	Instrument InstrumentRef            `yaml:"instrument"`
+	Id         int64                    `yaml:"-"`
 	Name       string                   `yaml:"name"`
 	ChannelKey string                   `yaml:"channelKey"`
 	MidiKey    string                   `yaml:"midiKey,omitempty"`

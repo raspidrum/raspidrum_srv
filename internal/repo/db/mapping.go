@@ -258,6 +258,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 				Key:  v.InstrKey,
 				Name: v.InstrName,
 			},
+			Id:         v.Id,
 			Name:       v.Name,
 			ChannelKey: v.ChannelKey,
 		}
