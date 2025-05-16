@@ -14,6 +14,10 @@ func ImportPresetFromFile(path string, db *db.Sqlite) (presetId int64, err error
 	if err != nil {
 		return 0, fmt.Errorf("faild load preset from file: %s %w", path, err)
 	}
+	if err = pst.Validate(); err != nil {
+		return 0, fmt.Errorf("invalid preset: %w", err)
+	}
+
 	// store kit and instrument in one transaction
 	err = db.RunInTx(func(tx *sqlx.Tx) error {
 		if len(pst.Uid) == 0 {

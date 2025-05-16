@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 type KitPreset struct {
 	Uid         string             `yaml:"uuid,omitempty"`
 	Kit         KitRef             `yaml:"kit"`
@@ -16,9 +18,10 @@ type KitRef struct {
 }
 
 type PresetChannel struct {
-	Key      string                   `yaml:"key"`
-	Name     string                   `yaml:"name"`
-	Controls map[string]PresetControl `yaml:"controls"`
+	Key         string                   `yaml:"key"`
+	Name        string                   `yaml:"name"`
+	Controls    map[string]PresetControl `yaml:"controls"`
+	instruments []*PresetInstrument      `yaml:"-"`
 }
 
 type PresetInstrument struct {
@@ -57,4 +60,73 @@ type PresetControl struct {
 	MidiCC int     `yaml:"midiCC,omitempty" json:"midiCC,omitempty"`
 	CfgKey string  `yaml:"-" json:"-"`
 	Value  float32 `yaml:"value" json:"value"`
+}
+
+type ControlType int
+
+const (
+	CTVolume ControlType = iota
+	CTPan
+	CTPitch
+	CTOther
+)
+
+var ControlTypeToString = map[ControlType]string{
+	CTVolume: "volume",
+	CTPan:    "pan",
+	CTPitch:  "pitch",
+	CTOther:  "other",
+}
+
+var ControlTypeFromString = map[string]ControlType{
+	"volume": CTVolume,
+	"pan":    CTPan,
+	"pitch":  CTPitch,
+	"other":  CTOther,
+}
+
+func (p *KitPreset) GetChannelInstrumentsByIdx(idx int) ([]*PresetInstrument, error) {
+	if idx > len(p.Channels)-1 {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	ins := p.Channels[idx].instruments
+	if len(ins) == 0 {
+		err := p.indexInstruments()
+		if err != nil {
+			return nil, err
+		}
+		ins = p.Channels[idx].instruments
+	}
+	return ins, nil
+}
+
+func (p *KitPreset) GetChannelInstrumentsByKey(key string) ([]*PresetInstrument, error) {
+	idx := -1
+	for i, v := range p.Channels {
+		if v.Key == key {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		return nil, fmt.Errorf("unknown channel key %s", key)
+	}
+	return p.GetChannelInstrumentsByIdx(idx)
+}
+
+func (p *KitPreset) indexInstruments() error {
+	chnls := make(map[string]int, len(p.Channels))
+	for j, c := range p.Channels {
+		chnls[c.Key] = j
+	}
+
+	for i, v := range p.Instruments {
+		chi, ok := chnls[v.ChannelKey]
+		if !ok {
+			return fmt.Errorf("instrument '%s' refs to missing channel '%s'", v.Name, v.ChannelKey)
+		}
+		ch := &p.Channels[chi]
+		ch.instruments = append(ch.instruments, &p.Instruments[i])
+	}
+	return nil
 }

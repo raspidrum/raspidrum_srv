@@ -124,16 +124,6 @@ func preparePresetDir(rootDir string, fs afero.Fs) (string, error) {
 func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPreset, instrfiles map[string]string) (map[string]int, error) {
 	channels := map[string]int{}
 
-	// Init "instruments-channel index". Map key - KitPreset.Channel.Key, value - KitPreset.Instruments index
-	//chnlInstr := make(map[string][]int, len(preset.Channels))
-	//for _, v := range preset.Channels {
-	//	chnlInstr[v.Key] = []int{}
-	//}
-	//for i, v := range preset.Instruments {
-	//	// add instrument array index to "instruments-channel index"
-	//	chnlInstr[v.ChannelKey] = append(chnlInstr[v.ChannelKey], i)
-	//}
-
 	//loading instruments
 	for _, cv := range preset.Channels {
 		// create channel
@@ -142,7 +132,6 @@ func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPrese
 			return nil, fmt.Errorf("failed create sampler channel: %w", err)
 		}
 		channels[cv.Key] = chnlId
-		//cins := chnlInstr[cv.Key]
 
 		// load instruments to channel
 		chnlName := "channel_" + cv.Key
@@ -154,22 +143,10 @@ func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPrese
 		if err != nil {
 			return nil, fmt.Errorf("failed load instruments %s to sampler: %w", chnlName, err)
 		}
-		//for _, iidx := range cins {
-		//	instr := preset.Instruments[iidx]
-		//	fname, ok := instrfiles[instr.Instrument.Uid]
-		//	if !ok {
-		//		return nil, fmt.Errorf("failed load instrument: not found filename for instrument %s", instr.Instrument.Key)
-		//	}
-		//	err = l.LoadInstrument(fname, 0, chnlId)
-		//	if err != nil {
-		//		return nil, fmt.Errorf("failed load instrument %s to sampler: %w", instr.Instrument.Key, err)
-		//	}
-		//}
 
 		// set channel controls
 		for _, ccv := range cv.Controls {
-			// TODO: extract control types to enum
-			if len(ccv.CfgKey) == 0 && ccv.Type == "volume" {
+			if len(ccv.CfgKey) == 0 && m.ControlTypeFromString[ccv.Type] == m.CTVolume {
 				l.SetChannelVolume(chnlId, float64(ccv.Value))
 			}
 		}
