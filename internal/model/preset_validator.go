@@ -43,10 +43,12 @@ func (p *KitPreset) Validate() error {
 		for _, vcc := range vc.Controls {
 			var сve MultiValidationError
 			err := vcc.Validate()
-			if errors.As(err, &сve) {
-				errs = append(errs, сve...)
-			} else {
-				return err
+			if err != nil {
+				if errors.As(err, &сve) {
+					errs = append(errs, сve...)
+				} else {
+					return err
+				}
 			}
 		}
 
@@ -57,10 +59,12 @@ func (p *KitPreset) Validate() error {
 			for _, vic := range vi.Controls {
 				var сve MultiValidationError
 				err := vic.Validate()
-				if errors.As(err, &сve) {
-					errs = append(errs, сve...)
-				} else {
-					return err
+				if err != nil {
+					if errors.As(err, &сve) {
+						errs = append(errs, сve...)
+					} else {
+						return err
+					}
 				}
 			}
 
@@ -74,7 +78,7 @@ func (p *KitPreset) Validate() error {
 				} else {
 					if ctrl.MidiCC == 0 {
 						// one or many instruments. Instrument without layers. Instrument has control. Control MUST have midiCC
-						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, ctrlVolumeKey), "is required and can't be 0"})
+						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, ctrlVolumeKey), "midiCC is required and can't be 0"})
 					}
 				}
 				// pan control
@@ -84,18 +88,20 @@ func (p *KitPreset) Validate() error {
 					}
 				} else {
 					if ctrl.MidiCC == 0 {
-						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, ctrlPanKey), "is required and can't be 0"})
+						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, ctrlPanKey), "midiCC is required and can't be 0"})
 					}
 				}
 			} else {
 				// validate instrument layers
-				for _, vl := range vi.Layers {
+				for kl, vl := range vi.Layers {
 					var сve MultiValidationError
 					err := vl.Validate()
-					if errors.As(err, &сve) {
-						errs = append(errs, сve...)
-					} else {
-						return err
+					if err != nil {
+						if errors.As(err, &сve) {
+							errs = append(errs, ValidationError{fmt.Sprintf("layer '%s'", kl), сve.Error()})
+						} else {
+							return err
+						}
 					}
 				}
 			}
@@ -119,12 +125,13 @@ func (p *PresetLayer) Validate() error {
 		// validate layers controls
 		var сve MultiValidationError
 		err := c.Validate()
-		if errors.As(err, &сve) {
-			errs = append(errs, сve...)
-		} else {
-			return err
+		if err != nil {
+			if errors.As(err, &сve) {
+				errs = append(errs, сve...)
+			} else {
+				return err
+			}
 		}
-
 		cType, ok := ControlTypeFromString[c.Type]
 		if !ok {
 			continue
@@ -134,7 +141,7 @@ func (p *PresetLayer) Validate() error {
 		if cType == CTVolume || cType == CTPan {
 			// MIDI CC = 0 - "Bank Select" code. It can't be used for layer control
 			if c.MidiCC == 0 {
-				errs = append(errs, ValidationError{fmt.Sprintf("control '%s'", k), "is required and can't be 0"})
+				errs = append(errs, ValidationError{fmt.Sprintf("control '%s'", k), "midiCC is required and can't be 0"})
 			}
 		}
 	}
