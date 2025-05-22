@@ -8,15 +8,13 @@ import (
 )
 
 func TestLoadKit(t *testing.T) {
-	d := &db.Sqlite{}
-
 	dir := getDBPath()
-	err := d.Connect(dir)
+	d, err := db.NewSqlite(dir)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	kitPath := path.Join(getProjectPath(), "../_presets/", "SMDrums")
 

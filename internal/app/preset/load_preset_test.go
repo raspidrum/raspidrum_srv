@@ -217,15 +217,13 @@ func TestLoadPreset(t *testing.T) {
 	ls.DataDir = path.Join(getProjectPath(), "../_presets")
 	osFs := afero.NewOsFs()
 
-	d := &db.Sqlite{}
-
 	dir := getDBPath()
-	err = d.Connect(dir)
+	d, err := db.NewSqlite(dir)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	type args struct {
 		presetId int64

@@ -439,6 +439,8 @@ channels:
 | UI<br>Preset        | UI<br>required | srv<br>KitPreset                     | db                         | Notes           |
 | ------------------- | :------------: | ------------------------------------ | -------------------------- | --------------- |
 | .key                |       Y        | .Uid                                 | kit_preset.uid             |                 |
+| .name               |       Y        | .Name                                | kit_preset.name            |                 |
+| .description        |       N        | -                                    | -                          |                 |
 | **.channels**       |       Y        | .Channels or LinuxSampler            | preset_channel or none     |                 |
 | ..key               |       Y        | .Channels.Key                        | preset_channel.key         |                 |
 | ..name              |       Y        | .Channels.Name                       | preset_channel.name        |                 |

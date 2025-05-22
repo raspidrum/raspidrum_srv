@@ -33,7 +33,7 @@ type KitTag struct {
 //   - isCustom
 //   - in (tags)
 func (d *Sqlite) ListKits() (*[]m.Kit, error) {
-	rows, err := d.Db.Queryx(`select k.*, string_agg(t.name, ',') as tags
+	rows, err := d.db.Queryx(`select k.*, string_agg(t.name, ',') as tags
 	from kit k left join kit_tag t on t.kit = k.id
 	group by k.id, k.uid, k.name, k.iscustom, k.description, k.copyright, k.licence, k.credits, k.url
 	order by k.name, k.id
@@ -61,7 +61,7 @@ func (d *Sqlite) StoreKit(tx *sqlx.Tx, kit *m.Kit) (kitId int64, err error) {
 	sql := `insert into kit(uid, name, iscustom, description, copyright, licence, credits, url) values(:uid, :name, :iscustom, :description, :copyright, :licence, :credits, :url)`
 
 	if localTx {
-		tx, err = d.Db.Beginx()
+		tx, err = d.db.Beginx()
 		if err != nil {
 			return 0, fmt.Errorf("failed store kit: %w", err)
 		}
@@ -113,7 +113,7 @@ func (d *Sqlite) getKitByUid(tx *sqlx.Tx, uids []string, fields ...string) (*map
 	var err error
 	localTx := tx == nil
 	if localTx {
-		tx, err = d.Db.Beginx()
+		tx, err = d.db.Beginx()
 		if err != nil {
 			return nil, fmt.Errorf("failed getKitByUid: %w", err)
 		}

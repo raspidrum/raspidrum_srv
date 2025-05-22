@@ -4,19 +4,17 @@ import (
 	"path"
 	"testing"
 
-	"github.com/raspidrum-srv/internal/repo/db"
+	db "github.com/raspidrum-srv/internal/repo/db"
 )
 
 func TestImportPresetFromFile(t *testing.T) {
-	d := &db.Sqlite{}
-
 	dir := getDBPath()
-	err := d.Connect(dir)
+	d, err := db.NewSqlite(dir)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	testDataPath := path.Join(getProjectPath(), "testdata/")
 

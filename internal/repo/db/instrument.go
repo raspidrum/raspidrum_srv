@@ -54,7 +54,7 @@ func (d *Sqlite) ListInstruments(conds ...Condition) (*[]m.Instrument, error) {
 
 	sql := fmt.Sprintf("%s %s %s %s", sql_select, sql_where, sql_group, sql_order)
 
-	rows, err := d.Db.Queryx(sql, args...)
+	rows, err := d.db.Queryx(sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed sqListInstrumentsl: %w", err)
 	}
@@ -79,7 +79,7 @@ func (d *Sqlite) StoreInstrument(tx *sqlx.Tx, kitId int64, instr *m.Instrument) 
 	values (:uid, :key, :name, :fullname, :type, :subtype, :midikey, :description, :copyright, :licence, :credits, :controls, :layers)`
 
 	if localTx {
-		tx, err = d.Db.Beginx()
+		tx, err = d.db.Beginx()
 		if err != nil {
 			return 0, fmt.Errorf("failed store kit: %w", err)
 		}
@@ -140,7 +140,7 @@ func (d *Sqlite) getInstrumentsByUid(tx *sqlx.Tx, uids []string, fields ...strin
 	var err error
 	localTx := tx == nil
 	if localTx {
-		tx, err = d.Db.Beginx()
+		tx, err = d.db.Beginx()
 		if err != nil {
 			return nil, fmt.Errorf("failed getInstrumentsByUid: %w", err)
 		}

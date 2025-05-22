@@ -6,15 +6,13 @@ import (
 )
 
 func TestSqlite_ListInstruments(t *testing.T) {
-	d := &Sqlite{}
-
 	dir := getDBPath()
-	err := d.Connect(dir)
+	d, err := NewSqlite(dir)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	type args struct {
 		conds []Condition
@@ -99,14 +97,12 @@ func Test_mapInstrFields(t *testing.T) {
 }
 
 func TestSqlite_getInstrumentsByUid(t *testing.T) {
-	d := &Sqlite{}
-	dir := getDBPath()
-	err := d.Connect(dir)
+	d, err := NewSqlite(getDBPath())
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	type args struct {
 		uids   []string
