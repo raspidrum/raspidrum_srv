@@ -8,16 +8,13 @@ import (
 )
 
 func TestSqlite_ListKits(t *testing.T) {
-
-	d := &Sqlite{}
-
 	dir := getDBPath()
-	err := d.Connect(dir)
+	d, err := NewSqlite(dir)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	tests := []struct {
 		name string
@@ -50,14 +47,12 @@ func TestSqlite_ListKits(t *testing.T) {
 }
 
 func TestSqlite_getKitByUid(t *testing.T) {
-	d := &Sqlite{}
-	dir := getDBPath()
-	err := d.Connect(dir)
+	d, err := NewSqlite(getDBPath())
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	type args struct {
 		uids   []string

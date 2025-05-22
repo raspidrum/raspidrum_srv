@@ -59,7 +59,7 @@ func (d *Sqlite) StorePreset(tx *sqlx.Tx, preset *m.KitPreset) (presetId int64, 
 	pstDb := kitPresetToDb(preset)
 
 	if localTx {
-		tx, err = d.Db.Beginx()
+		tx, err = d.db.Beginx()
 		if err != nil {
 			return 0, fmt.Errorf("failed store kit preset: %w", err)
 		}
@@ -179,7 +179,7 @@ func (d *Sqlite) ListPresets(conds ...Condition) (*[]m.KitPreset, error) {
 		return nil, fmt.Errorf("failed ListPresets: %w", err)
 	}
 	sql := fmt.Sprintf("%s %s %s", sql_select, sql_where, sql_order)
-	rows, err := d.Db.Queryx(sql, args...)
+	rows, err := d.db.Queryx(sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed ListPresets: %w", err)
 	}
@@ -209,7 +209,7 @@ func (d *Sqlite) GetPreset(conds ...Condition) (*m.KitPreset, error) {
 	sqlstmn := fmt.Sprintf("%s %s", sql_select, sql_where)
 
 	pst := KitPrst{}
-	err = d.Db.Get(&pst, sqlstmn, args...)
+	err = d.db.Get(&pst, sqlstmn, args...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -221,7 +221,7 @@ func (d *Sqlite) GetPreset(conds ...Condition) (*m.KitPreset, error) {
 	// Get Preset channels
 	sqlstmn = `select * from preset_channel where preset = :preset`
 	pst.Channels = []PrstChnl{}
-	err = d.Db.Select(&pst.Channels, sqlstmn, &pst.Id)
+	err = d.db.Select(&pst.Channels, sqlstmn, &pst.Id)
 	if err != nil {
 		return nil, fmt.Errorf("failed GetPreset: %w", err)
 	}
@@ -229,7 +229,7 @@ func (d *Sqlite) GetPreset(conds ...Condition) (*m.KitPreset, error) {
 	// Get Preset instruments
 	sqlstmn = `select * from v_preset_instrument where preset = :preset`
 	pst.Instruments = []PrtsInstr{}
-	err = d.Db.Select(&pst.Instruments, sqlstmn, &pst.Id)
+	err = d.db.Select(&pst.Instruments, sqlstmn, &pst.Id)
 	if err != nil {
 		return nil, fmt.Errorf("failed GetPreset: %w", err)
 	}

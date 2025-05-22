@@ -5,15 +5,12 @@ import (
 )
 
 func TestSqlite_GetPreset(t *testing.T) {
-	d := &Sqlite{}
-
-	dir := getDBPath()
-	err := d.Connect(dir)
+	d, err := NewSqlite(getDBPath())
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	type args struct {
 		conds []Condition
@@ -78,15 +75,12 @@ func TestSqlite_GetPreset(t *testing.T) {
 }
 
 func TestSqlite_ListPresets(t *testing.T) {
-	d := &Sqlite{}
-
-	dir := getDBPath()
-	err := d.Connect(dir)
+	d, err := NewSqlite(getDBPath())
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
-	defer d.Db.Close()
+	defer d.Close()
 
 	type args struct {
 		conds []Condition

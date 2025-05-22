@@ -3,37 +3,32 @@ package db
 import (
 	"errors"
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// TODO: move to config
-const dbname = "kits.sqlite3"
-
 type void struct{}
 type fieldMap map[string]void
 
 type Sqlite struct {
-	Db *sqlx.DB
+	db *sqlx.DB
 }
 
-func (d *Sqlite) Connect(dbpath string) error {
+func NewSqlite(dbPath string) (*Sqlite, error) {
 	var err error
 
-	dbfile := path.Join(dbpath, dbname)
-	constr := fmt.Sprintf("file:%s?_foreign_keys=true", dbfile)
-	d.Db, err = sqlx.Connect("sqlite3", constr)
+	constr := fmt.Sprintf("file:%s?_foreign_keys=true", dbPath)
+	db, err := sqlx.Connect("sqlite3", dbPath)
 	if err != nil {
-		return fmt.Errorf("failed connect to db: %s %w", constr, err)
+		return nil, fmt.Errorf("failed connect to db: %s %w", constr, err)
 	}
-	return nil
+	return &Sqlite{db: db}, nil
 }
 
 func (d *Sqlite) RunInTx(fn func(tx *sqlx.Tx) error) error {
-	tx, err := d.Db.Beginx()
+	tx, err := d.db.Beginx()
 	if err != nil {
 		return err
 	}
@@ -51,6 +46,11 @@ func (d *Sqlite) RunInTx(fn func(tx *sqlx.Tx) error) error {
 	}
 
 	return err
+}
+
+// Close closes the database connection
+func (s *Sqlite) Close() error {
+	return s.db.Close()
 }
 
 func flatFieldMap(fs fieldMap) string {
