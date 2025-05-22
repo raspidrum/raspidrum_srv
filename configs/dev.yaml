@@ -1,3 +1,6 @@
 host:
   addr: localhost
   port: 50051
+
+data:
+  dir: ./data

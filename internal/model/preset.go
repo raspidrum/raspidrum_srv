@@ -62,6 +62,7 @@ type PresetControl struct {
 	Value  float32 `yaml:"value" json:"value"`
 }
 
+// PresetControl.Type values MUST match one of the ControlType values
 type ControlType int
 
 const (
@@ -84,6 +85,11 @@ var ControlTypeFromString = map[string]ControlType{
 	"pitch":  CTPitch,
 	"other":  CTOther,
 }
+
+var (
+	CtrlVolume = ControlTypeToString[CTVolume]
+	CtrlPan    = ControlTypeToString[CTPan]
+)
 
 func (p *KitPreset) GetChannelInstrumentsByIdx(idx int) ([]*PresetInstrument, error) {
 	if idx > len(p.Channels)-1 {

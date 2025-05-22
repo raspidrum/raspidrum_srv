@@ -5,13 +5,17 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"path"
 
-	pb "github.com/raspidrum-srv/internal/pkg/grpc"
+	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
 	channelcontrol "github.com/raspidrum-srv/internal/app/channel_control"
-
+	"github.com/raspidrum-srv/internal/app/preset"
+	pb "github.com/raspidrum-srv/internal/pkg/grpc"
+	"github.com/raspidrum-srv/internal/repo/db"
+	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 )
 
@@ -20,6 +24,9 @@ type Config struct {
 		Addr string `mapstructure:"addr"`
 		Port int    `mapstructure:"port"`
 	} `mapstructure:"host"`
+	Data struct {
+		Dir string `mapstructure:"dir"`
+	} `mapstructure:"data"`
 }
 
 var cfg Config
@@ -33,12 +40,32 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
+	// Initialize LinuxSampler client
 	lsClient := lscp.NewClient("localhost", "8888", "1s")
 	err = lsClient.Connect()
 	if err != nil {
 		slog.Error(fmt.Sprintln(fmt.Errorf("Failed connect to LinuxSampler: %w", err)))
 		os.Exit(1)
 	}
+
+	// Initialize sampler
+	sampler := &lsampler.LinuxSampler{
+		Client:  lsClient,
+		Engine:  "sfz",
+		DataDir: cfg.Data.Dir,
+	}
+
+	// Initialize database
+	dbPath := path.Join(cfg.Data.Dir, "db", "kits.sqlite3")
+	db, err := db.NewSqlite(dbPath)
+	if err != nil {
+		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to initialize database: %w", err)))
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	// Initialize filesystem
+	fs := afero.NewOsFs()
 
 	// start GRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))
@@ -48,8 +75,14 @@ func main() {
 	}
 	var opts []grpc.ServerOption
 	s := grpc.NewServer(opts...)
-	server := channelcontrol.NewChannelControlServer()
-	pb.RegisterChannelControlServer(s, server)
+
+	// Register services
+	channelServer := channelcontrol.NewChannelControlServer()
+	pb.RegisterChannelControlServer(s, channelServer)
+
+	presetServer := preset.NewPresetServer(db, sampler, fs)
+	pb.RegisterKitPresetServer(s, presetServer)
+
 	slog.Info("Server is running", slog.Int("port:", cfg.Host.Port))
 	if err := s.Serve(lis); err != nil {
 		slog.Error(fmt.Sprintln(fmt.Errorf("Server error: %w", err)))

@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+
+option go_package = "github.com/raspidrum-srv/api/grpc";
+
+package kitPreset.v1;
+
+service KitPreset {
+  rpc LoadPreset(LoadPresetRequest) returns (LoadPresetResponse);
+}
+
+// Request message for loading a preset
+message LoadPresetRequest {
+  int64 preset_id = 1;
+}
+
+// Response message for loading a preset
+message LoadPresetResponse {
+  Preset preset = 1;
+}
+
+// Channel type enumeration
+enum ChannelType {
+  CHANNEL_TYPE_UNSPECIFIED = 0;
+  CHANNEL_TYPE_GLOBAL = 1;
+  CHANNEL_TYPE_SAMPLER = 2;
+  CHANNEL_TYPE_INSTRUMENT = 3;
+  CHANNEL_TYPE_MIXER = 4;
+  CHANNEL_TYPE_PLAYER = 5;
+}
+
+// FX parameter type enumeration
+enum FXParamType {
+  FX_PARAM_TYPE_UNSPECIFIED = 0;
+  FX_PARAM_TYPE_RANGE = 1;
+  FX_PARAM_TYPE_FIXED = 2;
+  FX_PARAM_TYPE_BOOLEAN = 3;
+}
+
+// Preset message
+message Preset {
+  string key = 1;
+  string name = 2;
+  optional string description = 3;
+  repeated Channel channels = 4;
+}
+
+// Channel message
+message Channel {
+  string key = 1;
+  string name = 2;
+  ChannelType type = 3;
+  double volume = 4;
+  double pan = 5;
+  repeated FX fxs = 6;
+  repeated Instrument instruments = 7;
+}
+
+// Instrument message
+message Instrument {
+  string key = 1;
+  string name = 2;
+  optional double volume = 3;
+  optional double pan = 4;
+  repeated FX tunes = 5;
+  repeated Layer layers = 6;
+}
+
+// Layer message
+message Layer {
+  string key = 1;
+  string name = 2;
+  optional double volume = 3;
+  optional double pan = 4;
+  repeated FX fxs = 5;
+}
+
+// FX message
+message FX {
+  string key = 1;
+  string name = 2;
+  int32 order = 3;
+  repeated FXParam params = 4;
+}
+
+// FX Parameter message
+message FXParam {
+  string key = 1;
+  string name = 2;
+  int32 order = 3;
+  FXParamType type = 4;
+  optional double min = 5;
+  optional double max = 6;
+  optional int32 divisions = 7;
+  repeated FXParamDiscreteVal discrete_vals = 8;
+  double value = 9;
+}
+
+// FX Parameter Discrete Value message
+message FXParamDiscreteVal {
+  optional string name = 1;
+  double val = 2;
+} 

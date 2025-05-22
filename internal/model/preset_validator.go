@@ -31,8 +31,6 @@ func (mve MultiValidationError) Error() string {
 // - in case one or many instrument in channel, instrument with layers MAY have `volume` or `pan` controls. Its controls MAY have midiCC
 func (p *KitPreset) Validate() error {
 	var errs MultiValidationError
-	ctrlVolumeKey := ControlTypeToString[CTVolume]
-	ctrlPanKey := ControlTypeToString[CTPan]
 
 	if err := p.indexInstruments(); err != nil {
 		errs = append(errs, ValidationError{"preset", err.Error()})
@@ -70,25 +68,25 @@ func (p *KitPreset) Validate() error {
 
 			if len(vi.Layers) == 0 {
 				// volume control
-				if ctrl, ok := vi.Controls[ctrlVolumeKey]; !ok {
+				if ctrl, ok := vi.Controls[CtrlVolume]; !ok {
 					// many instruments in channel, instrument without layers MUST have `volume` and `pan` controls
 					if manyInstruments {
-						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, ctrlVolumeKey), "is required, but missing"})
+						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, CtrlVolume), "is required, but missing"})
 					}
 				} else {
 					if ctrl.MidiCC == 0 {
 						// one or many instruments. Instrument without layers. Instrument has control. Control MUST have midiCC
-						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, ctrlVolumeKey), "midiCC is required and can't be 0"})
+						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, CtrlVolume), "midiCC is required and can't be 0"})
 					}
 				}
 				// pan control
-				if ctrl, ok := vi.Controls[ctrlPanKey]; !ok {
+				if ctrl, ok := vi.Controls[CtrlPan]; !ok {
 					if manyInstruments {
-						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, ctrlPanKey), "is required, but missing"})
+						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, CtrlPan), "is required, but missing"})
 					}
 				} else {
 					if ctrl.MidiCC == 0 {
-						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, ctrlPanKey), "midiCC is required and can't be 0"})
+						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, CtrlPan), "midiCC is required and can't be 0"})
 					}
 				}
 			} else {
