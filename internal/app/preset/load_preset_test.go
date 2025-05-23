@@ -204,7 +204,8 @@ func Test_augmentFromInstrument(t *testing.T) {
 	}
 }
 
-// for listening linuxSampler events:
+// Real load preset to running linuxsampler
+//for listening linuxSampler events:
 /* netcat netcat localhost 8888
 SUBSCRIBE MISCELLANEOUS
 */

@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"runtime"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
@@ -25,7 +26,8 @@ type Config struct {
 		Port int    `mapstructure:"port"`
 	} `mapstructure:"host"`
 	Data struct {
-		Dir string `mapstructure:"dir"`
+		DB      string `mapstructure:"dbRoot"`
+		Sampler string `mapstructure:"samplerRoot"`
 	} `mapstructure:"data"`
 }
 
@@ -36,6 +38,9 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
+
+	_, projectPath, _, _ := runtime.Caller(0)
+	projectPath = path.Join(path.Dir(projectPath), "../../")
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
@@ -52,12 +57,11 @@ func main() {
 	sampler := &lsampler.LinuxSampler{
 		Client:  lsClient,
 		Engine:  "sfz",
-		DataDir: cfg.Data.Dir,
+		DataDir: path.Join(projectPath, cfg.Data.Sampler),
 	}
 
 	// Initialize database
-	dbPath := path.Join(cfg.Data.Dir, "db", "kits.sqlite3")
-	db, err := db.NewSqlite(dbPath)
+	db, err := db.NewSqlite(cfg.Data.DB)
 	if err != nil {
 		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to initialize database: %w", err)))
 		os.Exit(1)
@@ -92,6 +96,7 @@ func main() {
 
 func loadConfig(configPath string) (*Config, error) {
 	v := viper.New()
+	// TODO: get config name from  env variable
 	v.SetConfigName("dev")
 	v.AddConfigPath(configPath)
 	v.SetConfigType("yaml")

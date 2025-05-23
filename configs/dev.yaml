@@ -3,4 +3,5 @@ host:
   port: 50051
 
 data:
-  dir: ./data
+  dbRoot: ./db
+  samplerRoot: ../_presets

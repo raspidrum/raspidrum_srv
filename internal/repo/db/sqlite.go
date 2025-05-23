@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -19,10 +20,10 @@ type Sqlite struct {
 func NewSqlite(dbPath string) (*Sqlite, error) {
 	var err error
 
-	constr := fmt.Sprintf("file:%s?_foreign_keys=true", dbPath)
-	db, err := sqlx.Connect("sqlite3", dbPath)
+	connStr := fmt.Sprintf("file:%s?_foreign_keys=true", path.Join(dbPath, "kits.sqlite3"))
+	db, err := sqlx.Connect("sqlite3", connStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed connect to db: %s %w", constr, err)
+		return nil, fmt.Errorf("failed connect to db: %s %w", connStr, err)
 	}
 	return &Sqlite{db: db}, nil
 }
