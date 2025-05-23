@@ -27,7 +27,7 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 	}
 
 	// 2nd step: augment channels and layers info from instrument and instrument preset
-	err = pst.AugmentAndIndex(midiDevices)
+	err = pst.PrepareToLoad(midiDevices)
 	if err != nil {
 		return nil, err
 	}

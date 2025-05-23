@@ -245,7 +245,7 @@ func Test_augmentFromInstrument(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			preset := tt.args.pst
-			if err := preset.AugmentAndIndex(tt.args.mididevs); (err != nil) != tt.wantErr {
+			if err := preset.PrepareToLoad(tt.args.mididevs); (err != nil) != tt.wantErr {
 				t.Errorf("AugmentFromInstrument() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if diff := cmp.Diff(tt.want, *preset, cmpopts.IgnoreUnexported(m.KitPreset{}), cmpopts.IgnoreUnexported(m.PresetControl{})); diff != "" {

@@ -157,8 +157,8 @@ func (p *PresetLayer) HandleSetControl(control *PresetControl, value float32) er
 	return fmt.Errorf("unimplemented")
 }
 
-// AugmentAndIndex augments preset controls and layers with data from instrument
-func (p *KitPreset) AugmentAndIndex(mididevs []MIDIDevice) error {
+// PrepareToLoad augments preset controls and layers with data from instrument
+func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 	// Initialize control index map if not exists
 	if p.controls == nil {
 		p.controls = make(ControlIndex)
