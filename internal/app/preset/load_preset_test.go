@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	midi "github.com/raspidrum-srv/internal/app/mididevice"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	m "github.com/raspidrum-srv/internal/model"
 	"github.com/raspidrum-srv/internal/repo"
 	"github.com/raspidrum-srv/internal/repo/db"
@@ -34,14 +34,22 @@ func (m *MockMMIDIDevice) GetKeysMapping() (map[string]int, error) {
 func Test_augmentFromInstrument(t *testing.T) {
 	type args struct {
 		pst      *m.KitPreset
-		mididevs []midi.MIDIDevice
+		mididevs []m.MIDIDevice
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    m.KitPreset
-		wantErr bool
-	}{
+	type testCase struct {
+		name            string
+		args            args
+		want            m.KitPreset
+		wantErr         bool
+		expectedControl map[string]struct {
+			Owner  m.ControlOwner
+			MidiCC int
+			CfgKey string
+			Type   string
+			Value  float32
+		}
+	}
+	tests := []testCase{
 		{
 			name: "wo layers",
 			args: args{
@@ -58,12 +66,13 @@ func Test_augmentFromInstrument(t *testing.T) {
 							Controls: map[string]m.PresetControl{
 								"volume": {
 									MidiCC: 30,
+									Type:   "volume",
 								},
 							},
 						},
 					},
 				},
-				mididevs: []midi.MIDIDevice{
+				mididevs: []m.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -82,12 +91,26 @@ func Test_augmentFromInstrument(t *testing.T) {
 							"volume": {
 								MidiCC: 30,
 								CfgKey: "KICKV",
+								Type:   "volume",
 							},
 						},
 					},
 				},
 			},
 			wantErr: false,
+			expectedControl: map[string]struct {
+				Owner  m.ControlOwner
+				MidiCC int
+				CfgKey string
+				Type   string
+				Value  float32
+			}{
+				"i0": {
+					MidiCC: 30,
+					CfgKey: "KICKV",
+					Type:   "volume",
+				},
+			},
 		},
 		{
 			name: "with layers",
@@ -116,27 +139,27 @@ func Test_augmentFromInstrument(t *testing.T) {
 								},
 							},
 							Controls: map[string]m.PresetControl{
-								"pan":   {MidiCC: 105},
-								"pitch": {MidiCC: 16},
+								"pan":   {MidiCC: 105, Type: "pan"},
+								"pitch": {MidiCC: 16, Type: "pitch"},
 							},
 							Layers: map[string]m.PresetLayer{
 								"bell": {
 									MidiKey: "ride1_bell",
 									Controls: map[string]m.PresetControl{
-										"volume": {MidiCC: 104},
+										"volume": {MidiCC: 104, Type: "volume"},
 									},
 								},
 								"edge": {
 									MidiKey: "ride1_edge",
 									Controls: map[string]m.PresetControl{
-										"volume": {MidiCC: 103},
+										"volume": {MidiCC: 103, Type: "volume"},
 									},
 								},
 							},
 						},
 					},
 				},
-				mididevs: []midi.MIDIDevice{
+				mididevs: []m.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -164,8 +187,8 @@ func Test_augmentFromInstrument(t *testing.T) {
 							},
 						},
 						Controls: map[string]m.PresetControl{
-							"pan":   {MidiCC: 105, CfgKey: "RI17P"},
-							"pitch": {MidiCC: 16, CfgKey: "RI17T"},
+							"pan":   {MidiCC: 105, CfgKey: "RI17P", Type: "pan"},
+							"pitch": {MidiCC: 16, CfgKey: "RI17T", Type: "pitch"},
 						},
 						Layers: map[string]m.PresetLayer{
 							"bell": {
@@ -173,7 +196,7 @@ func Test_augmentFromInstrument(t *testing.T) {
 								CfgMidiKey: "RI17BKEY",
 								MidiNote:   53,
 								Controls: map[string]m.PresetControl{
-									"volume": {MidiCC: 104, CfgKey: "RI17BV"},
+									"volume": {MidiCC: 104, CfgKey: "RI17BV", Type: "volume"},
 								},
 							},
 							"edge": {
@@ -181,7 +204,7 @@ func Test_augmentFromInstrument(t *testing.T) {
 								CfgMidiKey: "RI17EKEY",
 								MidiNote:   51,
 								Controls: map[string]m.PresetControl{
-									"volume": {MidiCC: 103, CfgKey: "RI17EV"},
+									"volume": {MidiCC: 103, CfgKey: "RI17EV", Type: "volume"},
 								},
 							},
 						},
@@ -189,16 +212,49 @@ func Test_augmentFromInstrument(t *testing.T) {
 				},
 			},
 			wantErr: false,
+			expectedControl: map[string]struct {
+				Owner  m.ControlOwner
+				MidiCC int
+				CfgKey string
+				Type   string
+				Value  float32
+			}{
+				"i0": {
+					MidiCC: 105,
+					CfgKey: "RI17P",
+					Type:   "pan",
+				},
+				"i1": {
+					MidiCC: 16,
+					CfgKey: "RI17T",
+					Type:   "pitch",
+				},
+				"l2": {
+					MidiCC: 104,
+					CfgKey: "RI17BV",
+					Type:   "volume",
+				},
+				"l3": {
+					MidiCC: 103,
+					CfgKey: "RI17EV",
+					Type:   "volume",
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			preset := tt.args.pst
-			if err := augmentFromInstrument(preset, tt.args.mididevs); (err != nil) != tt.wantErr {
-				t.Errorf("augmentFromInstrument() error = %v, wantErr %v", err, tt.wantErr)
+			if err := preset.AugmentAndIndex(tt.args.mididevs); (err != nil) != tt.wantErr {
+				t.Errorf("AugmentFromInstrument() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if diff := cmp.Diff(tt.want, *preset); diff != "" {
+			if diff := cmp.Diff(tt.want, *preset, cmpopts.IgnoreUnexported(m.KitPreset{}), cmpopts.IgnoreUnexported(m.PresetControl{})); diff != "" {
 				t.Errorf("MakeGatewayInfo() mismatch (-want +got):\n%s", diff)
+			}
+
+			// Verify controls state using the method from KitPreset
+			if diff := m.VerifyControlsForTest(preset, tt.expectedControl); diff != "" {
+				t.Error("Controls state does not match expected:", diff)
 			}
 		})
 	}

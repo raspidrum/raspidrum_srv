@@ -156,3 +156,111 @@ func (p *PresetInstrument) HandleSetControl(control *PresetControl, value float3
 func (p *PresetLayer) HandleSetControl(control *PresetControl, value float32) error {
 	return fmt.Errorf("unimplemented")
 }
+
+// AugmentAndIndex augments preset controls and layers with data from instrument
+func (p *KitPreset) AugmentAndIndex(mididevs []MIDIDevice) error {
+	// Initialize control index map if not exists
+	if p.controls == nil {
+		p.controls = make(ControlIndex)
+	}
+
+	// Counter for generating unique control IDs
+	controlId := 0
+
+	// Index channel controls
+	for i := range p.Channels {
+		ch := &p.Channels[i]
+		for k, ctrl := range ch.Controls {
+			tmpCtrl := ctrl // Create a copy to take address of
+			tmpCtrl.owner = ch
+			key := fmt.Sprintf("c%d", controlId)
+			p.controls[key] = &tmpCtrl
+			ch.Controls[k] = tmpCtrl // Update the original map
+			controlId++
+		}
+	}
+
+	for i, v := range p.Instruments {
+		// instrument MIDI Key
+		if len(v.MidiKey) > 0 {
+			mkeyid, err := MapMidiKey(v.MidiKey, mididevs)
+			if err != nil {
+				return err
+			}
+			p.Instruments[i].MidiNote = mkeyid
+		}
+
+		// Index instrument controls
+		instr := &p.Instruments[i]
+		for k, ctrl := range v.Controls {
+			ictrl, ok := v.Instrument.Controls[k]
+			if !ok {
+				return fmt.Errorf("not found control '%s' in instrument '%s'", k, v.Instrument.Key)
+			}
+			tmpCtrl := ctrl // Create a copy to take address of
+			tmpCtrl.CfgKey = ictrl.CfgKey
+			tmpCtrl.owner = instr
+			key := fmt.Sprintf("i%d", controlId)
+			p.controls[key] = &tmpCtrl
+			instr.Controls[k] = tmpCtrl // Update the original map
+			controlId++
+		}
+
+		// instrument layers
+		for lkey, lv := range v.Layers {
+			if len(lv.MidiKey) > 0 {
+				mkeyid, err := MapMidiKey(lv.MidiKey, mididevs)
+				if err != nil {
+					return err
+				}
+				lv.MidiNote = mkeyid
+			}
+
+			ilrs, ok := v.Instrument.Layers[lkey]
+			if !ok {
+				return fmt.Errorf("not found layer '%s' in instrument '%s'", lkey, v.Instrument.Key)
+			}
+			lv.CfgMidiKey = ilrs.CfgMidiKey
+
+			// Index layer controls
+			for k, ctrl := range lv.Controls {
+				ictrl, ok := ilrs.Controls[k]
+				if !ok {
+					return fmt.Errorf("not found control '%s' of layer '%s' in instrument '%s'", k, lkey, v.Instrument.Key)
+				}
+				tmpCtrl := ctrl // Create a copy to take address of
+				tmpCtrl.CfgKey = ictrl.CfgKey
+				tmpCtrl.owner = &lv
+				ctrlKey := fmt.Sprintf("l%d", controlId)
+				p.controls[ctrlKey] = &tmpCtrl
+				lv.Controls[k] = tmpCtrl // Update the original map
+				controlId++
+			}
+			instr.Layers[lkey] = lv
+		}
+	}
+	return nil
+}
+
+// MapMidiKey maps a MIDI key string to its numeric value using the provided MIDI devices
+func MapMidiKey(mkey string, mdevs []MIDIDevice) (int, error) {
+	devlist := make([]string, len(mdevs))
+	for i, d := range mdevs {
+		kmap, err := d.GetKeysMapping()
+		if err != nil {
+			return 0, fmt.Errorf("failed get MIDI Keys mapping for device %s: %w", d.Name(), err)
+		}
+		devlist[i] = d.Name()
+		midiId, ok := kmap[mkey]
+		if ok {
+			return midiId, nil
+		}
+	}
+	return 0, fmt.Errorf("MIDI devices %s doen't have mapping for MIDI Key %s", devlist, mkey)
+}
+
+// MIDIDevice interface defines methods required for MIDI device operations
+type MIDIDevice interface {
+	Name() string
+	GetKeysMapping() (map[string]int, error)
+}
