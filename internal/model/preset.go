@@ -2,12 +2,19 @@ package model
 
 import "fmt"
 
+type ControlOwner interface {
+	HandleSetControl(control *PresetControl, value float32) error
+}
+
+type ControlIndex map[string]*PresetControl
+
 type KitPreset struct {
 	Uid         string             `yaml:"uuid,omitempty"`
 	Kit         KitRef             `yaml:"kit"`
 	Name        string             `yaml:"name"`
 	Channels    []PresetChannel    `yaml:"channels"`
 	Instruments []PresetInstrument `yaml:"instruments"`
+	controls    ControlIndex
 }
 
 type KitRef struct {
@@ -60,6 +67,7 @@ type PresetControl struct {
 	MidiCC int     `yaml:"midiCC,omitempty" json:"midiCC,omitempty"`
 	CfgKey string  `yaml:"-" json:"-"`
 	Value  float32 `yaml:"value" json:"value"`
+	owner  ControlOwner
 }
 
 // PresetControl.Type values MUST match one of the ControlType values
@@ -135,4 +143,16 @@ func (p *KitPreset) indexInstruments() error {
 		ch.instruments = append(ch.instruments, &p.Instruments[i])
 	}
 	return nil
+}
+
+func (p *PresetChannel) HandleSetControl(control *PresetControl, value float32) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (p *PresetInstrument) HandleSetControl(control *PresetControl, value float32) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (p *PresetLayer) HandleSetControl(control *PresetControl, value float32) error {
+	return fmt.Errorf("unimplemented")
 }
