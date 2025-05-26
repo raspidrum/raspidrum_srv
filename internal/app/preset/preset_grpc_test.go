@@ -38,8 +38,8 @@ func TestConvertInstrumentToProto(t *testing.T) {
 					Id:   1,
 					Name: "Kick",
 					Controls: map[string]model.PresetControl{
-						"volume": {Name: "Volume", Type: "volume", Value: 100},
-						"pan":    {Name: "Pan", Type: "pan", Value: 64},
+						"volume": {Name: "volume", Type: "volume", Value: 100},
+						"pan":    {Name: "pan", Type: "pan", Value: 64},
 					},
 					Layers: map[string]model.PresetLayer{},
 				},
@@ -47,8 +47,8 @@ func TestConvertInstrumentToProto(t *testing.T) {
 					Id:   2,
 					Name: "Snare",
 					Controls: map[string]model.PresetControl{
-						"volume": {Name: "Volume", Type: "volume", Value: 90},
-						"pan":    {Name: "Pan", Type: "pan", Value: 32},
+						"volume": {Name: "volume", Type: "volume", Value: 90},
+						"pan":    {Name: "pan", Type: "pan", Value: 32},
 					},
 					Layers: map[string]model.PresetLayer{},
 				},
@@ -57,14 +57,14 @@ func TestConvertInstrumentToProto(t *testing.T) {
 				{
 					Key:    "1",
 					Name:   "Kick",
-					Volume: float64Ptr(100),
-					Pan:    float64Ptr(64),
+					Volume: &pb.BaseControl{Key: "volume", Name: "volume", Value: 100, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+					Pan:    &pb.BaseControl{Key: "pan", Name: "pan", Value: 64, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 				},
 				{
 					Key:    "2",
 					Name:   "Snare",
-					Volume: float64Ptr(90),
-					Pan:    float64Ptr(32),
+					Volume: &pb.BaseControl{Key: "volume", Name: "volume", Value: 90, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+					Pan:    &pb.BaseControl{Key: "pan", Name: "pan", Value: 32, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 				},
 			},
 		},
@@ -113,8 +113,8 @@ func TestConvertInstrumentToProto(t *testing.T) {
 						{
 							Key:    "layer1",
 							Name:   "Main",
-							Volume: float64Ptr(100),
-							Pan:    float64Ptr(64),
+							Volume: &pb.BaseControl{Key: "volume", Name: "Volume", Value: 100, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+							Pan:    &pb.BaseControl{Key: "pan", Name: "Pan", Value: 64, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 						},
 					},
 				},
@@ -147,8 +147,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:  "ch1",
 						Name: "Channel 1",
 						Controls: map[string]model.PresetControl{
-							"volume": {Name: "Volume", Type: "volume", Value: 100},
-							"pan":    {Name: "Pan", Type: "pan", Value: 64},
+							"volume": {Name: "Volume", Type: "volume", Value: 1.00},
+							"pan":    {Name: "Pan", Type: "pan", Value: 0.64},
 						},
 					},
 				},
@@ -177,8 +177,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:    "ch1",
 						Name:   "Channel 1",
 						Type:   pb.ChannelType_CHANNEL_TYPE_INSTRUMENT,
-						Volume: 90,
-						Pan:    54,
+						Volume: &pb.BaseControl{Key: "volume", Name: "Volume", Value: 0.709, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+						Pan:    &pb.BaseControl{Key: "pan", Name: "Pan", Value: -0.15, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 						Instruments: []*pb.Instrument{
 							{
 								Key:  "1",
@@ -199,8 +199,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:  "ch1",
 						Name: "Channel 1",
 						Controls: map[string]model.PresetControl{
-							"volume": {Name: "Volume", Type: "volume", Value: 100},
-							"pan":    {Name: "Pan", Type: "pan", Value: 64},
+							"volume": {Name: "Volume", Type: "volume", Value: 1.00},
+							"pan":    {Name: "Pan", Type: "pan", Value: 0.64},
 						},
 					},
 				},
@@ -210,8 +210,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Name:       "Kick",
 						ChannelKey: "ch1",
 						Controls: map[string]model.PresetControl{
-							"volume": {Name: "Volume", Type: "volume", Value: 90},
-							"pan":    {Name: "Pan", Type: "pan", Value: 54},
+							"volume": {Name: "Volume", Type: "volume", Value: 0.90},
+							"pan":    {Name: "Pan", Type: "pan", Value: 0.54},
 						},
 					},
 				},
@@ -229,8 +229,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:    "ch1",
 						Name:   "Channel 1",
 						Type:   pb.ChannelType_CHANNEL_TYPE_INSTRUMENT,
-						Volume: 100,
-						Pan:    64,
+						Volume: &pb.BaseControl{Key: "volume", Name: "Volume", Value: 1.00, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+						Pan:    &pb.BaseControl{Key: "pan", Name: "Pan", Value: 0.64, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 						Instruments: []*pb.Instrument{
 							{
 								Key:  "1",
@@ -251,7 +251,7 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:  "ch1",
 						Name: "Channel 1",
 						Controls: map[string]model.PresetControl{
-							"volume": {Name: "Volume", Type: "volume", Value: 100},
+							"volume": {Name: "Volume", Type: "volume", Value: 1.00},
 						},
 					},
 				},
@@ -261,8 +261,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Name:       "Kick",
 						ChannelKey: "ch1",
 						Controls: map[string]model.PresetControl{
-							"volume": {Name: "Volume", Type: "volume", Value: 90},
-							"pan":    {Name: "Pan", Type: "pan", Value: 54},
+							"volume": {Name: "Volume", Type: "volume", Value: 0.90},
+							"pan":    {Name: "Pan", Type: "pan", Value: 0.54},
 						},
 					},
 				},
@@ -280,8 +280,7 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:    "ch1",
 						Name:   "Channel 1",
 						Type:   pb.ChannelType_CHANNEL_TYPE_INSTRUMENT,
-						Volume: 100,
-						Pan:    0,
+						Volume: &pb.BaseControl{Key: "volume", Name: "Volume", Value: 1.00, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
 						Instruments: []*pb.Instrument{
 							{
 								Key:  "1",
@@ -302,8 +301,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:  "ch1",
 						Name: "Drums",
 						Controls: map[string]model.PresetControl{
-							"volume": {Name: "Volume", Type: "volume", Value: 100},
-							"pan":    {Name: "Pan", Type: "pan", Value: 64},
+							"volume": {Name: "Volume", Type: "volume", Value: 1.00},
+							"pan":    {Name: "Pan", Type: "pan", Value: 0.64},
 						},
 					},
 				},
@@ -313,8 +312,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Name:       "Kick",
 						ChannelKey: "ch1",
 						Controls: map[string]model.PresetControl{
-							"volume": {Name: "Volume", Type: "volume", Value: 90},
-							"pan":    {Name: "Pan", Type: "pan", Value: 32},
+							"volume": {Name: "Volume", Type: "volume", Value: 0.90},
+							"pan":    {Name: "Pan", Type: "pan", Value: 0.32},
 						},
 					},
 					{
@@ -322,8 +321,8 @@ func TestConvertPresetToProto(t *testing.T) {
 						Name:       "Snare",
 						ChannelKey: "ch1",
 						Controls: map[string]model.PresetControl{
-							"volume": {Name: "Volume", Type: "volume", Value: 85},
-							"pan":    {Name: "Pan", Type: "pan", Value: 96},
+							"volume": {Name: "Volume", Type: "volume", Value: 0.85},
+							"pan":    {Name: "Pan", Type: "pan", Value: 0.96},
 						},
 					},
 				},
@@ -341,20 +340,20 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:    "ch1",
 						Name:   "Drums",
 						Type:   pb.ChannelType_CHANNEL_TYPE_INSTRUMENT,
-						Volume: 100,
-						Pan:    64,
+						Volume: &pb.BaseControl{Key: "volume", Name: "Volume", Value: 1.00, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+						Pan:    &pb.BaseControl{Key: "pan", Name: "Pan", Value: 0.64, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 						Instruments: []*pb.Instrument{
 							{
 								Key:    "1",
 								Name:   "Kick",
-								Volume: float64Ptr(90),
-								Pan:    float64Ptr(32),
+								Volume: &pb.BaseControl{Key: "volume", Name: "Volume", Value: 0.90, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+								Pan:    &pb.BaseControl{Key: "pan", Name: "Pan", Value: 0.32, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 							},
 							{
 								Key:    "2",
 								Name:   "Snare",
-								Volume: float64Ptr(85),
-								Pan:    float64Ptr(96),
+								Volume: &pb.BaseControl{Key: "volume", Name: "Volume", Value: 0.85, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+								Pan:    &pb.BaseControl{Key: "pan", Name: "Pan", Value: 0.96, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 							},
 						},
 					},

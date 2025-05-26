@@ -2,6 +2,7 @@ package preset
 
 import (
 	"context"
+	"math"
 	"strconv"
 
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
@@ -81,25 +82,34 @@ func convertPresetToProto(kitPreset *model.KitPreset) (*pb.Preset, error) {
 			// Use instrument controls for single instrument with MIDI CC
 			if vol, ok := instruments[0].Controls[model.CtrlVolume]; ok {
 				if vol.MidiCC != 0 {
-					pbChannel.Volume = float64(vol.Value)
+					val, min, max := normalizeVol(vol)
+					pbChannel.Volume = &pb.BaseControl{Key: model.CtrlVolume, Name: vol.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
+
 				} else {
-					pbChannel.Volume = float64(ch.Controls[model.CtrlVolume].Value)
+					val, min, max := normalizeVol(ch.Controls[model.CtrlVolume])
+					pbChannel.Volume = &pb.BaseControl{Key: model.CtrlVolume, Name: vol.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 				}
 			}
 			if pan, ok := instruments[0].Controls[model.CtrlPan]; ok {
 				if pan.MidiCC != 0 {
-					pbChannel.Pan = float64(pan.Value)
+					val, min, max := normalizePan(pan)
+					pbChannel.Pan = &pb.BaseControl{Key: model.CtrlPan, Name: pan.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 				} else {
-					pbChannel.Pan = float64(ch.Controls[model.CtrlPan].Value)
+					if chpan, ok := ch.Controls[model.CtrlPan]; ok {
+						val, min, max := normalizePan(chpan)
+						pbChannel.Pan = &pb.BaseControl{Key: model.CtrlPan, Name: chpan.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
+					}
 				}
 			}
 		} else {
 			// Use channel controls
 			if vol, ok := ch.Controls[model.CtrlVolume]; ok {
-				pbChannel.Volume = float64(vol.Value)
+				val, min, max := normalizeVol(vol)
+				pbChannel.Volume = &pb.BaseControl{Key: model.CtrlVolume, Name: vol.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 			}
 			if pan, ok := ch.Controls[model.CtrlPan]; ok {
-				pbChannel.Pan = float64(pan.Value)
+				val, min, max := normalizePan(pan)
+				pbChannel.Pan = &pb.BaseControl{Key: model.CtrlPan, Name: pan.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 			}
 		}
 
@@ -126,11 +136,12 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 				// Add volume and pan for instrument only if channel has multiple instruments
 				if len(instruments) > 1 {
 					if cv, ok := instr.Controls[ctrl.Type]; ok {
-						v := float64(cv.Value)
 						if ctrl.Type == model.CtrlVolume {
-							pbInstrument.Volume = &v
+							val, min, max := normalizeVol(cv)
+							pbInstrument.Volume = &pb.BaseControl{Key: ctrl.Type, Name: cv.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 						} else {
-							pbInstrument.Pan = &v
+							val, min, max := normalizePan(cv)
+							pbInstrument.Pan = &pb.BaseControl{Key: ctrl.Type, Name: cv.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 						}
 					}
 				}
@@ -163,12 +174,12 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 			}
 
 			if vol, ok := layer.Controls[model.CtrlVolume]; ok {
-				v := float64(vol.Value)
-				pbLayer.Volume = &v
+				val, min, max := normalizeVol(vol)
+				pbLayer.Volume = &pb.BaseControl{Key: model.CtrlVolume, Name: vol.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 			}
 			if pan, ok := layer.Controls[model.CtrlPan]; ok {
-				p := float64(pan.Value)
-				pbLayer.Pan = &p
+				val, min, max := normalizePan(pan)
+				pbLayer.Pan = &pb.BaseControl{Key: model.CtrlPan, Name: pan.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 			}
 
 			pbInstrument.Layers = append(pbInstrument.Layers, pbLayer)
@@ -179,6 +190,26 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 	return res
 }
 
+func normalizeVol(ctrl model.PresetControl) (val float64, min float64, max float64) {
+	if ctrl.MidiCC != 0 {
+		// val from 0 to 1 with 3 decimal places
+		return roundFloat(float64(ctrl.Value/127), 3), 0, 1
+	}
+	return roundFloat(float64(ctrl.Value), 3), 0, 1
+}
+
+func normalizePan(ctrl model.PresetControl) (val float64, min float64, max float64) {
+	if ctrl.MidiCC != 0 {
+		return roundFloat(float64((ctrl.Value*2/127)-1), 3), -1, 1
+	}
+	return roundFloat(float64(ctrl.Value), 3), -1, 1
+}
+
 func makeFloat64Ptr(v float64) *float64 {
 	return &v
+}
+
+func roundFloat(val float64, precision uint) float64 {
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(val*ratio) / ratio
 }
