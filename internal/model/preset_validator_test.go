@@ -50,7 +50,7 @@ func TestPresetLayer_Validate(t *testing.T) {
 		MidiKey    string
 		CfgMidiKey string
 		MidiNote   int
-		Controls   map[string]PresetControl
+		Controls   map[string]*PresetControl
 	}
 	tests := []struct {
 		name    string
@@ -60,7 +60,7 @@ func TestPresetLayer_Validate(t *testing.T) {
 		{
 			name: "vol and pan with midiCC",
 			fields: fields{
-				Controls: map[string]PresetControl{
+				Controls: map[string]*PresetControl{
 					"volume": {Type: "volume", MidiCC: 123},
 					"pan":    {Type: "pan", MidiCC: 134},
 				},
@@ -70,7 +70,7 @@ func TestPresetLayer_Validate(t *testing.T) {
 		{
 			name: "vol with midiCC, no pan",
 			fields: fields{
-				Controls: map[string]PresetControl{
+				Controls: map[string]*PresetControl{
 					"volume": {Type: "volume", MidiCC: 123},
 				},
 			},
@@ -79,7 +79,7 @@ func TestPresetLayer_Validate(t *testing.T) {
 		{
 			name: "vol with midiCC, pan without midiCC",
 			fields: fields{
-				Controls: map[string]PresetControl{
+				Controls: map[string]*PresetControl{
 					"volume": {Type: "volume", MidiCC: 123},
 					"pan":    {Type: "pan"},
 				},
@@ -89,14 +89,14 @@ func TestPresetLayer_Validate(t *testing.T) {
 		{
 			name: "no vol",
 			fields: fields{
-				Controls: map[string]PresetControl{},
+				Controls: map[string]*PresetControl{},
 			},
 			wantErr: true,
 		},
 		{
 			name: "vol without midiCC",
 			fields: fields{
-				Controls: map[string]PresetControl{
+				Controls: map[string]*PresetControl{
 					"volume": {Type: "volume"},
 				},
 			},
@@ -138,7 +138,7 @@ func TestKitPreset_Validate(t *testing.T) {
 				Channels: []PresetChannel{{Key: "1"}},
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 						},
 					},
@@ -152,7 +152,7 @@ func TestKitPreset_Validate(t *testing.T) {
 				Channels: []PresetChannel{{Key: "1"}},
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume"},
 						},
 					},
@@ -176,12 +176,12 @@ func TestKitPreset_Validate(t *testing.T) {
 				Channels: []PresetChannel{{Key: "1"}},
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 						},
 						Layers: map[string]PresetLayer{
 							"top": {
-								Controls: map[string]PresetControl{
+								Controls: map[string]*PresetControl{
 									"volume": {Type: "volume", MidiCC: 123},
 								},
 							},
@@ -197,12 +197,12 @@ func TestKitPreset_Validate(t *testing.T) {
 				Channels: []PresetChannel{{Key: "1"}},
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume"},
 						},
 						Layers: map[string]PresetLayer{
 							"top": {
-								Controls: map[string]PresetControl{
+								Controls: map[string]*PresetControl{
 									"volume": {Type: "volume", MidiCC: 123},
 								},
 							},
@@ -218,10 +218,10 @@ func TestKitPreset_Validate(t *testing.T) {
 				Channels: []PresetChannel{{Key: "1"}},
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
-						Controls: map[string]PresetControl{},
+						Controls: map[string]*PresetControl{},
 						Layers: map[string]PresetLayer{
 							"top": {
-								Controls: map[string]PresetControl{
+								Controls: map[string]*PresetControl{
 									"volume": {Type: "volume", MidiCC: 123},
 								},
 							},
@@ -238,14 +238,14 @@ func TestKitPreset_Validate(t *testing.T) {
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
 						Name: "tom1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 							"pan":    {Type: "pan", MidiCC: 123},
 						},
 					},
 					{ChannelKey: "1",
 						Name: "tom2",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 							"pan":    {Type: "pan", MidiCC: 123},
 						},
@@ -261,14 +261,14 @@ func TestKitPreset_Validate(t *testing.T) {
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
 						Name: "tom1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume"},
 							"pan":    {Type: "pan", MidiCC: 123},
 						},
 					},
 					{ChannelKey: "1",
 						Name: "tom2",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 							"pan":    {Type: "pan"},
 						},
@@ -284,13 +284,13 @@ func TestKitPreset_Validate(t *testing.T) {
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
 						Name: "tom1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"pan": {Type: "pan", MidiCC: 123},
 						},
 					},
 					{ChannelKey: "1",
 						Name: "tom2",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 						},
 					},
@@ -305,13 +305,13 @@ func TestKitPreset_Validate(t *testing.T) {
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
 						Name: "tom1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 							"pan":    {Type: "pan", MidiCC: 123},
 						},
 						Layers: map[string]PresetLayer{
 							"top": {
-								Controls: map[string]PresetControl{
+								Controls: map[string]*PresetControl{
 									"volume": {Type: "volume", MidiCC: 123},
 								},
 							},
@@ -319,7 +319,7 @@ func TestKitPreset_Validate(t *testing.T) {
 					},
 					{ChannelKey: "1",
 						Name: "tom2",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 							"pan":    {Type: "pan", MidiCC: 123},
 						},
@@ -335,13 +335,13 @@ func TestKitPreset_Validate(t *testing.T) {
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
 						Name: "tom1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume"},
 							"pan":    {Type: "pan", MidiCC: 123},
 						},
 						Layers: map[string]PresetLayer{
 							"top": {
-								Controls: map[string]PresetControl{
+								Controls: map[string]*PresetControl{
 									"volume": {Type: "volume", MidiCC: 123},
 								},
 							},
@@ -349,7 +349,7 @@ func TestKitPreset_Validate(t *testing.T) {
 					},
 					{ChannelKey: "1",
 						Name: "tom2",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 							"pan":    {Type: "pan", MidiCC: 123},
 						},
@@ -365,12 +365,12 @@ func TestKitPreset_Validate(t *testing.T) {
 				Instruments: []PresetInstrument{
 					{ChannelKey: "1",
 						Name: "tom1",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"pan": {Type: "pan", MidiCC: 123},
 						},
 						Layers: map[string]PresetLayer{
 							"top": {
-								Controls: map[string]PresetControl{
+								Controls: map[string]*PresetControl{
 									"volume": {Type: "volume", MidiCC: 123},
 								},
 							},
@@ -378,7 +378,7 @@ func TestKitPreset_Validate(t *testing.T) {
 					},
 					{ChannelKey: "1",
 						Name: "tom2",
-						Controls: map[string]PresetControl{
+						Controls: map[string]*PresetControl{
 							"volume": {Type: "volume", MidiCC: 123},
 							"pan":    {Type: "pan", MidiCC: 123},
 						},

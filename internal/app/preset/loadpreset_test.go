@@ -33,11 +33,12 @@ func Test_PrepareToLoad(t *testing.T) {
 		mididevs []m.MIDIDevice
 	}
 	type testCase struct {
-		name            string
-		args            args
-		want            m.KitPreset
-		wantErr         bool
-		expectedControl map[string]struct {
+		name             string
+		args             args
+		want             m.KitPreset
+		wantErr          bool
+		expectedControls map[string]struct {
+			Key    string
 			Owner  m.ControlOwner
 			MidiCC int
 			CfgKey string
@@ -47,9 +48,17 @@ func Test_PrepareToLoad(t *testing.T) {
 	}
 	tests := []testCase{
 		{
-			name: "wo layers",
+			name: "channel with one instrument without layers",
 			args: args{
 				pst: &m.KitPreset{
+					Channels: []m.PresetChannel{
+						{
+							Key: "ch1",
+							Controls: map[string]*m.PresetControl{
+								"volume": {Type: "volume", Value: 66},
+							},
+						},
+					},
 					Instruments: []m.PresetInstrument{
 						{
 							Instrument: m.InstrumentRef{
@@ -58,12 +67,10 @@ func Test_PrepareToLoad(t *testing.T) {
 									"volume": {CfgKey: "KICKV"},
 								},
 							},
-							MidiKey: "kick1",
+							ChannelKey: "ch1",
+							MidiKey:    "kick1",
 							Controls: map[string]*m.PresetControl{
-								"volume": {
-									MidiCC: 30,
-									Type:   "volume",
-								},
+								"volume": {MidiCC: 30, Type: "volume", Value: 95},
 							},
 						},
 					},
@@ -73,6 +80,14 @@ func Test_PrepareToLoad(t *testing.T) {
 				},
 			},
 			want: m.KitPreset{
+				Channels: []m.PresetChannel{
+					{
+						Key: "ch1",
+						Controls: map[string]*m.PresetControl{
+							"volume": {Key: "c0", Type: "volume", Value: 66},
+						},
+					},
+				},
 				Instruments: []m.PresetInstrument{
 					{
 						Instrument: m.InstrumentRef{
@@ -81,31 +96,26 @@ func Test_PrepareToLoad(t *testing.T) {
 								"volume": {CfgKey: "KICKV"},
 							},
 						},
-						MidiKey:  "kick1",
-						MidiNote: 36,
+						ChannelKey: "ch1",
+						MidiKey:    "kick1",
+						MidiNote:   36,
 						Controls: map[string]*m.PresetControl{
-							"volume": {
-								MidiCC: 30,
-								CfgKey: "KICKV",
-								Type:   "volume",
-							},
+							"volume": {Key: "i1", MidiCC: 30, CfgKey: "KICKV", Type: "volume", Value: 95},
 						},
 					},
 				},
 			},
 			wantErr: false,
-			expectedControl: map[string]struct {
+			expectedControls: map[string]struct {
+				Key    string
 				Owner  m.ControlOwner
 				MidiCC int
 				CfgKey string
 				Type   string
 				Value  float32
 			}{
-				"i0": {
-					MidiCC: 30,
-					CfgKey: "KICKV",
-					Type:   "volume",
-				},
+				"c0": {Key: "c0", Type: "volume", Value: 66},
+				"i1": {Key: "i1", Type: "volume", MidiCC: 30, CfgKey: "KICKV", Value: 95},
 			},
 		},
 		{
@@ -208,7 +218,8 @@ func Test_PrepareToLoad(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			expectedControl: map[string]struct {
+			expectedControls: map[string]struct {
+				Key    string
 				Owner  m.ControlOwner
 				MidiCC int
 				CfgKey string
@@ -244,12 +255,19 @@ func Test_PrepareToLoad(t *testing.T) {
 			if err := preset.PrepareToLoad(tt.args.mididevs); (err != nil) != tt.wantErr {
 				t.Errorf("PrepareToLoad() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if diff := cmp.Diff(tt.want, *preset, cmpopts.IgnoreUnexported(m.KitPreset{}), cmpopts.IgnoreUnexported(m.PresetControl{})); diff != "" {
+			if diff := cmp.Diff(tt.want, *preset,
+				cmpopts.IgnoreUnexported(m.KitPreset{}),
+				cmpopts.IgnoreUnexported(m.PresetControl{}),
+				cmpopts.IgnoreUnexported(m.PresetInstrument{}),
+				cmpopts.IgnoreUnexported(m.PresetChannel{}),
+				cmpopts.IgnoreUnexported(m.InstrumentRef{}),
+				cmpopts.IgnoreUnexported(m.Layer{}),
+				cmpopts.IgnoreUnexported(m.Control{})); diff != "" {
 				t.Errorf("PrepareToLoad() mismatch (-want +got):\n%s", diff)
 			}
 
 			// Verify controls state using the method from KitPreset
-			if diff := m.VerifyControlsForTest(preset, tt.expectedControl); diff != "" {
+			if diff := m.VerifyControlsForTest(preset, tt.expectedControls); diff != "" {
 				t.Error("Controls state does not match expected:", diff)
 			}
 		})

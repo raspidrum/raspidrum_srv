@@ -20,7 +20,7 @@ func TestConvertInstrumentToProto(t *testing.T) {
 				{
 					Id:       1,
 					Name:     "Kick",
-					Controls: map[string]model.PresetControl{},
+					Controls: map[string]*model.PresetControl{},
 					Layers:   map[string]model.PresetLayer{},
 				},
 			},
@@ -37,7 +37,7 @@ func TestConvertInstrumentToProto(t *testing.T) {
 				{
 					Id:   1,
 					Name: "Kick",
-					Controls: map[string]model.PresetControl{
+					Controls: map[string]*model.PresetControl{
 						"volume": {Name: "volume", Type: "volume", Value: 100},
 						"pan":    {Name: "pan", Type: "pan", Value: 64},
 					},
@@ -46,7 +46,7 @@ func TestConvertInstrumentToProto(t *testing.T) {
 				{
 					Id:   2,
 					Name: "Snare",
-					Controls: map[string]model.PresetControl{
+					Controls: map[string]*model.PresetControl{
 						"volume": {Name: "volume", Type: "volume", Value: 90},
 						"pan":    {Name: "pan", Type: "pan", Value: 32},
 					},
@@ -74,13 +74,13 @@ func TestConvertInstrumentToProto(t *testing.T) {
 				{
 					Id:   1,
 					Name: "Kick",
-					Controls: map[string]model.PresetControl{
+					Controls: map[string]*model.PresetControl{
 						"pitch": {Name: "Pitch", Type: "pitch", Value: 50},
 					},
 					Layers: map[string]model.PresetLayer{
 						"layer1": {
 							Name: "Main",
-							Controls: map[string]model.PresetControl{
+							Controls: map[string]*model.PresetControl{
 								"volume": {Name: "Volume", Type: "volume", Value: 100},
 								"pan":    {Name: "Pan", Type: "pan", Value: 64},
 							},
@@ -146,7 +146,7 @@ func TestConvertPresetToProto(t *testing.T) {
 					{
 						Key:  "ch1",
 						Name: "Channel 1",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 1.00},
 							"pan":    {Name: "Pan", Type: "pan", Value: 0.64},
 						},
@@ -157,7 +157,7 @@ func TestConvertPresetToProto(t *testing.T) {
 						Id:         1,
 						Name:       "Kick",
 						ChannelKey: "ch1",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 90, MidiCC: 7},
 							"pan":    {Name: "Pan", Type: "pan", Value: 54, MidiCC: 10},
 						},
@@ -198,7 +198,7 @@ func TestConvertPresetToProto(t *testing.T) {
 					{
 						Key:  "ch1",
 						Name: "Channel 1",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 1.00},
 							"pan":    {Name: "Pan", Type: "pan", Value: 0.64},
 						},
@@ -209,7 +209,7 @@ func TestConvertPresetToProto(t *testing.T) {
 						Id:         1,
 						Name:       "Kick",
 						ChannelKey: "ch1",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 0.90},
 							"pan":    {Name: "Pan", Type: "pan", Value: 0.54},
 						},
@@ -250,7 +250,7 @@ func TestConvertPresetToProto(t *testing.T) {
 					{
 						Key:  "ch1",
 						Name: "Channel 1",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 1.00},
 						},
 					},
@@ -260,7 +260,7 @@ func TestConvertPresetToProto(t *testing.T) {
 						Id:         1,
 						Name:       "Kick",
 						ChannelKey: "ch1",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 0.90},
 							"pan":    {Name: "Pan", Type: "pan", Value: 0.54},
 						},
@@ -300,7 +300,7 @@ func TestConvertPresetToProto(t *testing.T) {
 					{
 						Key:  "ch1",
 						Name: "Drums",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 1.00},
 							"pan":    {Name: "Pan", Type: "pan", Value: 0.64},
 						},
@@ -311,7 +311,7 @@ func TestConvertPresetToProto(t *testing.T) {
 						Id:         1,
 						Name:       "Kick",
 						ChannelKey: "ch1",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 0.90},
 							"pan":    {Name: "Pan", Type: "pan", Value: 0.32},
 						},
@@ -320,7 +320,7 @@ func TestConvertPresetToProto(t *testing.T) {
 						Id:         2,
 						Name:       "Snare",
 						ChannelKey: "ch1",
-						Controls: map[string]model.PresetControl{
+						Controls: map[string]*model.PresetControl{
 							"volume": {Name: "Volume", Type: "volume", Value: 0.85},
 							"pan":    {Name: "Pan", Type: "pan", Value: 0.96},
 						},

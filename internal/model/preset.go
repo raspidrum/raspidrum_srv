@@ -1,6 +1,8 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type ControlOwner interface {
 	HandleSetControl(control *PresetControl, value float32) error
@@ -25,21 +27,21 @@ type KitRef struct {
 }
 
 type PresetChannel struct {
-	Key         string                   `yaml:"key"`
-	Name        string                   `yaml:"name"`
-	Controls    map[string]PresetControl `yaml:"controls"`
-	instruments []*PresetInstrument      `yaml:"-"`
+	Key         string                    `yaml:"key"`
+	Name        string                    `yaml:"name"`
+	Controls    map[string]*PresetControl `yaml:"controls"`
+	instruments []*PresetInstrument       `yaml:"-"`
 }
 
 type PresetInstrument struct {
-	Instrument InstrumentRef            `yaml:"instrument"`
-	Id         int64                    `yaml:"-"`
-	Name       string                   `yaml:"name"`
-	ChannelKey string                   `yaml:"channelKey"`
-	MidiKey    string                   `yaml:"midiKey,omitempty"`
-	MidiNote   int                      `yaml:"-"`
-	Controls   map[string]PresetControl `yaml:"controls"`
-	Layers     map[string]PresetLayer   `yaml:"layers"`
+	Instrument InstrumentRef             `yaml:"instrument"`
+	Id         int64                     `yaml:"-"`
+	Name       string                    `yaml:"name"`
+	ChannelKey string                    `yaml:"channelKey"`
+	MidiKey    string                    `yaml:"midiKey,omitempty"`
+	MidiNote   int                       `yaml:"-"`
+	Controls   map[string]*PresetControl `yaml:"controls"`
+	Layers     map[string]PresetLayer    `yaml:"layers"`
 }
 
 type InstrumentRef struct {
@@ -53,21 +55,27 @@ type InstrumentRef struct {
 }
 
 type PresetLayer struct {
-	Name       string                   `yaml:"name,omitempty" json:"name,omitempty"`
-	MidiKey    string                   `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
-	CfgMidiKey string                   `yaml:"-" json:"-"`
-	MidiNote   int                      `yaml:"-"`
-	Controls   map[string]PresetControl `yaml:"controls" json:"controls"`
+	Name       string                    `yaml:"name,omitempty" json:"name,omitempty"`
+	MidiKey    string                    `yaml:"midiKey,omitempty" json:"midiKey,omitempty"`
+	CfgMidiKey string                    `yaml:"-" json:"-"`
+	MidiNote   int                       `yaml:"-"`
+	Controls   map[string]*PresetControl `yaml:"controls" json:"controls"`
 }
 
 // CfgKey - sfz-variable key, same value as Instrument.Controls
+// Key - unique id across preset. Used for identification control for communication between srv and ui
+// linkedTo - ref to control, example: channel volume control linked to instrument volume control
+// linkedWith - ref from control, example: instrument volume control linked from channel volume control
 type PresetControl struct {
-	Name   string  `yaml:"name,omitempty" json:"name,omitempty"`
-	Type   string  `yaml:"type" json:"type"`
-	MidiCC int     `yaml:"midiCC,omitempty" json:"midiCC,omitempty"`
-	CfgKey string  `yaml:"-" json:"-"`
-	Value  float32 `yaml:"value" json:"value"`
-	owner  ControlOwner
+	Name       string  `yaml:"name,omitempty" json:"name,omitempty"`
+	Type       string  `yaml:"type" json:"type"`
+	MidiCC     int     `yaml:"midiCC,omitempty" json:"midiCC,omitempty"`
+	CfgKey     string  `yaml:"-" json:"-"`
+	Value      float32 `yaml:"value" json:"value"`
+	Key        string  `yaml:"-" json:"-"`
+	owner      ControlOwner
+	linkedTo   []*PresetControl
+	linkedWith *PresetControl
 }
 
 // PresetControl.Type values MUST match one of the ControlType values
@@ -98,6 +106,57 @@ var (
 	CtrlVolume = ControlTypeToString[CTVolume]
 	CtrlPan    = ControlTypeToString[CTPan]
 )
+
+func findControlByType(ctrls map[string]*PresetControl, t string) (*PresetControl, bool) {
+	for _, c := range ctrls {
+		if t == c.Type {
+			return c, true
+		}
+	}
+	return nil, false
+}
+
+// If channel has linked control (linked to corresponding instrument control)
+// then substitute instrument control as channel control, but with channel control key
+func (c *PresetChannel) GetControls() func(func(*PresetControl) bool) {
+	return func(yield func(*PresetControl) bool) {
+		for _, c := range c.Controls {
+			var finished bool
+			if len(c.linkedTo) > 0 {
+				// channel control MAY be linked only with one instrument control
+				ctrl := c.linkedTo[0]
+				finished = !yield(ctrl)
+			} else {
+				finished = !yield(c)
+			}
+			if finished {
+				return
+			}
+		}
+	}
+}
+
+func (c *PresetInstrument) GetControls() func(func(*PresetControl) bool) {
+	return func(yield func(*PresetControl) bool) {
+		for _, c := range c.Controls {
+			// don't yield control if it is linked with channel control
+			// it's be yielded by channel
+			if c.linkedWith == nil {
+				if !yield(c) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (c *PresetLayer) GetControls() func(func(*PresetControl) bool) {
+	return func(yield func(*PresetControl) bool) {
+		for _, c := range c.Controls {
+			yield(c)
+		}
+	}
+}
 
 func (p *KitPreset) GetChannelInstrumentsByIdx(idx int) ([]*PresetInstrument, error) {
 	if idx > len(p.Channels)-1 {
@@ -145,20 +204,12 @@ func (p *KitPreset) indexInstruments() error {
 	return nil
 }
 
-func (p *PresetChannel) HandleSetControl(control *PresetControl, value float32) error {
-	return fmt.Errorf("unimplemented")
-}
-
-func (p *PresetInstrument) HandleSetControl(control *PresetControl, value float32) error {
-	return fmt.Errorf("unimplemented")
-}
-
-func (p *PresetLayer) HandleSetControl(control *PresetControl, value float32) error {
-	return fmt.Errorf("unimplemented")
-}
-
 // PrepareToLoad augments preset controls and layers with data from instrument
 func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
+	if err := p.indexInstruments(); err != nil {
+		return err
+	}
+
 	// Initialize control index map if not exists
 	if p.controls == nil {
 		p.controls = make(ControlIndex)
@@ -170,70 +221,96 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 	// Index channel controls
 	for i := range p.Channels {
 		ch := &p.Channels[i]
-		for k, ctrl := range ch.Controls {
-			tmpCtrl := ctrl // Create a copy to take address of
-			tmpCtrl.owner = ch
+		instrCount := len(ch.instruments)
+		// Index channel controls
+		for _, ctrl := range ch.Controls {
+			// Link instrument volume or pan control for single instrument with MIDI CC
+			if instrCount == 1 && (ctrl.Type == CtrlVolume || ctrl.Type == CtrlPan) {
+				if ictrl, ok := findControlByType(ch.instruments[0].Controls, ctrl.Type); ok {
+					if ictrl.MidiCC != 0 {
+						ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
+						ictrl.linkedWith = ctrl
+					}
+				}
+			}
+			ctrl.owner = ch
 			key := fmt.Sprintf("c%d", controlId)
-			p.controls[key] = &tmpCtrl
-			ch.Controls[k] = tmpCtrl // Update the original map
+			ctrl.Key = key
+			p.controls[key] = ctrl
+			//ch.Controls[k] = tmpCtrl // Update the original map
 			controlId++
 		}
 	}
 
-	for i, v := range p.Instruments {
+	for i := range p.Instruments {
+		instr := &p.Instruments[i]
 		// instrument MIDI Key
-		if len(v.MidiKey) > 0 {
-			mkeyid, err := MapMidiKey(v.MidiKey, mididevs)
+		if len(instr.MidiKey) > 0 {
+			mkeyid, err := MapMidiKey(instr.MidiKey, mididevs)
 			if err != nil {
 				return err
 			}
-			p.Instruments[i].MidiNote = mkeyid
+			instr.MidiNote = mkeyid
 		}
 
-		// Index instrument controls
-		instr := &p.Instruments[i]
-		for k, ctrl := range v.Controls {
-			ictrl, ok := v.Instrument.Controls[k]
+		for k, ctrl := range instr.Controls {
+			// find control declaration in instrument
+			ctrlMeta, ok := instr.Instrument.Controls[k]
 			if !ok {
-				return fmt.Errorf("not found control '%s' in instrument '%s'", k, v.Instrument.Key)
+				return fmt.Errorf("not found control '%s' in instrument '%s'", k, instr.Instrument.Key)
 			}
-			tmpCtrl := ctrl // Create a copy to take address of
-			tmpCtrl.CfgKey = ictrl.CfgKey
-			tmpCtrl.owner = instr
+			ctrl.CfgKey = ctrlMeta.CfgKey
+
+			// link with layer controls if instrument has multiple layers
+			if ctrl.MidiCC == 0 && (ctrl.Type == CtrlVolume || ctrl.Type == CtrlPan) {
+				for _, lr := range instr.Layers {
+					// find same type control in layer
+					lrCtrl, ok := findControlByType(lr.Controls, ctrl.Type)
+					if ok {
+						ctrl.linkedTo = append(ctrl.linkedTo, lrCtrl)
+						lrCtrl.linkedWith = ctrl
+					}
+				}
+			}
+
+			ctrl.owner = instr
+			// Index instrument controls
 			key := fmt.Sprintf("i%d", controlId)
-			p.controls[key] = &tmpCtrl
-			instr.Controls[k] = tmpCtrl // Update the original map
+			ctrl.Key = key
+			p.controls[key] = ctrl
+			//instr.Controls[k] = tmpCtrl // Update the original map
 			controlId++
 		}
 
 		// instrument layers
-		for lkey, lv := range v.Layers {
+		for lkey, lv := range instr.Layers {
 			if len(lv.MidiKey) > 0 {
 				mkeyid, err := MapMidiKey(lv.MidiKey, mididevs)
 				if err != nil {
 					return err
 				}
+				// TODO: test it
 				lv.MidiNote = mkeyid
 			}
 
-			ilrs, ok := v.Instrument.Layers[lkey]
+			lrMeta, ok := instr.Instrument.Layers[lkey]
 			if !ok {
-				return fmt.Errorf("not found layer '%s' in instrument '%s'", lkey, v.Instrument.Key)
+				return fmt.Errorf("not found layer '%s' in instrument '%s'", lkey, instr.Instrument.Key)
 			}
-			lv.CfgMidiKey = ilrs.CfgMidiKey
+			lv.CfgMidiKey = lrMeta.CfgMidiKey
 
-			// Index layer controls
 			for k, ctrl := range lv.Controls {
-				ictrl, ok := ilrs.Controls[k]
+				ictrl, ok := lrMeta.Controls[k]
 				if !ok {
-					return fmt.Errorf("not found control '%s' of layer '%s' in instrument '%s'", k, lkey, v.Instrument.Key)
+					return fmt.Errorf("not found control '%s' of layer '%s' in instrument '%s'", k, lkey, instr.Instrument.Key)
 				}
-				tmpCtrl := ctrl // Create a copy to take address of
-				tmpCtrl.CfgKey = ictrl.CfgKey
-				tmpCtrl.owner = &lv
-				ctrlKey := fmt.Sprintf("l%d", controlId)
-				p.controls[ctrlKey] = &tmpCtrl
-				lv.Controls[k] = tmpCtrl // Update the original map
+				ctrl.CfgKey = ictrl.CfgKey
+				ctrl.owner = &lv
+				// Index layer controls
+				key := fmt.Sprintf("l%d", controlId)
+				ctrl.Key = key
+				p.controls[key] = ctrl
+				//lv.Controls[k] = tmpCtrl // Update the original map
 				controlId++
 			}
 			instr.Layers[lkey] = lv
@@ -263,4 +340,16 @@ func MapMidiKey(mkey string, mdevs []MIDIDevice) (int, error) {
 type MIDIDevice interface {
 	Name() string
 	GetKeysMapping() (map[string]int, error)
+}
+
+func (p *PresetChannel) HandleSetControl(control *PresetControl, value float32) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (p *PresetInstrument) HandleSetControl(control *PresetControl, value float32) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (p *PresetLayer) HandleSetControl(control *PresetControl, value float32) error {
+	return fmt.Errorf("unimplemented")
 }

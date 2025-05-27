@@ -238,7 +238,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 			Name: v.Name,
 		}
 		if len(v.Controls) > 0 {
-			var ctrls map[string]m.PresetControl
+			var ctrls map[string]*m.PresetControl
 			err := json.Unmarshal([]byte(v.Controls), &ctrls)
 			if err != nil {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert channel controls from json due loading from db: %w", err)))
@@ -266,7 +266,7 @@ func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 			ins[i].MidiKey = v.MidiKey.String
 		}
 		if len(v.Controls) > 0 {
-			var ctrls map[string]m.PresetControl
+			var ctrls map[string]*m.PresetControl
 			err := json.Unmarshal([]byte(v.Controls), &ctrls)
 			if err != nil {
 				slog.Error(fmt.Sprint(fmt.Errorf("failed convert instrument controls from json due loading from db: %w", err)))

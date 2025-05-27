@@ -7,6 +7,7 @@ import (
 
 // VerifyControlsForTest is a test helper to verify the internal controls state
 func VerifyControlsForTest(p *KitPreset, expectedControls map[string]struct {
+	Key    string
 	Owner  ControlOwner
 	MidiCC int
 	CfgKey string

@@ -106,7 +106,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 							},
 							MidiKey:  "snare",
 							MidiNote: 38,
-							Controls: map[string]m.PresetControl{
+							Controls: map[string]*m.PresetControl{
 								"volume": {
 									CfgKey: "S65NRV",
 									MidiCC: 22,
@@ -171,7 +171,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 									CfgMidiKey: "RI17BKEY",
 									MidiKey:    "ride1_bell",
 									MidiNote:   53,
-									Controls: map[string]m.PresetControl{
+									Controls: map[string]*m.PresetControl{
 										"volume": {
 											CfgKey: "RI17BV",
 											MidiCC: 104,
@@ -183,7 +183,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 									CfgMidiKey: "RI17EKEY",
 									MidiKey:    "ride1_edge",
 									MidiNote:   51,
-									Controls: map[string]m.PresetControl{
+									Controls: map[string]*m.PresetControl{
 										"volume": {
 											CfgKey: "RI17EV",
 											MidiCC: 103,
@@ -202,7 +202,7 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 							},
 							MidiKey:  "snare",
 							MidiNote: 38,
-							Controls: map[string]m.PresetControl{
+							Controls: map[string]*m.PresetControl{
 								"volume": {
 									CfgKey: "S65NRV",
 									MidiCC: 22,
@@ -469,7 +469,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 				preset: &m.KitPreset{
 					Channels: []m.PresetChannel{
 						{Key: "1",
-							Controls: map[string]m.PresetControl{
+							Controls: map[string]*m.PresetControl{
 								"volume": {
 									Type:  "volume",
 									Value: 1.0,
