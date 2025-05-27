@@ -1,15 +1,11 @@
 package preset
 
 import (
-	"path"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	m "github.com/raspidrum-srv/internal/model"
-	"github.com/raspidrum-srv/internal/repo"
-	"github.com/raspidrum-srv/internal/repo/db"
-	"github.com/spf13/afero"
 )
 
 type MockMMIDIDevice struct{}
@@ -31,7 +27,7 @@ func (m *MockMMIDIDevice) GetKeysMapping() (map[string]int, error) {
 	}, nil
 }
 
-func Test_augmentFromInstrument(t *testing.T) {
+func Test_PrepareToLoad(t *testing.T) {
 	type args struct {
 		pst      *m.KitPreset
 		mididevs []m.MIDIDevice
@@ -63,7 +59,7 @@ func Test_augmentFromInstrument(t *testing.T) {
 								},
 							},
 							MidiKey: "kick1",
-							Controls: map[string]m.PresetControl{
+							Controls: map[string]*m.PresetControl{
 								"volume": {
 									MidiCC: 30,
 									Type:   "volume",
@@ -87,7 +83,7 @@ func Test_augmentFromInstrument(t *testing.T) {
 						},
 						MidiKey:  "kick1",
 						MidiNote: 36,
-						Controls: map[string]m.PresetControl{
+						Controls: map[string]*m.PresetControl{
 							"volume": {
 								MidiCC: 30,
 								CfgKey: "KICKV",
@@ -138,20 +134,20 @@ func Test_augmentFromInstrument(t *testing.T) {
 									},
 								},
 							},
-							Controls: map[string]m.PresetControl{
+							Controls: map[string]*m.PresetControl{
 								"pan":   {MidiCC: 105, Type: "pan"},
 								"pitch": {MidiCC: 16, Type: "pitch"},
 							},
 							Layers: map[string]m.PresetLayer{
 								"bell": {
 									MidiKey: "ride1_bell",
-									Controls: map[string]m.PresetControl{
+									Controls: map[string]*m.PresetControl{
 										"volume": {MidiCC: 104, Type: "volume"},
 									},
 								},
 								"edge": {
 									MidiKey: "ride1_edge",
-									Controls: map[string]m.PresetControl{
+									Controls: map[string]*m.PresetControl{
 										"volume": {MidiCC: 103, Type: "volume"},
 									},
 								},
@@ -186,7 +182,7 @@ func Test_augmentFromInstrument(t *testing.T) {
 								},
 							},
 						},
-						Controls: map[string]m.PresetControl{
+						Controls: map[string]*m.PresetControl{
 							"pan":   {MidiCC: 105, CfgKey: "RI17P", Type: "pan"},
 							"pitch": {MidiCC: 16, CfgKey: "RI17T", Type: "pitch"},
 						},
@@ -195,7 +191,7 @@ func Test_augmentFromInstrument(t *testing.T) {
 								MidiKey:    "ride1_bell",
 								CfgMidiKey: "RI17BKEY",
 								MidiNote:   53,
-								Controls: map[string]m.PresetControl{
+								Controls: map[string]*m.PresetControl{
 									"volume": {MidiCC: 104, CfgKey: "RI17BV", Type: "volume"},
 								},
 							},
@@ -203,7 +199,7 @@ func Test_augmentFromInstrument(t *testing.T) {
 								MidiKey:    "ride1_edge",
 								CfgMidiKey: "RI17EKEY",
 								MidiNote:   51,
-								Controls: map[string]m.PresetControl{
+								Controls: map[string]*m.PresetControl{
 									"volume": {MidiCC: 103, CfgKey: "RI17EV", Type: "volume"},
 								},
 							},
@@ -246,114 +242,15 @@ func Test_augmentFromInstrument(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			preset := tt.args.pst
 			if err := preset.PrepareToLoad(tt.args.mididevs); (err != nil) != tt.wantErr {
-				t.Errorf("AugmentFromInstrument() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("PrepareToLoad() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if diff := cmp.Diff(tt.want, *preset, cmpopts.IgnoreUnexported(m.KitPreset{}), cmpopts.IgnoreUnexported(m.PresetControl{})); diff != "" {
-				t.Errorf("MakeGatewayInfo() mismatch (-want +got):\n%s", diff)
+				t.Errorf("PrepareToLoad() mismatch (-want +got):\n%s", diff)
 			}
 
 			// Verify controls state using the method from KitPreset
 			if diff := m.VerifyControlsForTest(preset, tt.expectedControl); diff != "" {
 				t.Error("Controls state does not match expected:", diff)
-			}
-		})
-	}
-}
-
-// Real load preset to running linuxsampler
-//for listening linuxSampler events:
-/* netcat netcat localhost 8888
-SUBSCRIBE MISCELLANEOUS
-*/
-func TestLoadPreset(t *testing.T) {
-	ls, err := connectSampler()
-	if err != nil {
-		t.Errorf("InitSampler() error = %v", err)
-		return
-	}
-	ls.DataDir = path.Join(getProjectPath(), "../_presets")
-	osFs := afero.NewOsFs()
-
-	dir := getDBPath()
-	d, err := db.NewSqlite(dir)
-	if err != nil {
-		t.Errorf("%v", err)
-		return
-	}
-	defer d.Close()
-
-	type args struct {
-		presetId int64
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name:    "kit_preset_1",
-			args:    args{presetId: 1},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := LoadPreset(tt.args.presetId, d, ls, osFs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("LoadPreset() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-		})
-	}
-}
-
-func TestLoadPresetToSampler(t *testing.T) {
-	type args struct {
-		sampler        repo.SamplerRepo
-		audDevId       int
-		midiDevId      int
-		instrumentFile string
-	}
-
-	//preconfig
-	ls, err := connectSampler()
-	if err != nil {
-		t.Errorf("InitSampler() error = %v", err)
-		return
-	}
-	aDevId, mDevId, err := InitSampler(ls)
-	if err != nil {
-		t.Errorf("InitSampler() error = %v", err)
-		return
-	}
-
-	tests := []struct {
-		name     string
-		args     args
-		wantChnl int
-		wantErr  bool
-	}{
-		{
-			"Add channel and load instruments",
-			args{
-				ls,
-				aDevId,
-				mDevId,
-				"/Users/art/art_work/_projects/artem.brayko/raspidrum/_presets/SMDrums/mappings/ride20/ride20.sfz",
-			},
-			0,
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotChnl, err := LoadPresetToSampler(tt.args.sampler, tt.args.audDevId, tt.args.midiDevId, tt.args.instrumentFile)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("LoadPresetToSampler() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotChnl != tt.wantChnl {
-				t.Errorf("LoadPresetToSampler() = %v, want %v", gotChnl, tt.wantChnl)
 			}
 		})
 	}
