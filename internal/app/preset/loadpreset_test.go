@@ -1,8 +1,11 @@
 package preset
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	m "github.com/raspidrum-srv/internal/model"
@@ -24,7 +27,25 @@ func (m *MockMMIDIDevice) GetKeysMapping() (map[string]int, error) {
 		"snare":      38,
 		"ride1_edge": 51,
 		"ride1_bell": 53,
+		"tom1":       48,
 	}, nil
+}
+
+func loadPresetFromYAML(t *testing.T, filename string) *m.KitPreset {
+	t.Helper()
+	absPath, err := filepath.Abs("../../../testdata/preset_load/" + filename)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		t.Fatalf("Failed to read test data file: %v", err)
+	}
+	var preset m.KitPreset
+	if err := yaml.Unmarshal(data, &preset); err != nil {
+		t.Fatalf("Failed to unmarshal YAML: %v", err)
+	}
+	return &preset
 }
 
 func Test_PrepareToLoad(t *testing.T) {
@@ -34,6 +55,7 @@ func Test_PrepareToLoad(t *testing.T) {
 	}
 	type testCase struct {
 		name             string
+		yamlFile         string
 		args             args
 		want             m.KitPreset
 		wantErr          bool
@@ -48,33 +70,9 @@ func Test_PrepareToLoad(t *testing.T) {
 	}
 	tests := []testCase{
 		{
-			name: "channel with one instrument without layers",
+			name:     "channel with one instrument without layers",
+			yamlFile: "single_instrument.yaml",
 			args: args{
-				pst: &m.KitPreset{
-					Channels: []m.PresetChannel{
-						{
-							Key: "ch1",
-							Controls: map[string]*m.PresetControl{
-								"volume": {Type: "volume", Value: 66},
-							},
-						},
-					},
-					Instruments: []m.PresetInstrument{
-						{
-							Instrument: m.InstrumentRef{
-								CfgMidiKey: "KEYKICK",
-								Controls: map[string]m.Control{
-									"volume": {CfgKey: "KICKV"},
-								},
-							},
-							ChannelKey: "ch1",
-							MidiKey:    "kick1",
-							Controls: map[string]*m.PresetControl{
-								"volume": {MidiCC: 30, Type: "volume", Value: 95},
-							},
-						},
-					},
-				},
 				mididevs: []m.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
@@ -84,23 +82,18 @@ func Test_PrepareToLoad(t *testing.T) {
 					{
 						Key: "ch1",
 						Controls: map[string]*m.PresetControl{
-							"volume": {Key: "c0", Type: "volume", Value: 66},
+							"volume": {Key: "c0volume", Type: "volume", Value: 66},
 						},
 					},
 				},
 				Instruments: []m.PresetInstrument{
 					{
-						Instrument: m.InstrumentRef{
-							CfgMidiKey: "KEYKICK",
-							Controls: map[string]m.Control{
-								"volume": {CfgKey: "KICKV"},
-							},
-						},
+						Name:       "Kick",
 						ChannelKey: "ch1",
 						MidiKey:    "kick1",
 						MidiNote:   36,
 						Controls: map[string]*m.PresetControl{
-							"volume": {Key: "i1", MidiCC: 30, CfgKey: "KICKV", Type: "volume", Value: 95},
+							"volume": {Key: "i0volume", MidiCC: 30, CfgKey: "KICKV", Type: "volume", Value: 95},
 						},
 					},
 				},
@@ -114,87 +107,35 @@ func Test_PrepareToLoad(t *testing.T) {
 				Type   string
 				Value  float32
 			}{
-				"c0": {Key: "c0", Type: "volume", Value: 66},
-				"i1": {Key: "i1", Type: "volume", MidiCC: 30, CfgKey: "KICKV", Value: 95},
+				"c0volume": {Key: "c0volume", Type: "volume", Value: 66},
+				"i0volume": {Key: "i0volume", Type: "volume", MidiCC: 30, CfgKey: "KICKV", Value: 95},
 			},
 		},
 		{
-			name: "with layers",
+			name:     "with layers",
+			yamlFile: "single instr_with_layers.yaml",
 			args: args{
-				pst: &m.KitPreset{
-					Instruments: []m.PresetInstrument{
-						{
-							Instrument: m.InstrumentRef{
-								Controls: map[string]m.Control{
-									"pan":   {CfgKey: "RI17P"},
-									"pitch": {CfgKey: "RI17T"},
-								},
-								Layers: map[string]m.Layer{
-									"bell": {
-										CfgMidiKey: "RI17BKEY",
-										Controls: map[string]m.Control{
-											"volume": {CfgKey: "RI17BV"},
-										},
-									},
-									"edge": {
-										CfgMidiKey: "RI17EKEY",
-										Controls: map[string]m.Control{
-											"volume": {CfgKey: "RI17EV"},
-										},
-									},
-								},
-							},
-							Controls: map[string]*m.PresetControl{
-								"pan":   {MidiCC: 105, Type: "pan"},
-								"pitch": {MidiCC: 16, Type: "pitch"},
-							},
-							Layers: map[string]m.PresetLayer{
-								"bell": {
-									MidiKey: "ride1_bell",
-									Controls: map[string]*m.PresetControl{
-										"volume": {MidiCC: 104, Type: "volume"},
-									},
-								},
-								"edge": {
-									MidiKey: "ride1_edge",
-									Controls: map[string]*m.PresetControl{
-										"volume": {MidiCC: 103, Type: "volume"},
-									},
-								},
-							},
-						},
-					},
-				},
 				mididevs: []m.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
 			want: m.KitPreset{
+				Channels: []m.PresetChannel{
+					{
+						Key: "ch1",
+						Controls: map[string]*m.PresetControl{
+							"volume": {Key: "c0volume", Type: "volume", Value: 66},
+						},
+					},
+				},
 				Instruments: []m.PresetInstrument{
 					{
-						Instrument: m.InstrumentRef{
-							Controls: map[string]m.Control{
-								"pan":   {CfgKey: "RI17P"},
-								"pitch": {CfgKey: "RI17T"},
-							},
-							Layers: map[string]m.Layer{
-								"bell": {
-									CfgMidiKey: "RI17BKEY",
-									Controls: map[string]m.Control{
-										"volume": {CfgKey: "RI17BV"},
-									},
-								},
-								"edge": {
-									CfgMidiKey: "RI17EKEY",
-									Controls: map[string]m.Control{
-										"volume": {CfgKey: "RI17EV"},
-									},
-								},
-							},
-						},
+						Name:       "Ride",
+						ChannelKey: "ch1",
 						Controls: map[string]*m.PresetControl{
-							"pan":   {MidiCC: 105, CfgKey: "RI17P", Type: "pan"},
-							"pitch": {MidiCC: 16, CfgKey: "RI17T", Type: "pitch"},
+							"pan":    {Key: "i0pan", MidiCC: 105, CfgKey: "RI17P", Type: "pan", Value: 75},
+							"pitch":  {Key: "i0pitch", MidiCC: 16, CfgKey: "RI17T", Type: "pitch", Value: 120},
+							"volume": {Key: "i0volume", Type: "volume", Value: 111},
 						},
 						Layers: map[string]m.PresetLayer{
 							"bell": {
@@ -202,7 +143,7 @@ func Test_PrepareToLoad(t *testing.T) {
 								CfgMidiKey: "RI17BKEY",
 								MidiNote:   53,
 								Controls: map[string]*m.PresetControl{
-									"volume": {MidiCC: 104, CfgKey: "RI17BV", Type: "volume"},
+									"volume": {Key: "i0l0volume", MidiCC: 104, CfgKey: "RI17BV", Type: "volume", Value: 80},
 								},
 							},
 							"edge": {
@@ -210,7 +151,7 @@ func Test_PrepareToLoad(t *testing.T) {
 								CfgMidiKey: "RI17EKEY",
 								MidiNote:   51,
 								Controls: map[string]*m.PresetControl{
-									"volume": {MidiCC: 103, CfgKey: "RI17EV", Type: "volume"},
+									"volume": {Key: "i0l1volume", MidiCC: 103, CfgKey: "RI17EV", Type: "volume", Value: 90},
 								},
 							},
 						},
@@ -226,32 +167,71 @@ func Test_PrepareToLoad(t *testing.T) {
 				Type   string
 				Value  float32
 			}{
-				"i0": {
-					MidiCC: 105,
-					CfgKey: "RI17P",
-					Type:   "pan",
+				"c0volume":   {Key: "c0volume", Type: "volume", Value: 66},
+				"i0pan":      {Key: "i0pan", MidiCC: 105, CfgKey: "RI17P", Type: "pan", Value: 75},
+				"i0pitch":    {Key: "i0pitch", MidiCC: 16, CfgKey: "RI17T", Type: "pitch", Value: 120},
+				"i0volume":   {Key: "i0volume", Type: "volume", Value: 111},
+				"i0l0volume": {Key: "i0l0volume", MidiCC: 104, CfgKey: "RI17BV", Type: "volume", Value: 80},
+				"i0l1volume": {Key: "i0l1volume", MidiCC: 103, CfgKey: "RI17EV", Type: "volume", Value: 90},
+			},
+		},
+		{
+			name:     "two instruments",
+			yamlFile: "two_instruments.yaml",
+			args: args{
+				mididevs: []m.MIDIDevice{
+					&MockMMIDIDevice{},
 				},
-				"i1": {
-					MidiCC: 16,
-					CfgKey: "RI17T",
-					Type:   "pitch",
+			},
+			want: m.KitPreset{
+				Channels: []m.PresetChannel{
+					{
+						Key: "ch1",
+						Controls: map[string]*m.PresetControl{
+							"volume": {Key: "c0volume", Type: "volume", Value: 66},
+						},
+					},
 				},
-				"l2": {
-					MidiCC: 104,
-					CfgKey: "RI17BV",
-					Type:   "volume",
+				Instruments: []m.PresetInstrument{
+					{
+						Name:       "Kick",
+						ChannelKey: "ch1",
+						MidiKey:    "kick1",
+						MidiNote:   36,
+						Controls: map[string]*m.PresetControl{
+							"volume": {Key: "i0volume", MidiCC: 30, CfgKey: "KICKV", Type: "volume", Value: 95},
+						},
+					},
+					{
+						Name:       "Tom",
+						ChannelKey: "ch1",
+						MidiKey:    "tom1",
+						MidiNote:   48,
+						Controls: map[string]*m.PresetControl{
+							"volume": {Key: "i1volume", MidiCC: 31, CfgKey: "TOM1V", Type: "volume", Value: 87},
+						},
+					},
 				},
-				"l3": {
-					MidiCC: 103,
-					CfgKey: "RI17EV",
-					Type:   "volume",
-				},
+			},
+			wantErr: false,
+			expectedControls: map[string]struct {
+				Key    string
+				Owner  m.ControlOwner
+				MidiCC int
+				CfgKey string
+				Type   string
+				Value  float32
+			}{
+				"c0volume": {Key: "c0volume", Type: "volume", Value: 66},
+				"i0volume": {Key: "i0volume", MidiCC: 30, CfgKey: "KICKV", Type: "volume", Value: 95},
+				"i1volume": {Key: "i1volume", MidiCC: 31, CfgKey: "TOM1V", Type: "volume", Value: 87},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			preset := tt.args.pst
+			preset := loadPresetFromYAML(t, tt.yamlFile)
+			tt.args.pst = preset
 			if err := preset.PrepareToLoad(tt.args.mididevs); (err != nil) != tt.wantErr {
 				t.Errorf("PrepareToLoad() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -262,11 +242,13 @@ func Test_PrepareToLoad(t *testing.T) {
 				cmpopts.IgnoreUnexported(m.PresetChannel{}),
 				cmpopts.IgnoreUnexported(m.InstrumentRef{}),
 				cmpopts.IgnoreUnexported(m.Layer{}),
-				cmpopts.IgnoreUnexported(m.Control{})); diff != "" {
+				cmpopts.IgnoreUnexported(m.Control{}),
+				cmpopts.IgnoreFields(m.PresetInstrument{}, "Instrument")); diff != "" {
 				t.Errorf("PrepareToLoad() mismatch (-want +got):\n%s", diff)
 			}
 
 			// Verify controls state using the method from KitPreset
+			// TODO: collect expected controls from preset and compare with actual controls
 			if diff := m.VerifyControlsForTest(preset, tt.expectedControls); diff != "" {
 				t.Error("Controls state does not match expected:", diff)
 			}

@@ -216,14 +216,14 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 	}
 
 	// Counter for generating unique control IDs
-	controlId := 0
+	channelIdx := 0
 
 	// Index channel controls
 	for i := range p.Channels {
 		ch := &p.Channels[i]
 		instrCount := len(ch.instruments)
 		// Index channel controls
-		for _, ctrl := range ch.Controls {
+		for k, ctrl := range ch.Controls {
 			// Link instrument volume or pan control for single instrument with MIDI CC
 			if instrCount == 1 && (ctrl.Type == CtrlVolume || ctrl.Type == CtrlPan) {
 				if ictrl, ok := findControlByType(ch.instruments[0].Controls, ctrl.Type); ok {
@@ -234,14 +234,14 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 				}
 			}
 			ctrl.owner = ch
-			key := fmt.Sprintf("c%d", controlId)
+			key := fmt.Sprintf("c%d%s", channelIdx, k)
 			ctrl.Key = key
 			p.controls[key] = ctrl
-			//ch.Controls[k] = tmpCtrl // Update the original map
-			controlId++
+			channelIdx++
 		}
 	}
 
+	instrumentIdx := 0
 	for i := range p.Instruments {
 		instr := &p.Instruments[i]
 		// instrument MIDI Key
@@ -275,21 +275,18 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 
 			ctrl.owner = instr
 			// Index instrument controls
-			key := fmt.Sprintf("i%d", controlId)
+			key := fmt.Sprintf("i%d%s", instrumentIdx, k)
 			ctrl.Key = key
 			p.controls[key] = ctrl
-			//instr.Controls[k] = tmpCtrl // Update the original map
-			controlId++
 		}
 
-		// instrument layers
+		layerIdx := 0
 		for lkey, lv := range instr.Layers {
 			if len(lv.MidiKey) > 0 {
 				mkeyid, err := MapMidiKey(lv.MidiKey, mididevs)
 				if err != nil {
 					return err
 				}
-				// TODO: test it
 				lv.MidiNote = mkeyid
 			}
 
@@ -307,14 +304,14 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 				ctrl.CfgKey = ictrl.CfgKey
 				ctrl.owner = &lv
 				// Index layer controls
-				key := fmt.Sprintf("l%d", controlId)
+				key := fmt.Sprintf("i%dl%d%s", instrumentIdx, layerIdx, k)
 				ctrl.Key = key
 				p.controls[key] = ctrl
-				//lv.Controls[k] = tmpCtrl // Update the original map
-				controlId++
 			}
 			instr.Layers[lkey] = lv
+			layerIdx++
 		}
+		instrumentIdx++
 	}
 	return nil
 }

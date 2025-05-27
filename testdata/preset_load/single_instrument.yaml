@@ -1,0 +1,20 @@
+channels:
+  - key: ch1
+    controls:
+      volume:
+        type: volume
+        value: 66
+instruments:
+  - name: Kick
+    channelKey: ch1
+    midiKey: kick1
+    instrument:
+      midiKey: KEYKICK
+      controls:
+        volume: 
+          key: KICKV
+    controls:
+      volume:
+        midiCC: 30
+        type: volume
+        value: 95 

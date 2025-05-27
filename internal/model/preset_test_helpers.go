@@ -1,9 +1,32 @@
+//go:test unit
+
 package model
 
 import (
 	"fmt"
 	"strings"
+
+	"github.com/goccy/go-yaml"
 )
+
+func (i *InstrumentRef) UnmarshalYAML(data []byte) error {
+	type alias struct {
+		Id         int64              `yaml:"-"`
+		Uid        string             `yaml:"uuid"`
+		Key        string             `yaml:"-"`
+		Name       string             `yaml:"name"`
+		CfgMidiKey string             `yaml:"midiKey"`
+		Controls   map[string]Control `yaml:"controls"`
+		Layers     map[string]Layer   `yaml:"layers"`
+	}
+	var a alias
+	err := yaml.Unmarshal(data, &a)
+	if err != nil {
+		return err
+	}
+	*i = InstrumentRef(a)
+	return nil
+}
 
 // VerifyControlsForTest is a test helper to verify the internal controls state
 func VerifyControlsForTest(p *KitPreset, expectedControls map[string]struct {
@@ -24,6 +47,9 @@ func VerifyControlsForTest(p *KitPreset, expectedControls map[string]struct {
 		if !exists {
 			differences = append(differences, fmt.Sprintf("Control %q not found", key))
 			continue
+		}
+		if control.Key != expected.Key {
+			differences = append(differences, fmt.Sprintf("Control %q Key mismatch: got %q, want %q", key, control.Key, expected.Key))
 		}
 		if control.MidiCC != expected.MidiCC {
 			differences = append(differences, fmt.Sprintf("Control %q MidiCC mismatch: got %d, want %d", key, control.MidiCC, expected.MidiCC))

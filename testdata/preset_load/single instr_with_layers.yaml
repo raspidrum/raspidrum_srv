@@ -1,0 +1,56 @@
+channels:
+  - key: ch1
+    controls:
+      volume:
+        type: volume
+        value: 66
+instruments:
+  - name: Ride
+    channelKey: ch1
+    instrument:
+      name: Ride1
+      controls:
+        volume:
+          type: volume
+        pan:
+          key: RI17P
+        pitch:
+          key: RI17T
+      layers:
+        bell:
+          midiKey: RI17BKEY
+          controls:
+            volume:
+              key: RI17BV
+        edge:
+          midiKey: RI17EKEY
+          controls:
+            volume:
+              key: RI17EV
+    controls:
+      volume:
+        type: volume
+        value: 111
+      pan:
+        midiCC: 105
+        type: pan
+        value: 75
+      pitch:
+        midiCC: 16
+        type: pitch
+        value: 120
+    layers:
+      bell:
+        midiKey: ride1_bell
+        controls:
+          volume:
+            midiCC: 104
+            type: volume
+            value: 80
+      edge:
+        midiKey: ride1_edge
+        controls:
+          volume:
+            midiCC: 103
+            type: volume
+            value: 90
