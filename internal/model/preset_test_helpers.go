@@ -28,15 +28,38 @@ func (i *InstrumentRef) UnmarshalYAML(data []byte) error {
 	return nil
 }
 
-// VerifyControlsForTest is a test helper to verify the internal controls state
-func VerifyControlsForTest(p *KitPreset, expectedControls map[string]struct {
+func (i *PresetInstrument) UnmarshalYAML(data []byte) error {
+	type alias struct {
+		Instrument InstrumentRef             `yaml:"instrument"`
+		Id         int64                     `yaml:"id"`
+		Name       string                    `yaml:"name"`
+		ChannelKey string                    `yaml:"channelKey"`
+		MidiKey    string                    `yaml:"midiKey,omitempty"`
+		MidiNote   int                       `yaml:"-"`
+		Controls   map[string]*PresetControl `yaml:"controls"`
+		Layers     map[string]PresetLayer    `yaml:"layers"`
+	}
+	var a alias
+	err := yaml.Unmarshal(data, &a)
+	if err != nil {
+		return err
+	}
+	*i = PresetInstrument(a)
+	return nil
+}
+
+type ExpectedControls map[string]struct {
 	Key    string
+	Name   string
 	Owner  ControlOwner
 	MidiCC int
 	CfgKey string
 	Type   string
 	Value  float32
-}) string {
+}
+
+// VerifyControlsForTest is a test helper to verify the internal controls state
+func VerifyControlsForTest(p *KitPreset, expectedControls ExpectedControls) string {
 	if len(p.controls) != len(expectedControls) {
 		return fmt.Sprintf("Controls count mismatch: got %d, want %d", len(p.controls), len(expectedControls))
 	}
@@ -45,7 +68,7 @@ func VerifyControlsForTest(p *KitPreset, expectedControls map[string]struct {
 	for key, expected := range expectedControls {
 		control, exists := p.controls[key]
 		if !exists {
-			differences = append(differences, fmt.Sprintf("Control %q not found", key))
+			differences = append(differences, fmt.Sprintf("Control %q not found in preset index", key))
 			continue
 		}
 		if control.Key != expected.Key {

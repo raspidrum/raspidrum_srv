@@ -1,25 +1,44 @@
-
+uuid: "preset-2"
+name: "multiple instruments in channel"
 channels:
   - key: ch1
+    name: Drums
     controls:
       volume:
+        name: Volume
         type: volume
-        value: 66
+        value: 1.00
+      pan:
+        name: Pan
+        type: pan
+        value: 0.00
 instruments:
   - name: Kick
+    id: 0
     channelKey: ch1
     midiKey: kick1
     instrument:
       midiKey: KEYKICK
       controls:
         volume: 
+          type: volume
           key: KICKV
+        pan:
+          type: pan
+          key: KICKP
     controls:
       volume:
+        name: Volume
         midiCC: 30
         type: volume
-        value: 95 
+        value: 95
+      pan:
+        name: Pan
+        type: pan
+        midiCC: 10
+        value: 54
   - name: Tom
+    id: 1
     channelKey: ch1
     midiKey: tom1
     instrument:
@@ -29,6 +48,7 @@ instruments:
           key: TOM1V
     controls:
       volume:
+        name: Volume
         midiCC: 31
         type: volume
         value: 87 

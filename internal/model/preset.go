@@ -121,15 +121,14 @@ func findControlByType(ctrls map[string]*PresetControl, t string) (*PresetContro
 func (c *PresetChannel) GetControls() func(func(*PresetControl) bool) {
 	return func(yield func(*PresetControl) bool) {
 		for _, c := range c.Controls {
-			var finished bool
+			var ctrl *PresetControl
 			if len(c.linkedTo) > 0 {
 				// channel control MAY be linked only with one instrument control
-				ctrl := c.linkedTo[0]
-				finished = !yield(ctrl)
+				ctrl = c.linkedTo[0]
 			} else {
-				finished = !yield(c)
+				ctrl = c
 			}
-			if finished {
+			if !yield(ctrl) {
 				return
 			}
 		}
@@ -153,7 +152,9 @@ func (c *PresetInstrument) GetControls() func(func(*PresetControl) bool) {
 func (c *PresetLayer) GetControls() func(func(*PresetControl) bool) {
 	return func(yield func(*PresetControl) bool) {
 		for _, c := range c.Controls {
-			yield(c)
+			if !yield(c) {
+				return
+			}
 		}
 	}
 }
@@ -223,6 +224,8 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 		ch := &p.Channels[i]
 		instrCount := len(ch.instruments)
 		// Index channel controls
+		// TODO: return instrument pan if not exists in channel controls
+		var hasPan bool
 		for k, ctrl := range ch.Controls {
 			// Link instrument volume or pan control for single instrument with MIDI CC
 			if instrCount == 1 && (ctrl.Type == CtrlVolume || ctrl.Type == CtrlPan) {
@@ -233,12 +236,33 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 					}
 				}
 			}
+			if ctrl.Type == CtrlPan {
+				hasPan = true
+			}
 			ctrl.owner = ch
 			key := fmt.Sprintf("c%d%s", channelIdx, k)
 			ctrl.Key = key
 			p.controls[key] = ctrl
-			channelIdx++
 		}
+		if !hasPan && instrCount == 1 {
+			// add control for pan linked to instrument pan if not exists in channel controls
+			if ictrl, ok := findControlByType(ch.instruments[0].Controls, CtrlPan); ok {
+				if ictrl.MidiCC != 0 {
+					ctrl := &PresetControl{
+						Name:  ictrl.Name,
+						Type:  ictrl.Type,
+						owner: ch,
+					}
+					key := fmt.Sprintf("c%d%s", channelIdx, CtrlPan)
+					ctrl.Key = key
+					ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
+					ictrl.linkedWith = ctrl
+					ch.Controls[CtrlPan] = ctrl
+					p.controls[key] = ctrl
+				}
+			}
+		}
+		channelIdx++
 	}
 
 	instrumentIdx := 0

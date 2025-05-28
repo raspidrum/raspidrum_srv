@@ -1,5 +1,5 @@
 uuid: "preset-1"
-name: "Single Instrument"
+name: "Single Instrument controls without MidiCC"
 channels:
   - key: ch1
     name: Kick
@@ -16,18 +16,16 @@ instruments:
     instrument:
       midiKey: KEYKICK
       controls:
-        volume: 
-          key: KICKV
+        volume:
+          type: volume
         pan:
-          key: KICKP
+          type: pan
     controls:
       volume:
         name: Volume
-        midiCC: 30
         type: volume
-        value: 95
+        value: 0.95
       pan:
         name: Pan
-        midiCC: 10
         type: pan
-        value: 54
+        value: -0.2
