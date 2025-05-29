@@ -59,6 +59,13 @@ func convertPresetToProto(kitPreset *model.KitPreset) (*pb.Preset, error) {
 		Key:  "sampler",
 		Name: "Kit",
 		Type: pb.ChannelType_CHANNEL_TYPE_SAMPLER,
+		Volume: &pb.BaseControl{
+			Key:   "s0volume",
+			Name:  "Volume",
+			Value: 1.0,
+			Min:   makeFloat64Ptr(0),
+			Max:   makeFloat64Ptr(1),
+		},
 	}
 	pbPreset.Channels = append(pbPreset.Channels, samplerChannel)
 

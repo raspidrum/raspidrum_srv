@@ -51,7 +51,7 @@ message Channel {
   string name = 2;
   ChannelType type = 3;
   BaseControl volume = 4;
-  BaseControl pan = 5;
+  optional BaseControl pan = 5;
   repeated FX fxs = 6;
   repeated Instrument instruments = 7;
 }
@@ -60,8 +60,8 @@ message Channel {
 message Instrument {
   string key = 1;
   string name = 2;
-  BaseControl volume = 3;
-  BaseControl pan = 4;
+  optional BaseControl volume = 3;
+  optional BaseControl pan = 4;
   repeated FX tunes = 5;
   repeated Layer layers = 6;
 }
@@ -70,8 +70,8 @@ message Instrument {
 message Layer {
   string key = 1;
   string name = 2;
-  BaseControl volume = 3;
-  BaseControl pan = 4;
+  optional BaseControl volume = 3;
+  optional BaseControl pan = 4;
   repeated FX fxs = 5;
 }
 

@@ -129,6 +129,7 @@ func TestConvertPresetToProto(t *testing.T) {
 				},
 			},
 		},
+		// TODO: add test for preset with single instrument with layers for test instrument tunes
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
