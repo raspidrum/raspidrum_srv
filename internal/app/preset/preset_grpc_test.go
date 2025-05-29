@@ -38,6 +38,13 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:  "sampler",
 						Name: "Kit",
 						Type: pb.ChannelType_CHANNEL_TYPE_SAMPLER,
+						Volume: &pb.BaseControl{
+							Key:   "s0volume",
+							Name:  "Volume",
+							Value: 1.0,
+							Min:   makeFloat64Ptr(0),
+							Max:   makeFloat64Ptr(1),
+						},
 					},
 					{
 						Key:    "ch1",
@@ -71,6 +78,13 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:  "sampler",
 						Name: "Kit",
 						Type: pb.ChannelType_CHANNEL_TYPE_SAMPLER,
+						Volume: &pb.BaseControl{
+							Key:   "s0volume",
+							Name:  "Volume",
+							Value: 1.0,
+							Min:   makeFloat64Ptr(0),
+							Max:   makeFloat64Ptr(1),
+						},
 					},
 					{
 						Key:    "ch1",
@@ -105,6 +119,13 @@ func TestConvertPresetToProto(t *testing.T) {
 						Key:  "sampler",
 						Name: "Kit",
 						Type: pb.ChannelType_CHANNEL_TYPE_SAMPLER,
+						Volume: &pb.BaseControl{
+							Key:   "s0volume",
+							Name:  "Volume",
+							Value: 1.0,
+							Min:   makeFloat64Ptr(0),
+							Max:   makeFloat64Ptr(1),
+						},
 					},
 					{
 						Key:    "ch1",
