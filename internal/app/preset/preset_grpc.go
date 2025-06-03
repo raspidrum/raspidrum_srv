@@ -71,6 +71,7 @@ func (s *PresetServer) GetPreset(ctx context.Context, req *pb.GetPresetRequest) 
 // convertPresetToProto converts internal KitPreset model to protobuf Preset message
 func convertPresetToProto(kitPreset *model.KitPreset) (*pb.Preset, error) {
 	pbPreset := &pb.Preset{
+		Id:   kitPreset.Id,
 		Key:  kitPreset.Uid,
 		Name: kitPreset.Name,
 	}
