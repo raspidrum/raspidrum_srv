@@ -40,10 +40,11 @@ enum FXParamType {
 
 // Preset message
 message Preset {
-  string key = 1;
-  string name = 2;
-  optional string description = 3;
-  repeated Channel channels = 4;
+  int64 id = 1;
+  string key = 2;
+  string name = 3;
+  optional string description = 4;
+  repeated Channel channels = 5;
 }
 
 // Channel message
