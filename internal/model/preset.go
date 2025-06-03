@@ -11,6 +11,7 @@ type ControlOwner interface {
 type ControlIndex map[string]*PresetControl
 
 type KitPreset struct {
+	Id          int64              `yaml:"-"`
 	Uid         string             `yaml:"uuid,omitempty"`
 	Kit         KitRef             `yaml:"kit"`
 	Name        string             `yaml:"name"`

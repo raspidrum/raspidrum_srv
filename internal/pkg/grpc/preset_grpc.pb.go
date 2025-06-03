@@ -20,13 +20,15 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	KitPreset_LoadPreset_FullMethodName = "/kitPreset.v1.KitPreset/LoadPreset"
+	KitPreset_GetPreset_FullMethodName  = "/kitPreset.v1.KitPreset/GetPreset"
 )
 
 // KitPresetClient is the client API for KitPreset service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type KitPresetClient interface {
-	LoadPreset(ctx context.Context, in *LoadPresetRequest, opts ...grpc.CallOption) (*LoadPresetResponse, error)
+	LoadPreset(ctx context.Context, in *GetPresetRequest, opts ...grpc.CallOption) (*PresetResponse, error)
+	GetPreset(ctx context.Context, in *GetPresetRequest, opts ...grpc.CallOption) (*PresetResponse, error)
 }
 
 type kitPresetClient struct {
@@ -37,10 +39,20 @@ func NewKitPresetClient(cc grpc.ClientConnInterface) KitPresetClient {
 	return &kitPresetClient{cc}
 }
 
-func (c *kitPresetClient) LoadPreset(ctx context.Context, in *LoadPresetRequest, opts ...grpc.CallOption) (*LoadPresetResponse, error) {
+func (c *kitPresetClient) LoadPreset(ctx context.Context, in *GetPresetRequest, opts ...grpc.CallOption) (*PresetResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LoadPresetResponse)
+	out := new(PresetResponse)
 	err := c.cc.Invoke(ctx, KitPreset_LoadPreset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kitPresetClient) GetPreset(ctx context.Context, in *GetPresetRequest, opts ...grpc.CallOption) (*PresetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PresetResponse)
+	err := c.cc.Invoke(ctx, KitPreset_GetPreset_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +63,8 @@ func (c *kitPresetClient) LoadPreset(ctx context.Context, in *LoadPresetRequest,
 // All implementations must embed UnimplementedKitPresetServer
 // for forward compatibility.
 type KitPresetServer interface {
-	LoadPreset(context.Context, *LoadPresetRequest) (*LoadPresetResponse, error)
+	LoadPreset(context.Context, *GetPresetRequest) (*PresetResponse, error)
+	GetPreset(context.Context, *GetPresetRequest) (*PresetResponse, error)
 	mustEmbedUnimplementedKitPresetServer()
 }
 
@@ -62,8 +75,11 @@ type KitPresetServer interface {
 // pointer dereference when methods are called.
 type UnimplementedKitPresetServer struct{}
 
-func (UnimplementedKitPresetServer) LoadPreset(context.Context, *LoadPresetRequest) (*LoadPresetResponse, error) {
+func (UnimplementedKitPresetServer) LoadPreset(context.Context, *GetPresetRequest) (*PresetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoadPreset not implemented")
+}
+func (UnimplementedKitPresetServer) GetPreset(context.Context, *GetPresetRequest) (*PresetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPreset not implemented")
 }
 func (UnimplementedKitPresetServer) mustEmbedUnimplementedKitPresetServer() {}
 func (UnimplementedKitPresetServer) testEmbeddedByValue()                   {}
@@ -87,7 +103,7 @@ func RegisterKitPresetServer(s grpc.ServiceRegistrar, srv KitPresetServer) {
 }
 
 func _KitPreset_LoadPreset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LoadPresetRequest)
+	in := new(GetPresetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -99,7 +115,25 @@ func _KitPreset_LoadPreset_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: KitPreset_LoadPreset_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KitPresetServer).LoadPreset(ctx, req.(*LoadPresetRequest))
+		return srv.(KitPresetServer).LoadPreset(ctx, req.(*GetPresetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KitPreset_GetPreset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPresetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KitPresetServer).GetPreset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KitPreset_GetPreset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KitPresetServer).GetPreset(ctx, req.(*GetPresetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -114,6 +148,10 @@ var KitPreset_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoadPreset",
 			Handler:    _KitPreset_LoadPreset_Handler,
+		},
+		{
+			MethodName: "GetPreset",
+			Handler:    _KitPreset_GetPreset_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

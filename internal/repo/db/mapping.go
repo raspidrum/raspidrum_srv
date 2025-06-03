@@ -221,6 +221,7 @@ func kitPresetToDb(pst *m.KitPreset) *KitPrst {
 
 func dbToKitPreset(pst *KitPrst) *m.KitPreset {
 	res := m.KitPreset{
+		Id:  pst.Id,
 		Uid: pst.Uid,
 		Kit: m.KitRef{
 			Id:       pst.KitId,

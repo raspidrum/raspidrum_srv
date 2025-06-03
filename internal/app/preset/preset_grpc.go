@@ -17,9 +17,10 @@ import (
 
 type PresetServer struct {
 	pb.UnimplementedKitPresetServer
-	db      *d.Sqlite
-	sampler repo.SamplerRepo
-	fs      afero.Fs
+	db           *d.Sqlite
+	sampler      repo.SamplerRepo
+	fs           afero.Fs
+	loadedPreset *model.KitPreset
 }
 
 func NewPresetServer(db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) *PresetServer {
@@ -30,18 +31,39 @@ func NewPresetServer(db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) *Prese
 	}
 }
 
-func (s *PresetServer) LoadPreset(ctx context.Context, req *pb.LoadPresetRequest) (*pb.LoadPresetResponse, error) {
+func (s *PresetServer) LoadPreset(ctx context.Context, req *pb.GetPresetRequest) (*pb.PresetResponse, error) {
 	preset, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to load preset: %v", err)
 	}
+
+	s.loadedPreset = preset
 
 	pbPreset, err := convertPresetToProto(preset)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to convert preset: %v", err)
 	}
 
-	return &pb.LoadPresetResponse{
+	return &pb.PresetResponse{
+		Preset: pbPreset,
+	}, nil
+}
+
+func (s *PresetServer) GetPreset(ctx context.Context, req *pb.GetPresetRequest) (*pb.PresetResponse, error) {
+	if s.loadedPreset == nil || s.loadedPreset.Id != req.PresetId {
+		preset, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to load preset: %v", err)
+		}
+		s.loadedPreset = preset
+	}
+
+	pbPreset, err := convertPresetToProto(s.loadedPreset)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to convert preset: %v", err)
+	}
+
+	return &pb.PresetResponse{
 		Preset: pbPreset,
 	}, nil
 }

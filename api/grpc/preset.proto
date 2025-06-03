@@ -6,16 +6,17 @@ option go_package = "github.com/raspidrum-srv/api/grpc";
 package kitPreset.v1;
 
 service KitPreset {
-  rpc LoadPreset(LoadPresetRequest) returns (LoadPresetResponse);
+  rpc LoadPreset(GetPresetRequest) returns (PresetResponse);
+  rpc GetPreset(GetPresetRequest) returns (PresetResponse);
 }
 
 // Request message for loading a preset
-message LoadPresetRequest {
+message GetPresetRequest {
   int64 preset_id = 1;
 }
 
 // Response message for loading a preset
-message LoadPresetResponse {
+message PresetResponse {
   Preset preset = 1;
 }
 
