@@ -18,7 +18,7 @@ func TestImportPresetFromFile(t *testing.T) {
 	}
 	defer d.Close()
 
-	testDataPath := path.Join(getProjectPath(), "testdata/")
+	testDataPath := path.Join(getProjectPath(), "testdata/preset_import/")
 
 	tests := []struct {
 		name     string

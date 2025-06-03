@@ -1,0 +1,4 @@
+{
+  "go.testExplorer.alwaysRunBenchmarks": false,
+  "go.testTags": ""
+}

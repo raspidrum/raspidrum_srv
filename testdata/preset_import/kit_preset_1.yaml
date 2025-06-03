@@ -8,30 +8,35 @@ channels:
     controls:
       volume:
         type: volume
+        name: Volume
         value: 1.0
   - key: 2
     name: Snare
     controls:
       volume:
         type: volume
+        name: Volume
         value: 1.0
   - key: 3
     name: Hi-Hat
     controls:
       volume:
         type: volume
+        name: Volume
         value: 1.0
   - key: 4
     name: Toms
     controls:
       volume:
         type: volume
+        name: Volume
         value: 1.0
   - key: 5
     name: Cymbals
     controls:
       volume:
         type: volume
+        name: Volume
         value: 1.0  
       
 instruments:
@@ -44,14 +49,17 @@ instruments:
     controls:
       volume:
         type: volume
+        name: Volume
         midiCC: 70
         value: 95
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 20
         value: 63
       decay:
         type: other
+        name: Decay
         midiCC: 21
         value: 0
   # snare group instruments
@@ -64,18 +72,22 @@ instruments:
     controls:
       volume:
         type: volume
+        name: Volume
         midiCC: 22
         value: 95
       pan:
         type: pan
+        name: Pan
         midiCC: 80
         value: 64
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 36
         value: 63
       decay:
         type: other
+        name: Decay
         midiCC: 37
         value: 0
   - instrument:
@@ -87,18 +99,22 @@ instruments:
     controls:
       volume:
         type: volume
+        name: Volume
         midiCC: 75
         value: 95
       pan:
         type: pan
+        name: Pan
         midiCC: 80
         value: 64
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 36
         value: 63
       decay:
         type: other
+        name: Decay
         midiCC: 37
         value: 0
   
@@ -112,18 +128,22 @@ instruments:
     controls:
       volume:
         type: volume
+        name: Volume
         midiCC: 115
         value: 95
       pan:
         type: pan
+        name: Pan
         midiCC: 116
         value: 64
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 56
         value: 63
       decay:
         type: other
+        name: Decay
         midiCC: 57
         value: 0
   - instrument:
@@ -135,18 +155,22 @@ instruments:
     controls:
       volume:
         type: volume
+        name: Volume
         midiCC: 113
         value: 95
       pan:
         type: pan
+        name: Pan
         midiCC: 114
         value: 64
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 54
         value: 63
       decay:
         type: other
+        name: Decay
         midiCC: 55
         value: 0
   - instrument:
@@ -158,18 +182,22 @@ instruments:
     controls:
       volume:
         type: volume
+        name: Volume
         midiCC: 109
         value: 95
       pan:
         type: pan
+        name: Pan
         midiCC: 110
         value: 64
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 50
         value: 63
       decay:
         type: other
+        name: Decay
         midiCC: 51
         value: 0
 
@@ -181,36 +209,45 @@ instruments:
     controls:
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 42
         value: 64
       decay:
         type: other
+        name: Decay
         midiCC: 43
         value: 0
       pan:
         type: pan
+        name: Pan
         midiCC: 92
         value: 64 
     layers:
       closed:
+        name: Closed
         midiKey: hihat_close
         controls:
           volume:
             type: volume
+            name: Volume
             midiCC: 81
             value: 95
       open:
+        name: Open
         midiKey: hihat_open
         controls:
           volume:
             type: volume
+            name: Volume
             midiCC: 85
             value: 95
       loose:
+        name: Loose
         midiKey: hihat_loose
         controls:
           volume:
             type: volume
+            name: Volume
             midiCC: 83
             value: 95
       foot_open:
@@ -219,20 +256,25 @@ instruments:
         controls:
           volume:
             type: volume
+            name: Volume
             midiCC: 89
             value: 95
       foot:
+        name: Foot
         midiKey: hihat_foot_close
         controls:
           volume:
             type: volume
+            name: Volume
             midiCC: 87
             value: 95
       splash:
+        name: Splash
         midiKey: hihat_splash
         controls:
           volume:
             type: volume
+            name: Volume
             midiCC: 91
             value: 95       
 
@@ -245,29 +287,36 @@ instruments:
     controls:
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 16
         value: 64
       decay:
         type: other
+        name: Decay
         midiCC: 17
         value: 0.0
       pan:
         type: pan
+        name: Pan
         midiCC: 105
         value: 64
     layers:
       edge:
+        name: Edge
         midiKey: ride1_edge
         controls:
           volume:
             type: volume
+            name: Volume
             midiCC: 103
             value: 95
       bell:
+        name: Bell
         midiKey: ride1_bell
         controls:
           volume:
             type: volume
+            name: Volume
             midiCC: 104
             value: 95
   - instrument:
@@ -279,18 +328,22 @@ instruments:
     controls:
       volume:
         type: volume
+        name: Volume
         midiCC: 93
         value: 95
       pitch:
         type: pitch
+        name: Pitch
         midiCC: 26
         value: 64
       decay:
         type: other
+        name: Decay
         midiCC: 27
         value: 0.0
       pan:
         type: pan
+        name: Pan
         midiCC: 94
         value: 64
 
