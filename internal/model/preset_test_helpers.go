@@ -30,14 +30,14 @@ func (i *InstrumentRef) UnmarshalYAML(data []byte) error {
 
 func (i *PresetInstrument) UnmarshalYAML(data []byte) error {
 	type alias struct {
-		Instrument InstrumentRef             `yaml:"instrument"`
-		Id         int64                     `yaml:"id"`
-		Name       string                    `yaml:"name"`
-		ChannelKey string                    `yaml:"channelKey"`
-		MidiKey    string                    `yaml:"midiKey,omitempty"`
-		MidiNote   int                       `yaml:"-"`
-		Controls   map[string]*PresetControl `yaml:"controls"`
-		Layers     map[string]PresetLayer    `yaml:"layers"`
+		Instrument InstrumentRef          `yaml:"instrument"`
+		Id         int64                  `yaml:"id"`
+		Name       string                 `yaml:"name"`
+		ChannelKey string                 `yaml:"channelKey"`
+		MidiKey    string                 `yaml:"midiKey,omitempty"`
+		MidiNote   int                    `yaml:"-"`
+		Controls   ControlMap             `yaml:"controls"`
+		Layers     map[string]PresetLayer `yaml:"layers"`
 	}
 	var a alias
 	err := yaml.Unmarshal(data, &a)

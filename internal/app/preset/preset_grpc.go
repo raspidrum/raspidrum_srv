@@ -79,7 +79,18 @@ func (s *PresetServer) SetValue(stream pb.ChannelControl_SetValueServer) error {
 		if err != nil {
 			return err
 		}
-		// TODO: здесь должна быть логика: маппинг на физический контрол (семплера или jack), реализуемая через usecase. Т.е. здесь вызов useCase
+		// find control by key
+		ctrl, err := s.loadedPreset.GetControlByKey(in.Key)
+		if err != nil {
+			return status.Errorf(codes.NotFound, "control not found: %s", in.Key)
+		}
+		// set value
+		err = ctrl.SetValue(float32(in.Value))
+		if err != nil {
+			return status.Errorf(codes.Internal, "failed to set control value: %v", err)
+		}
+		// send response
+		// TODO: return setted value
 		out := &pb.ControlValue{
 			Key:   in.Key,
 			Seq:   in.Seq,
