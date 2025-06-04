@@ -280,7 +280,10 @@ func (c *Client) SetMidiInputPortParameter(devId int, port int, prm Parameter[an
 
 // Sends a MIDI event to this sampler channel.
 // samplerChn The sampler channel number.
-// type The type of MIDI message to send.
+// eventType The type of MIDI message to send. Can be:
+// - "NOTE_ON"
+// - "NOTE_OFF"
+// - "CC"
 func (c *Client) SendChannelMidiData(samplerChn int, eventType string, arg1, arg2 int) error {
 	cmd := fmt.Sprintf("SEND CHANNEL MIDI_DATA %s %d %d %d", eventType, samplerChn, arg1, arg2)
 	_, err := c.retrieveIndex(cmd)

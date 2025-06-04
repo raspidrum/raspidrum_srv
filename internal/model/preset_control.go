@@ -30,7 +30,7 @@ var (
 )
 
 type ControlOwner interface {
-	HandleSetControl(control *PresetControl, value float32) error
+	HandleControlValue(control *PresetControl, value float32) error
 }
 
 type ControlMap map[string]*PresetControl
@@ -69,5 +69,5 @@ func (c ControlMap) FindControlByType(t string) (*PresetControl, bool) {
 }
 
 func (c *PresetControl) SetValue(value float32) error {
-	return c.owner.HandleSetControl(c, value)
+	return c.owner.HandleControlValue(c, value)
 }

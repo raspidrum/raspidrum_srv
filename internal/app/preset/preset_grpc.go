@@ -85,6 +85,8 @@ func (s *PresetServer) SetValue(stream pb.ChannelControl_SetValueServer) error {
 			return status.Errorf(codes.NotFound, "control not found: %s", in.Key)
 		}
 		// set value
+		// TODO: denormalize value
+		// TODO: inject function to set value to sampler. Model don't set value to sampler directly (or by sampler interface)
 		err = ctrl.SetValue(float32(in.Value))
 		if err != nil {
 			return status.Errorf(codes.Internal, "failed to set control value: %v", err)
@@ -223,6 +225,7 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 	return res
 }
 
+// TODO: move to model
 func normalizeVol(ctrl *model.PresetControl) (val float64, min float64, max float64) {
 	if ctrl.MidiCC != 0 {
 		// val from 0 to 1 with 3 decimal places
@@ -231,6 +234,7 @@ func normalizeVol(ctrl *model.PresetControl) (val float64, min float64, max floa
 	return roundFloat(float64(ctrl.Value), 3), 0, 1
 }
 
+// TODO: move to model
 func normalizePan(ctrl *model.PresetControl) (val float64, min float64, max float64) {
 	if ctrl.MidiCC != 0 {
 		return roundFloat(float64((ctrl.Value*2/127)-1), 3), -1, 1

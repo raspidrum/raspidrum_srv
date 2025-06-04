@@ -21,4 +21,5 @@ type SamplerRepo interface {
 	LoadInstrument(instrumentFile string, instrIdx int, channelId int) error
 	LoadPreset(audioDevId, midiDevId int, preset *m.KitPreset, fs afero.Fs) error
 	SetChannelVolume(samplerChn int, volume float64) error
+	SendMidiCC(samplerChn int, cc int, value float64) error
 }

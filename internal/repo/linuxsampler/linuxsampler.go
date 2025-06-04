@@ -87,3 +87,7 @@ func (l *LinuxSampler) LoadInstrument(instrumentFile string, instrIdx int, chann
 func (l *LinuxSampler) SetChannelVolume(samplerChn int, volume float64) error {
 	return l.Client.SetChannelVolume(samplerChn, volume)
 }
+
+func (l *LinuxSampler) SendMidiCC(samplerChn int, cc int, value float64) error {
+	return l.Client.SendChannelMidiData(samplerChn, "CC", cc, int(value))
+}

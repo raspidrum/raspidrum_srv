@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"log/slog"
 )
 
 type KitPreset struct {
@@ -122,7 +123,6 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 		ch := &p.Channels[i]
 		instrCount := len(ch.instruments)
 		// Index channel controls
-		// TODO: return instrument pan if not exists in channel controls
 		var hasPan bool
 		for k, ctrl := range ch.Controls {
 			// Link instrument volume or pan control for single instrument with MIDI CC
@@ -134,6 +134,9 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 					}
 				}
 			}
+			// TODO: pan always linked to instrument pan.
+			// In case many instruments in channel pan is virtual and linked with pan of all instruments in channel
+			// In case one instrument in channel pan regulated in instrument
 			if ctrl.Type == CtrlPan {
 				hasPan = true
 			}
@@ -249,8 +252,13 @@ func (p *KitPreset) GetControlByKey(key string) (*PresetControl, error) {
 	return ctrl, nil
 }
 
-func (p *PresetChannel) HandleSetControl(control *PresetControl, value float32) error {
-	return fmt.Errorf("unimplemented")
+// Volume in channel sets by Sampler API
+// Pan in channel virtual (in case many instruments in channel).
+// In case one instrument in channel, pan is linked to instrument pan. Pan will be regulated in instrument
+// Other controls except volume and pan are not supported in channel
+func (p *PresetChannel) HandleControlValue(control *PresetControl, value float32) error {
+	slog.Debug("HandleControlValue", "control", control, "value", value)
+	return nil
 }
 
 // If channel has linked control (linked to corresponding instrument control)
@@ -272,8 +280,13 @@ func (c *PresetChannel) GetControls() func(func(*PresetControl) bool) {
 	}
 }
 
-func (p *PresetInstrument) HandleSetControl(control *PresetControl, value float32) error {
-	return fmt.Errorf("unimplemented")
+// Volume and pan can be virtual or regulated by MIDI CC accordingly
+// If virtual, then regulated by linked layer controls
+// Else regulated by MIDI CC
+// Other controls always regulated by MIDI CC
+func (p *PresetInstrument) HandleControlValue(control *PresetControl, value float32) error {
+	slog.Debug("HandleControlValue", "control", control, "value", value)
+	return nil
 }
 
 func (c *PresetInstrument) GetControls() func(func(*PresetControl) bool) {
@@ -290,10 +303,13 @@ func (c *PresetInstrument) GetControls() func(func(*PresetControl) bool) {
 	}
 }
 
-func (p *PresetLayer) HandleSetControl(control *PresetControl, value float32) error {
-	return fmt.Errorf("unimplemented")
+func (p *PresetLayer) HandleControlValue(control *PresetControl, value float32) error {
+	slog.Debug("HandleControlValue", "control", control, "value", value)
+	return nil
 }
 
+// Layer can be in instrument with virtual controls of volume or pan
+// In that case its required to calculate correction value by linked instrument control
 func (c *PresetLayer) GetControls() func(func(*PresetControl) bool) {
 	return func(yield func(*PresetControl) bool) {
 		for _, c := range c.Controls {
