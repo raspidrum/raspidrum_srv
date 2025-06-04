@@ -2,6 +2,7 @@ package preset
 
 import (
 	"context"
+	"io"
 	"math"
 	"strconv"
 
@@ -17,6 +18,7 @@ import (
 
 type PresetServer struct {
 	pb.UnimplementedKitPresetServer
+	pb.UnimplementedChannelControlServer
 	db           *d.Sqlite
 	sampler      repo.SamplerRepo
 	fs           afero.Fs
@@ -66,6 +68,28 @@ func (s *PresetServer) GetPreset(ctx context.Context, req *pb.GetPresetRequest) 
 	return &pb.PresetResponse{
 		Preset: pbPreset,
 	}, nil
+}
+
+func (s *PresetServer) SetValue(stream pb.ChannelControl_SetValueServer) error {
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		// TODO: здесь должна быть логика: маппинг на физический контрол (семплера или jack), реализуемая через usecase. Т.е. здесь вызов useCase
+		out := &pb.ControlValue{
+			Key:   in.Key,
+			Seq:   in.Seq,
+			Value: in.Value,
+		}
+		if err := stream.Send(out); err != nil {
+			return err
+		}
+
+	}
 }
 
 // convertPresetToProto converts internal KitPreset model to protobuf Preset message

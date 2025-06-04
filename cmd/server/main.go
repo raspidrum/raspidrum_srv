@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
-	channelcontrol "github.com/raspidrum-srv/internal/app/channel_control"
 	"github.com/raspidrum-srv/internal/app/preset"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/raspidrum-srv/internal/repo/db"
@@ -81,11 +80,9 @@ func main() {
 	s := grpc.NewServer(opts...)
 
 	// Register services
-	channelServer := channelcontrol.NewChannelControlServer()
-	pb.RegisterChannelControlServer(s, channelServer)
-
 	presetServer := preset.NewPresetServer(db, sampler, fs)
 	pb.RegisterKitPresetServer(s, presetServer)
+	pb.RegisterChannelControlServer(s, presetServer)
 
 	slog.Info("Server is running", slog.Int("port:", cfg.Host.Port))
 	if err := s.Serve(lis); err != nil {
