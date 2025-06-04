@@ -95,7 +95,10 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) (map[str
 	for k, v := range chnlFiles {
 		chnlName := "channel_" + k
 		fname := path.Join(presetDir, fmt.Sprintf("%s.sfz", chnlName))
-		err = file.WriteLines(v, fname, fs)
+		cont := []string{}
+		cont = append(cont, getControlLimits()...)
+		cont = append(cont, v...)
+		err = file.WriteLines(cont, fname, fs)
 		if err != nil {
 			return nil, err
 		}
@@ -103,6 +106,16 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) (map[str
 	}
 
 	return presetFiles, nil
+}
+
+// make define sfzvariables for control limits
+func getControlLimits() []string {
+	return []string{
+		"#define $VOLMIN 18",
+		"#define $VOLSHIFT 24",
+		"#define $PITCHMAX 1200",
+		"#define $PITCHMIN 600",
+	}
 }
 
 // recreate dir with instrument control files (<instrument>_ctrl.sfz)
