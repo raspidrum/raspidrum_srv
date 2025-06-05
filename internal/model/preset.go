@@ -269,7 +269,8 @@ func (p *KitPreset) SetControlValue(controlKey string, value float32, csetter Sa
 func (c *PresetChannel) HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error {
 	slog.Debug("HandleControlValue", "control", control, "value", value)
 	if control.Type == CtrlVolume {
-		if control.MidiCC != 0 {
+		control.Value = value
+		if control.MidiCC == 0 {
 			return csetter.SetChannelVolume(c.Key, control.Value)
 		} else {
 			return csetter.SendChannelMidiCC(c.Key, control.MidiCC, control.Value)
@@ -323,6 +324,12 @@ func (c *PresetInstrument) GetControls() func(func(*PresetControl) bool) {
 
 func (p *PresetLayer) HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error {
 	slog.Debug("HandleControlValue", "control", control, "value", value)
+	if control.Type == CtrlVolume || control.Type == CtrlPan {
+		control.Value = value
+		if control.MidiCC != 0 {
+			return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value)
+		}
+	}
 	return nil
 }
 
