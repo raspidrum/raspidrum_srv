@@ -10,8 +10,6 @@ import (
 const audioDriver = "COREAUDIO"
 const midiDriver = "COREMIDI"
 
-// TODO: Добавить инициализацию repo Linuxsampler и заинжектить в него lscp.Client
-
 // TODO: может сделать тип Sampler, в который сохранять созданные идентификаторы устройств и каналов
 
 func InitSampler(sampler repo.SamplerRepo) (audioDevId, midiDevId int, err error) {

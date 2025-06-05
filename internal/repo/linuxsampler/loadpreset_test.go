@@ -277,7 +277,6 @@ func TestLinuxSampler_genPresetFiles(t *testing.T) {
 				Engine:  tt.fields.Engine,
 				DataDir: rootDir,
 			}
-			// TODO: get and check generated instrument files map
 			if _, err := l.genPresetFiles(tt.args.preset, tt.args.fs); (err != nil) != tt.wantErr {
 				t.Errorf("LinuxSampler.LoadPreset() error = %v, wantErr %v", err, tt.wantErr)
 			}

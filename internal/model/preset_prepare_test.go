@@ -197,7 +197,6 @@ func Test_PrepareToLoad(t *testing.T) {
 			}
 
 			// Verify controls state using the method from KitPreset
-			// TODO: collect expected controls from preset and compare with actual controls
 			if diff := VerifyControlsForTest(preset, tt.expectedControls); diff != "" {
 				t.Error("Controls state does not match expected:", diff)
 			}

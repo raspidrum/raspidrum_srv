@@ -17,7 +17,6 @@ func LoadKit(path string, db *db.Sqlite) (kitId int64, err error) {
 		return kitId, fmt.Errorf("failed load kit files: %w", err)
 	}
 
-	// TODO: validate unique control key
 	// search kit
 	kitCnt := 0
 	var kitKey string
