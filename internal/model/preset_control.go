@@ -29,8 +29,13 @@ var (
 	CtrlPan    = ControlTypeToString[CTPan]
 )
 
+type SamplerControlSetter interface {
+	SendChannelMidiCC(channelKey string, cc int, value float32) error
+	SetChannelVolume(channelKey string, value float32) error
+}
+
 type ControlOwner interface {
-	HandleControlValue(control *PresetControl, value float32) error
+	HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error
 }
 
 type ControlMap map[string]*PresetControl
@@ -68,6 +73,6 @@ func (c ControlMap) FindControlByType(t string) (*PresetControl, bool) {
 	return nil, false
 }
 
-func (c *PresetControl) SetValue(value float32) error {
-	return c.owner.HandleControlValue(c, value)
+func (c *PresetControl) SetValue(value float32, channelKey string, csetter SamplerControlSetter) error {
+	return c.owner.HandleControlValue(channelKey, c, value, csetter)
 }

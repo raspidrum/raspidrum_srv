@@ -5,14 +5,19 @@ import (
 	"log/slog"
 )
 
+type controlRef struct {
+	channel *PresetChannel
+	control *PresetControl
+}
+
 type KitPreset struct {
-	Id          int64              `yaml:"-"`
-	Uid         string             `yaml:"uuid,omitempty"`
-	Kit         KitRef             `yaml:"kit"`
-	Name        string             `yaml:"name"`
-	Channels    []PresetChannel    `yaml:"channels"`
-	Instruments []PresetInstrument `yaml:"instruments"`
-	controls    ControlMap
+	Id          int64                 `yaml:"-"`
+	Uid         string                `yaml:"uuid,omitempty"`
+	Kit         KitRef                `yaml:"kit"`
+	Name        string                `yaml:"name"`
+	Channels    []PresetChannel       `yaml:"channels"`
+	Instruments []PresetInstrument    `yaml:"instruments"`
+	controls    map[string]controlRef // key - control.Key
 }
 
 type KitRef struct {
@@ -87,6 +92,7 @@ func (p *KitPreset) GetChannelInstrumentsByKey(key string) ([]*PresetInstrument,
 	return p.GetChannelInstrumentsByIdx(idx)
 }
 
+// make instrument index for each channel
 func (p *KitPreset) indexInstruments() error {
 	chnls := make(map[string]int, len(p.Channels))
 	for j, c := range p.Channels {
@@ -106,13 +112,14 @@ func (p *KitPreset) indexInstruments() error {
 
 // PrepareToLoad augments preset controls and layers with data from instrument
 func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
+	cnlsIndex := make(map[string]*PresetChannel, len(p.Channels))
 	if err := p.indexInstruments(); err != nil {
 		return err
 	}
 
 	// Initialize control index map if not exists
 	if p.controls == nil {
-		p.controls = make(ControlMap)
+		p.controls = make(map[string]controlRef)
 	}
 
 	// Counter for generating unique control IDs
@@ -121,6 +128,7 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 	// Index channel controls
 	for i := range p.Channels {
 		ch := &p.Channels[i]
+		cnlsIndex[ch.Key] = ch
 		instrCount := len(ch.instruments)
 		// Index channel controls
 		var hasPan bool
@@ -143,7 +151,7 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 			ctrl.owner = ch
 			key := fmt.Sprintf("c%d%s", channelIdx, k)
 			ctrl.Key = key
-			p.controls[key] = ctrl
+			p.controls[key] = controlRef{channel: ch, control: ctrl}
 		}
 		if !hasPan && instrCount == 1 {
 			// add control for pan linked to instrument pan if not exists in channel controls
@@ -159,7 +167,7 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 					ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
 					ictrl.linkedWith = ctrl
 					ch.Controls[CtrlPan] = ctrl
-					p.controls[key] = ctrl
+					p.controls[key] = controlRef{channel: ch, control: ctrl}
 				}
 			}
 		}
@@ -169,6 +177,7 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 	instrumentIdx := 0
 	for i := range p.Instruments {
 		instr := &p.Instruments[i]
+		ch := cnlsIndex[instr.ChannelKey]
 		// instrument MIDI Key
 		if len(instr.MidiKey) > 0 {
 			mkeyid, err := MapMidiKey(instr.MidiKey, mididevs)
@@ -202,7 +211,7 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 			// Index instrument controls
 			key := fmt.Sprintf("i%d%s", instrumentIdx, k)
 			ctrl.Key = key
-			p.controls[key] = ctrl
+			p.controls[key] = controlRef{channel: ch, control: ctrl}
 		}
 
 		layerIdx := 0
@@ -231,7 +240,7 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 				// Index layer controls
 				key := fmt.Sprintf("i%dl%d%s", instrumentIdx, layerIdx, k)
 				ctrl.Key = key
-				p.controls[key] = ctrl
+				p.controls[key] = controlRef{channel: ch, control: ctrl}
 			}
 			instr.Layers[lkey] = lv
 			layerIdx++
@@ -241,23 +250,32 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 	return nil
 }
 
-func (p *KitPreset) GetControlByKey(key string) (*PresetControl, error) {
+func (p *KitPreset) SetControlValue(controlKey string, value float32, csetter SamplerControlSetter) error {
+	// find control by key
 	if p.controls == nil {
-		return nil, fmt.Errorf("controls not initialized")
+		return fmt.Errorf("controls not initialized")
 	}
-	ctrl, ok := p.controls.GetControlByKey(key)
+	ctrl, ok := p.controls[controlKey]
 	if !ok {
-		return nil, fmt.Errorf("control '%s' not found", key)
+		return fmt.Errorf("control '%s' not found", controlKey)
 	}
-	return ctrl, nil
+	return ctrl.control.SetValue(value, ctrl.channel.Key, csetter)
 }
 
 // Volume in channel sets by Sampler API
 // Pan in channel virtual (in case many instruments in channel).
 // In case one instrument in channel, pan is linked to instrument pan. Pan will be regulated in instrument
 // Other controls except volume and pan are not supported in channel
-func (p *PresetChannel) HandleControlValue(control *PresetControl, value float32) error {
+func (c *PresetChannel) HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error {
 	slog.Debug("HandleControlValue", "control", control, "value", value)
+	if control.Type == CtrlVolume {
+		if control.MidiCC != 0 {
+			return csetter.SetChannelVolume(c.Key, control.Value)
+		} else {
+			return csetter.SendChannelMidiCC(c.Key, control.MidiCC, control.Value)
+		}
+	}
+	// TODO: pan handle
 	return nil
 }
 
@@ -284,7 +302,7 @@ func (c *PresetChannel) GetControls() func(func(*PresetControl) bool) {
 // If virtual, then regulated by linked layer controls
 // Else regulated by MIDI CC
 // Other controls always regulated by MIDI CC
-func (p *PresetInstrument) HandleControlValue(control *PresetControl, value float32) error {
+func (p *PresetInstrument) HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error {
 	slog.Debug("HandleControlValue", "control", control, "value", value)
 	return nil
 }
@@ -303,7 +321,7 @@ func (c *PresetInstrument) GetControls() func(func(*PresetControl) bool) {
 	}
 }
 
-func (p *PresetLayer) HandleControlValue(control *PresetControl, value float32) error {
+func (p *PresetLayer) HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error {
 	slog.Debug("HandleControlValue", "control", control, "value", value)
 	return nil
 }

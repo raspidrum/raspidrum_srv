@@ -66,25 +66,25 @@ func VerifyControlsForTest(p *KitPreset, expectedControls ExpectedControls) stri
 
 	var differences []string
 	for key, expected := range expectedControls {
-		control, exists := p.controls[key]
+		ctrlRef, exists := p.controls[key]
 		if !exists {
 			differences = append(differences, fmt.Sprintf("Control %q not found in preset index", key))
 			continue
 		}
-		if control.Key != expected.Key {
-			differences = append(differences, fmt.Sprintf("Control %q Key mismatch: got %q, want %q", key, control.Key, expected.Key))
+		if ctrlRef.control.Key != expected.Key {
+			differences = append(differences, fmt.Sprintf("Control %q Key mismatch: got %q, want %q", key, ctrlRef.control.Key, expected.Key))
 		}
-		if control.MidiCC != expected.MidiCC {
-			differences = append(differences, fmt.Sprintf("Control %q MidiCC mismatch: got %d, want %d", key, control.MidiCC, expected.MidiCC))
+		if ctrlRef.control.MidiCC != expected.MidiCC {
+			differences = append(differences, fmt.Sprintf("Control %q MidiCC mismatch: got %d, want %d", key, ctrlRef.control.MidiCC, expected.MidiCC))
 		}
-		if control.CfgKey != expected.CfgKey {
-			differences = append(differences, fmt.Sprintf("Control %q CfgKey mismatch: got %q, want %q", key, control.CfgKey, expected.CfgKey))
+		if ctrlRef.control.CfgKey != expected.CfgKey {
+			differences = append(differences, fmt.Sprintf("Control %q CfgKey mismatch: got %q, want %q", key, ctrlRef.control.CfgKey, expected.CfgKey))
 		}
-		if control.Type != expected.Type {
-			differences = append(differences, fmt.Sprintf("Control %q Type mismatch: got %q, want %q", key, control.Type, expected.Type))
+		if ctrlRef.control.Type != expected.Type {
+			differences = append(differences, fmt.Sprintf("Control %q Type mismatch: got %q, want %q", key, ctrlRef.control.Type, expected.Type))
 		}
-		if control.Value != expected.Value {
-			differences = append(differences, fmt.Sprintf("Control %q Value mismatch: got %f, want %f", key, control.Value, expected.Value))
+		if ctrlRef.control.Value != expected.Value {
+			differences = append(differences, fmt.Sprintf("Control %q Value mismatch: got %f, want %f", key, ctrlRef.control.Value, expected.Value))
 		}
 	}
 

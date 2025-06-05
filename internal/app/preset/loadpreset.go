@@ -18,18 +18,18 @@ var midiDevices = []m.MIDIDevice{
 }
 
 // Loads the specified preset into the sampler and returns information about the loaded preset
-func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) (*m.KitPreset, error) {
+func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) (*m.KitPreset, repo.SamplerChannels, error) {
 
 	// 1st step: get preset info from db
 	pst, err := db.GetPreset(d.ById(presetId))
 	if err != nil {
-		return nil, fmt.Errorf("failed LoadPreset: %w", err)
+		return nil, nil, fmt.Errorf("failed LoadPreset: %w", err)
 	}
 
 	// 2nd step: augment channels and layers info from instrument and instrument preset
 	err = pst.PrepareToLoad(midiDevices)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 3rd step: substitute ids of MIDI Keys and MIDI CC
@@ -38,15 +38,16 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 	// 4rd step: init sampler
 	audioDevId, midiDevId, err := InitSampler(sampler)
 	if err != nil {
-		return nil, fmt.Errorf("failed init sampler: %w", err)
+		return nil, nil, fmt.Errorf("failed init sampler: %w", err)
 	}
 
 	// 5th step: load to sampler
-	err = sampler.LoadPreset(audioDevId, midiDevId, pst, fs)
+	chnls, err := sampler.LoadPreset(audioDevId, midiDevId, pst, fs)
 	if err != nil {
-		return nil, fmt.Errorf("failed load preset to sampler: %w", err)
+		return nil, nil, fmt.Errorf("failed load preset to sampler: %w", err)
 	}
-	return pst, nil
+
+	return pst, chnls, nil
 }
 
 // deprecated

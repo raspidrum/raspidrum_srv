@@ -6,6 +6,7 @@ import (
 	"path"
 
 	m "github.com/raspidrum-srv/internal/model"
+	repo "github.com/raspidrum-srv/internal/repo"
 	"github.com/raspidrum-srv/internal/repo/file"
 	"github.com/spf13/afero"
 )
@@ -18,19 +19,19 @@ var sampleRoot = "samples"
 var presetRoot = "presets"
 var instrumentRoot = "instruments"
 
-func (l *LinuxSampler) LoadPreset(audioDevId, midiDevId int, preset *m.KitPreset, fs afero.Fs) error {
+func (l *LinuxSampler) LoadPreset(audioDevId, midiDevId int, preset *m.KitPreset, fs afero.Fs) (repo.SamplerChannels, error) {
 
 	instrFiles, err := l.genPresetFiles(preset, fs)
 	if err != nil {
-		return fmt.Errorf("failed prepare instrument control files for preset: %w", err)
+		return nil, fmt.Errorf("failed prepare instrument control files for preset: %w", err)
 	}
 
 	// load sfz control files and samples in sampler
-	_, err = l.loadToSampler(audioDevId, midiDevId, preset, instrFiles)
+	chnls, err := l.loadToSampler(audioDevId, midiDevId, preset, instrFiles)
 	if err != nil {
-		return fmt.Errorf("failed load instrument config and samples to sampler: %w", err)
+		return nil, fmt.Errorf("failed load instrument config and samples to sampler: %w", err)
 	}
-	return nil
+	return chnls, nil
 }
 
 // make sfz control files
@@ -134,8 +135,8 @@ func preparePresetDir(rootDir string, fs afero.Fs) (string, error) {
 
 // Create sampler channels and load into its preset instruments
 // return map: key - Channel.Key, value - sampler channel Id
-func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPreset, instrfiles map[string]string) (map[string]int, error) {
-	channels := map[string]int{}
+func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPreset, instrfiles map[string]string) (repo.SamplerChannels, error) {
+	channels := repo.SamplerChannels{}
 
 	//loading instruments
 	for _, cv := range preset.Channels {
@@ -160,7 +161,7 @@ func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPrese
 		// set channel controls
 		for _, ccv := range cv.Controls {
 			if len(ccv.CfgKey) == 0 && m.ControlTypeFromString[ccv.Type] == m.CTVolume {
-				l.SetChannelVolume(chnlId, float64(ccv.Value))
+				l.SetChannelVolume(chnlId, ccv.Value)
 			}
 		}
 	}

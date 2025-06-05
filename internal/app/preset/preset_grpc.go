@@ -21,6 +21,7 @@ type PresetServer struct {
 	pb.UnimplementedChannelControlServer
 	db           *d.Sqlite
 	sampler      repo.SamplerRepo
+	ctrlHandler  *SamplerControlHandler
 	fs           afero.Fs
 	loadedPreset *model.KitPreset
 }
@@ -34,12 +35,13 @@ func NewPresetServer(db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) *Prese
 }
 
 func (s *PresetServer) LoadPreset(ctx context.Context, req *pb.GetPresetRequest) (*pb.PresetResponse, error) {
-	preset, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs)
+	preset, chnls, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to load preset: %v", err)
 	}
 
 	s.loadedPreset = preset
+	s.ctrlHandler = NewSamplerControlHandler(s.sampler, chnls)
 
 	pbPreset, err := convertPresetToProto(preset)
 	if err != nil {
@@ -53,11 +55,7 @@ func (s *PresetServer) LoadPreset(ctx context.Context, req *pb.GetPresetRequest)
 
 func (s *PresetServer) GetPreset(ctx context.Context, req *pb.GetPresetRequest) (*pb.PresetResponse, error) {
 	if s.loadedPreset == nil || s.loadedPreset.Id != req.PresetId {
-		preset, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to load preset: %v", err)
-		}
-		s.loadedPreset = preset
+		return s.LoadPreset(ctx, req)
 	}
 
 	pbPreset, err := convertPresetToProto(s.loadedPreset)
@@ -79,15 +77,9 @@ func (s *PresetServer) SetValue(stream pb.ChannelControl_SetValueServer) error {
 		if err != nil {
 			return err
 		}
-		// find control by key
-		ctrl, err := s.loadedPreset.GetControlByKey(in.Key)
-		if err != nil {
-			return status.Errorf(codes.NotFound, "control not found: %s", in.Key)
-		}
 		// set value
 		// TODO: denormalize value
-		// TODO: inject function to set value to sampler. Model don't set value to sampler directly (or by sampler interface)
-		err = ctrl.SetValue(float32(in.Value))
+		err = s.loadedPreset.SetControlValue(in.Key, float32(in.Value), s.ctrlHandler)
 		if err != nil {
 			return status.Errorf(codes.Internal, "failed to set control value: %v", err)
 		}
@@ -101,7 +93,6 @@ func (s *PresetServer) SetValue(stream pb.ChannelControl_SetValueServer) error {
 		if err := stream.Send(out); err != nil {
 			return err
 		}
-
 	}
 }
 

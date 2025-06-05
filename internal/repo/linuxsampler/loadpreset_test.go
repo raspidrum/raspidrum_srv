@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	m "github.com/raspidrum-srv/internal/model"
+	repo "github.com/raspidrum-srv/internal/repo"
 	"github.com/raspidrum-srv/internal/repo/file"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 	"github.com/spf13/afero"
@@ -465,7 +467,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 	}
 	type res struct {
 		lscpCommands []string
-		channels     map[string]int
+		channels     repo.SamplerChannels
 	}
 
 	tests := []struct {
@@ -517,7 +519,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "channel_1.sfz") + "' 0 0",
 					"SET CHANNEL VOLUME 0 1.00",
 				},
-				channels: map[string]int{
+				channels: repo.SamplerChannels{
 					"1": 0,
 				},
 			},
@@ -565,7 +567,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"LOAD ENGINE sfz 0",
 					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "channel_1.sfz") + "' 0 0",
 				},
-				channels: map[string]int{
+				channels: repo.SamplerChannels{
 					"1": 0,
 				},
 			},
@@ -620,7 +622,7 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 					"LOAD ENGINE sfz 1",
 					"LOAD INSTRUMENT '" + path.Join(rootDir, presetRoot, presetDir, "channel_2.sfz") + "' 0 1",
 				},
-				channels: map[string]int{
+				channels: repo.SamplerChannels{
 					"1": 0,
 					"2": 1,
 				},
@@ -652,9 +654,10 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 				t.Errorf("diff lscp commands: %v", compareLines(tt.want.lscpCommands, mockServer.getMessages()))
 			}
 			// compare channels
-			if !reflect.DeepEqual(gotChannels, tt.want.channels) {
-				t.Errorf("Expected %v, got %v", tt.want.channels, gotChannels)
+			if diff := cmp.Diff(tt.want.channels, gotChannels); diff != "" {
+				t.Errorf("mismatch channels (-want +got):\n%s", diff)
 			}
+
 			clientConn.Close()
 			serverConn.Close()
 		})
