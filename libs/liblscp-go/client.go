@@ -378,7 +378,7 @@ func (c *Client) SetChannelMidiInputDevice(samplerChn int, devId int) error {
 // Sets the volume of the specified sampler channel.
 // samplerChn The sampler channel number.
 // volume The new volume value.
-func (c *Client) SetChannelVolume(samplerChn int, volume float64) error {
+func (c *Client) SetChannelVolume(samplerChn int, volume float32) error {
 	cmd := fmt.Sprintf("SET CHANNEL VOLUME %d %.2f", samplerChn, volume)
 	_, err := c.retrieveIndex(cmd)
 	return err
@@ -411,7 +411,7 @@ func (c *Client) SetChannelSolo(samplerChn int, solo bool) error {
 }
 
 // Gets the global volume of the sampler.
-func (c *Client) GetVolume() (float64, error) {
+func (c *Client) GetVolume() (float32, error) {
 	rs, err := c.retrieveInfo("GET VOLUME", false)
 	if err != nil {
 		return 0, err
@@ -420,7 +420,7 @@ func (c *Client) GetVolume() (float64, error) {
 }
 
 // Sets the global volume of the sampler.
-func (c *Client) SetVolume(vol float64) error {
+func (c *Client) SetVolume(vol float32) error {
 	_, err := c.retrieveIndex(fmt.Sprintf("SET VOLUME %.2f", vol))
 	return err
 }
@@ -536,7 +536,7 @@ func (c *Client) RemoveFxSendEffect(channel int, fxSend int) error {
 // channel The sampler channel number.
 // fxSend The numerical ID of the effect send entity.
 // volume The new volume value (a value smaller than 1.0 means attenuation, whereas a value greater than 1.0 means amplification).
-func (c *Client) SetFxSendLevel(channel int, fxSend int, vol float64) error {
+func (c *Client) SetFxSendLevel(channel int, fxSend int, vol float32) error {
 	cmd := fmt.Sprintf("SET FX_SEND LEVEL %d %d %.2f", channel, fxSend, vol)
 	_, err := c.retrieveIndex(cmd)
 	return err
@@ -638,11 +638,11 @@ func (c *Client) GetEffectInstanceInfo(id int) (EffectInstance, error) {
 // parameter The parameter index.
 // return <code>EffectParameter</code> object containing information about the specified effect parameter.
 // Note that only the following fields are used - description, value, rangeMin, rangeMax, possibilities and default.
-func (c *Client) GetEffectInstanceParameterInfo(instId int, paramId int) (Parameter[float64], error) {
+func (c *Client) GetEffectInstanceParameterInfo(instId int, paramId int) (Parameter[float32], error) {
 	cmd := fmt.Sprintf("GET EFFECT_INSTANCE_INPUT_CONTROL INFO %d %d", instId, paramId)
 	rs, err := c.retrieveInfo(cmd, true)
 	if err != nil {
-		return Parameter[float64]{}, err
+		return Parameter[float32]{}, err
 	}
 	return ParseEffectParameter(rs.MultiLineResult)
 }
@@ -668,7 +668,7 @@ func (c *Client) GetEffectInstances() ([]EffectInstance, error) {
 // instanceId The numerical ID of the effect instance.
 // prmIndex The index of the parameter to alter.
 // value The new value for this parameter.
-func (c *Client) SetEffectInstanceParameter(instId int, paramId int, val float64) error {
+func (c *Client) SetEffectInstanceParameter(instId int, paramId int, val float32) error {
 	cmd := fmt.Sprintf("SET EFFECT_INSTANCE_INPUT_CONTROL VALUE %d %d %.2f", instId, paramId, val)
 	_, err := c.retrieveIndex(cmd)
 	return err

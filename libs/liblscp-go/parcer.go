@@ -35,12 +35,12 @@ func parseInt(s string) (int, error) {
 }
 
 // Parses a float value.
-func parseFloat(s string) (float64, error) {
-	i, err := strconv.ParseFloat(s, 64)
+func parseFloat(s string) (float32, error) {
+	i, err := strconv.ParseFloat(s, 32)
 	if err != nil {
 		return 0, fmt.Errorf("not float: %s %w", s, err)
 	}
-	return i, nil
+	return float32(i), nil
 }
 
 // Parses a comma separated list with boolean values
@@ -72,15 +72,15 @@ func parseIntList(list string) ([]int, error) {
 }
 
 // Parses a comma separated list with float values.
-func parseFloatList(list string) ([]float64, error) {
+func parseFloatList(list string) ([]float32, error) {
 	ar := strings.Split(list, ",")
-	bar := make([]float64, len(ar))
+	bar := make([]float32, len(ar))
 	for i, v := range ar {
-		b, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+		b, err := strconv.ParseFloat(strings.TrimSpace(v), 32)
 		if err != nil {
 			return nil, fmt.Errorf("not float: %s %w", v, err)
 		}
-		bar[i] = b
+		bar[i] = float32(b)
 	}
 	return bar, nil
 }

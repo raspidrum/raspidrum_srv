@@ -9,7 +9,7 @@ type FxSend struct {
 	Id             int
 	Name           string
 	MidiController int
-	Level          float64
+	Level          float32
 	AudRouting     []int
 	DestChainId    int
 	DestChainPos   int

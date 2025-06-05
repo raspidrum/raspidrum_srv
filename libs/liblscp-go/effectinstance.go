@@ -4,7 +4,7 @@ import "strings"
 
 type EffectInstance struct {
 	Id     int
-	Params []Parameter[float64]
+	Params []Parameter[float32]
 }
 
 func ParseEffectInstance(id int, ln []string) (EffectInstance, error) {
@@ -15,14 +15,14 @@ func ParseEffectInstance(id int, ln []string) (EffectInstance, error) {
 			if err != nil {
 				return ei, err
 			}
-			ei.Params = make([]Parameter[float64], c)
+			ei.Params = make([]Parameter[float32], c)
 		}
 	}
 	return ei, nil
 }
 
-func ParseEffectParameter(ln []string) (Parameter[float64], error) {
-	prm := Parameter[float64]{}
+func ParseEffectParameter(ln []string) (Parameter[float32], error) {
+	prm := Parameter[float32]{}
 	for _, v := range ln {
 		if vl, f := strings.CutPrefix(v, "DESCRIPTION: "); f {
 			prm.Description = vl
