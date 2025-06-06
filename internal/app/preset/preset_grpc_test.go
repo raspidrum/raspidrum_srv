@@ -144,6 +144,7 @@ func TestConvertPresetToProto(t *testing.T) {
 								Key:    "1",
 								Name:   "Tom",
 								Volume: &pb.BaseControl{Key: "i1volume", Name: "Volume", Value: 0.685, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
+								Pan:    &pb.BaseControl{Key: "i1pan", Name: "Pan", Value: 0.37, Min: makeFloat64Ptr(-1), Max: makeFloat64Ptr(1)},
 							},
 						},
 					},
@@ -177,9 +178,4 @@ func TestConvertPresetToProto(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Helper function to create float64 pointer
-func float64Ptr(v float64) *float64 {
-	return &v
 }

@@ -46,9 +46,16 @@ instruments:
       controls:
         volume: 
           key: TOM1V
+        pan:
+          key: TOM1P
     controls:
       volume:
         name: Volume
         midiCC: 31
         type: volume
-        value: 87 
+        value: 87
+      pan:
+        name: Pan
+        type: pan
+        midiCC: 11
+        value: 87

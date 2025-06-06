@@ -3,7 +3,7 @@ channels:
     controls:
       volume:
         type: volume
-        value: 66
+        value: 0.65
 instruments:
   - name: Ride
     channelKey: ch1
@@ -30,9 +30,10 @@ instruments:
     controls:
       volume:
         type: volume
-        value: 111
+        value: 0.95
       pan:
         midiCC: 105
+        name: Pan
         type: pan
         value: 75
       pitch:

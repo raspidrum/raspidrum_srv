@@ -97,6 +97,9 @@ func (p *KitPreset) indexInstruments() error {
 	chnls := make(map[string]int, len(p.Channels))
 	for j, c := range p.Channels {
 		chnls[c.Key] = j
+		if len(c.instruments) > 0 {
+			p.Channels[j].instruments = p.Channels[j].instruments[:0]
+		}
 	}
 
 	for i, v := range p.Instruments {
@@ -104,8 +107,7 @@ func (p *KitPreset) indexInstruments() error {
 		if !ok {
 			return fmt.Errorf("instrument '%s' refs to missing channel '%s'", v.Name, v.ChannelKey)
 		}
-		ch := &p.Channels[chi]
-		ch.instruments = append(ch.instruments, &p.Instruments[i])
+		p.Channels[chi].instruments = append(p.Channels[chi].instruments, &p.Instruments[i])
 	}
 	return nil
 }
@@ -276,7 +278,7 @@ func (c *PresetChannel) HandleControlValue(channelKey string, control *PresetCon
 			return csetter.SendChannelMidiCC(c.Key, control.MidiCC, control.Value)
 		}
 	}
-	// TODO: pan handle
+	// TODO: do pan control via instruments controls
 	return nil
 }
 
@@ -305,6 +307,14 @@ func (c *PresetChannel) GetControls() func(func(*PresetControl) bool) {
 // Other controls always regulated by MIDI CC
 func (p *PresetInstrument) HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error {
 	slog.Debug("HandleControlValue", "control", control, "value", value)
+	control.Value = value
+	if control.MidiCC != 0 {
+		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value)
+	} else {
+		if (control.Type == CtrlVolume || control.Type == CtrlPan) && len(control.linkedTo) > 0 {
+			// TODO: do control via layers controls
+		}
+	}
 	return nil
 }
 
@@ -325,10 +335,11 @@ func (c *PresetInstrument) GetControls() func(func(*PresetControl) bool) {
 func (p *PresetLayer) HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error {
 	slog.Debug("HandleControlValue", "control", control, "value", value)
 	if control.Type == CtrlVolume || control.Type == CtrlPan {
-		control.Value = value
-		if control.MidiCC != 0 {
-			return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value)
-		}
+		// TODO: получить корректировку от инструмента
+	}
+	control.Value = value
+	if control.MidiCC != 0 {
+		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value)
 	}
 	return nil
 }
