@@ -29,6 +29,7 @@ func (mve MultiValidationError) Error() string {
 // - in case many instruments in channel, instrument without layers MUST have `volume` and `pan` controls. Its controls MUST have midiCC
 // - in case one instrument in channel,   instrument without layers MAY  have `volume` or `pan` controls.  Its controls MUST have midiCC
 // - in case one or many instrument in channel, instrument with layers MAY have `volume` or `pan` controls. Its controls MAY have midiCC
+// - other controls of instrument (except `volume` and `pan`) MUST have midiCC
 func (p *KitPreset) Validate() error {
 	var errs MultiValidationError
 
@@ -50,7 +51,7 @@ func (p *KitPreset) Validate() error {
 			}
 		}
 
-		manyInstruments := len(vc.instruments) > 1
+		isManyInstruments := len(vc.instruments) > 1
 
 		for _, vi := range vc.instruments {
 			// validate instrument controls
@@ -64,13 +65,16 @@ func (p *KitPreset) Validate() error {
 						return err
 					}
 				}
+				if vic.Type != CtrlVolume && vic.Type != CtrlPan && vic.MidiCC == 0 {
+					errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s'", vic.Name), "midiCC is required and can't be 0"})
+				}
 			}
 
 			if len(vi.Layers) == 0 {
 				// volume control
 				if ctrl, ok := vi.Controls[CtrlVolume]; !ok {
 					// many instruments in channel, instrument without layers MUST have `volume` and `pan` controls
-					if manyInstruments {
+					if isManyInstruments {
 						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, CtrlVolume), "is required, but missing"})
 					}
 				} else {
@@ -81,7 +85,7 @@ func (p *KitPreset) Validate() error {
 				}
 				// pan control
 				if ctrl, ok := vi.Controls[CtrlPan]; !ok {
-					if manyInstruments {
+					if isManyInstruments {
 						errs = append(errs, ValidationError{fmt.Sprintf("instrument control '%s.%s'", vi.Name, CtrlPan), "is required, but missing"})
 					}
 				} else {
@@ -114,7 +118,8 @@ func (p *KitPreset) Validate() error {
 
 // Validations:
 // - controls MUST have `volume` type control. It control MUST have midiCC
-// - controls MAY have `pan` type control. If `pan` exists then it MUST have midiCC value
+// - controls MAY have `pan` type control.
+// - any control MUST have midiCC value
 func (p *PresetLayer) Validate() error {
 	var errs MultiValidationError
 	hasVolume := false
@@ -136,11 +141,9 @@ func (p *PresetLayer) Validate() error {
 		}
 		hasVolume = (cType == CTVolume) || hasVolume
 
-		if cType == CTVolume || cType == CTPan {
-			// MIDI CC = 0 - "Bank Select" code. It can't be used for layer control
-			if c.MidiCC == 0 {
-				errs = append(errs, ValidationError{fmt.Sprintf("control '%s'", k), "midiCC is required and can't be 0"})
-			}
+		// MIDI CC = 0 - "Bank Select" code. It can't be used for layer control
+		if c.MidiCC == 0 {
+			errs = append(errs, ValidationError{fmt.Sprintf("control '%s'", k), "midiCC is required and can't be 0"})
 		}
 	}
 
@@ -155,10 +158,22 @@ func (p *PresetLayer) Validate() error {
 
 // Validations:
 // - type MUST match one of ControlType
+// - value MUST be in range 0..127 if MidiCC is not 0
+// - value MUST be in range -1.0..1.0 for pan if MidiCC is 0
+// - value MUST be in range 0..1.0 for volume if MidiCC is 0
 func (c *PresetControl) Validate() error {
 	var errs MultiValidationError
 	if _, ok := ControlTypeFromString[c.Type]; !ok {
 		errs = append(errs, ValidationError{"type", fmt.Sprintf("unknown value '%s'", c.Type)})
+	}
+	if c.MidiCC != 0 && (c.Value < 0 || c.Value > 127) {
+		errs = append(errs, ValidationError{"value", "value must be in range 0..127"})
+	}
+	if c.MidiCC == 0 && (c.Type == CtrlPan && (c.Value < -1.0 || c.Value > 1.0)) {
+		errs = append(errs, ValidationError{"value", "value must be in range -1.0..1.0"})
+	}
+	if c.MidiCC == 0 && (c.Type == CtrlVolume && (c.Value < 0 || c.Value > 1.0)) {
+		errs = append(errs, ValidationError{"value", "value must be in range 0..1.0"})
 	}
 	if len(errs) > 0 {
 		return errs

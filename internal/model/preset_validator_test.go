@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestPresetControl_Validate(t *testing.T) {
+func TestPresetControl_ValidateType(t *testing.T) {
 	type fields struct {
 		Name   string
 		Type   string
@@ -25,6 +25,101 @@ func TestPresetControl_Validate(t *testing.T) {
 		{
 			name:    "doesn't match",
 			fields:  fields{Type: "level"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &PresetControl{
+				Name:   tt.fields.Name,
+				Type:   tt.fields.Type,
+				MidiCC: tt.fields.MidiCC,
+				CfgKey: tt.fields.CfgKey,
+				Value:  tt.fields.Value,
+			}
+			if err := c.Validate(); (err != nil) != tt.wantErr {
+				t.Errorf("PresetControl.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestPresetControl_ValidateValue(t *testing.T) {
+	type fields struct {
+		Name   string
+		Type   string
+		MidiCC int
+		CfgKey string
+		Value  float32
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{
+			name:    "volume with midiCC",
+			fields:  fields{Type: "volume", MidiCC: 123, Value: 20},
+			wantErr: false,
+		},
+		{
+			name:    "volume without midiCC",
+			fields:  fields{Type: "volume", Value: 0.2},
+			wantErr: false,
+		},
+		{
+			name:    "pan with midiCC",
+			fields:  fields{Type: "pan", MidiCC: 123, Value: 10},
+			wantErr: false,
+		},
+		{
+			name:    "pan without midiCC",
+			fields:  fields{Type: "pan", Value: 0.5},
+			wantErr: false,
+		},
+		{
+			name:    "volume with midiCC, value over of range",
+			fields:  fields{Type: "volume", MidiCC: 123, Value: 207},
+			wantErr: true,
+		},
+		{
+			name:    "volume with midiCC, value lower of range",
+			fields:  fields{Type: "volume", MidiCC: 123, Value: -10},
+			wantErr: true,
+		},
+		{
+			name:    "pan with midiCC, value lower of range",
+			fields:  fields{Type: "pan", MidiCC: 123, Value: -10},
+			wantErr: true,
+		},
+		{
+			name:    "pan without midiCC, value lower of range",
+			fields:  fields{Type: "pan", Value: 1.5},
+			wantErr: true,
+		},
+		{
+			name:    "volume without midiCC, value lower of range",
+			fields:  fields{Type: "volume", Value: -0.5},
+			wantErr: true,
+		},
+		{
+			name:    "volume without midiCC, value over of range",
+			fields:  fields{Type: "volume", Value: 1.5},
+			wantErr: true,
+		},
+		{
+			name:    "pan without midiCC, value over of range",
+			fields:  fields{Type: "pan", Value: 1.5},
+			wantErr: true,
+		},
+		{
+			name:    "other control with midiCC, value lower of range",
+			fields:  fields{Type: "other", MidiCC: 123, Value: -10},
+			wantErr: true,
+		},
+		{
+			name:    "other control with midiCC, value over of range",
+			fields:  fields{Type: "other", MidiCC: 123, Value: 207},
 			wantErr: true,
 		},
 	}
@@ -98,6 +193,15 @@ func TestPresetLayer_Validate(t *testing.T) {
 			fields: fields{
 				Controls: map[string]*PresetControl{
 					"volume": {Type: "volume"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "other control without midiCC",
+			fields: fields{
+				Controls: map[string]*PresetControl{
+					"pitch": {Type: "pitch"},
 				},
 			},
 			wantErr: true,
@@ -386,6 +490,20 @@ func TestKitPreset_Validate(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "other control must have midiCC",
+			fields: fields{
+				Channels: []PresetChannel{{Key: "1"}},
+				Instruments: []PresetInstrument{
+					{ChannelKey: "1",
+						Controls: map[string]*PresetControl{
+							"pitch": {Type: "pitch"},
+						},
+					},
+				},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
