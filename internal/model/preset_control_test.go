@@ -130,6 +130,42 @@ func Test_SetControlValue(t *testing.T) {
 			wantChannelKey: "ch1",
 			wantErr:        false,
 		},
+		{
+			name:     "set pitch (tunes) control in instrument",
+			testData: "single_instrument_with_tunes.yaml",
+			args: args{
+				mididevs: []MIDIDevice{
+					&MockMMIDIDevice{},
+				},
+			},
+			controlKey:     "i0pitch",
+			value:          0.75,
+			wantVolumeCall: false,
+			wantMidiCCCall: true,
+			wantValue:      0.75,
+			wantMidiCC:     11,
+			wantChannelKey: "ch1",
+			wantErr:        false,
+		},
+		{
+			name:     "set pitch (tunes) control in layer",
+			testData: "layer_with_tune.yaml",
+			args: args{
+				mididevs: []MIDIDevice{
+					&MockMMIDIDevice{},
+				},
+			},
+			controlKey:     "i0l0pitch",
+			value:          0.75,
+			wantVolumeCall: false,
+			wantMidiCCCall: true,
+			wantValue:      0.75,
+			wantMidiCC:     16,
+			wantChannelKey: "ch1",
+			wantErr:        false,
+		},
+		// TODO: test instrument virtual vol and pan controls
+		// TODO: test channel pan (two_instruments.yaml)
 	}
 
 	for _, tt := range tests {

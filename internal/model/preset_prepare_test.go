@@ -38,7 +38,7 @@ func Test_PrepareToLoad(t *testing.T) {
 						Name: "Kick",
 						Controls: map[string]*PresetControl{
 							"volume": {Key: "c0volume", Name: "Volume", Type: "volume", Value: 1.00},
-							"pan":    {Key: "c0pan", Name: "Pan", Type: "pan", Value: 0.00},
+							"pan":    {Key: "c0pan", Name: "Pan", Type: "pan"},
 						},
 					},
 				},
@@ -58,7 +58,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			wantErr: false,
 			expectedControls: ExpectedControls{
 				"c0volume": {Key: "c0volume", Name: "Volume", Type: "volume", Value: 1.00},
-				"c0pan":    {Key: "c0pan", Name: "Pan", Type: "pan", Value: 0.00},
+				"c0pan":    {Key: "c0pan", Name: "Pan", Type: "pan"},
 				"i0volume": {Key: "i0volume", Name: "Volume", Type: "volume", MidiCC: 30, CfgKey: "KICKV", Value: 95},
 				"i0pan":    {Key: "i0pan", Name: "Pan", Type: "pan", MidiCC: 10, CfgKey: "KICKP", Value: 54},
 			},
@@ -76,8 +76,8 @@ func Test_PrepareToLoad(t *testing.T) {
 					{
 						Key: "ch1",
 						Controls: map[string]*PresetControl{
-							"volume": {Key: "c0volume", Type: "volume", Value: 66},
-							"pan":    {Key: "c0pan", Type: "pan", Value: 0.00},
+							"volume": {Key: "c0volume", Type: "volume", Value: 0.65},
+							"pan":    {Key: "c0pan", Name: "Pan", Type: "pan"},
 						},
 					},
 				},
@@ -86,9 +86,9 @@ func Test_PrepareToLoad(t *testing.T) {
 						Name:       "Ride",
 						ChannelKey: "ch1",
 						Controls: map[string]*PresetControl{
-							"pan":    {Key: "i0pan", MidiCC: 105, CfgKey: "RI17P", Type: "pan", Value: 75},
+							"pan":    {Key: "i0pan", Name: "Pan", MidiCC: 105, CfgKey: "RI17P", Type: "pan", Value: 75},
 							"pitch":  {Key: "i0pitch", MidiCC: 16, CfgKey: "RI17T", Type: "pitch", Value: 120},
-							"volume": {Key: "i0volume", Type: "volume", Value: 111},
+							"volume": {Key: "i0volume", Type: "volume", Value: 0.95},
 						},
 						Layers: map[string]PresetLayer{
 							"bell": {
@@ -113,11 +113,11 @@ func Test_PrepareToLoad(t *testing.T) {
 			},
 			wantErr: false,
 			expectedControls: ExpectedControls{
-				"c0volume":   {Key: "c0volume", Type: "volume", Value: 66},
-				"c0pan":      {Key: "c0pan", Type: "pan", Value: 0.00},
-				"i0pan":      {Key: "i0pan", MidiCC: 105, CfgKey: "RI17P", Type: "pan", Value: 75},
+				"c0volume":   {Key: "c0volume", Type: "volume", Value: 0.65},
+				"c0pan":      {Key: "c0pan", Name: "Pan", Type: "pan"},
+				"i0pan":      {Key: "i0pan", Name: "Pan", MidiCC: 105, CfgKey: "RI17P", Type: "pan", Value: 75},
 				"i0pitch":    {Key: "i0pitch", MidiCC: 16, CfgKey: "RI17T", Type: "pitch", Value: 120},
-				"i0volume":   {Key: "i0volume", Type: "volume", Value: 111},
+				"i0volume":   {Key: "i0volume", Type: "volume", Value: 0.95},
 				"i0l0volume": {Key: "i0l0volume", MidiCC: 104, CfgKey: "RI17BV", Type: "volume", Value: 80},
 				"i0l1volume": {Key: "i0l1volume", MidiCC: 103, CfgKey: "RI17EV", Type: "volume", Value: 90},
 			},
@@ -161,6 +161,7 @@ func Test_PrepareToLoad(t *testing.T) {
 						MidiNote:   48,
 						Controls: map[string]*PresetControl{
 							"volume": {Key: "i1volume", Name: "Volume", MidiCC: 31, CfgKey: "TOM1V", Type: "volume", Value: 87},
+							"pan":    {Key: "i1pan", Name: "Pan", MidiCC: 11, CfgKey: "TOM1P", Type: "pan", Value: 87},
 						},
 					},
 				},
@@ -172,6 +173,7 @@ func Test_PrepareToLoad(t *testing.T) {
 				"i0volume": {Key: "i0volume", Name: "Volume", MidiCC: 30, CfgKey: "KICKV", Type: "volume", Value: 95},
 				"i0pan":    {Key: "i0pan", Name: "Pan", MidiCC: 10, CfgKey: "KICKP", Type: "pan", Value: 54},
 				"i1volume": {Key: "i1volume", Name: "Volume", MidiCC: 31, CfgKey: "TOM1V", Type: "volume", Value: 87},
+				"i1pan":    {Key: "i1pan", Name: "Pan", MidiCC: 11, CfgKey: "TOM1P", Type: "pan", Value: 87},
 			},
 		},
 	}
@@ -179,6 +181,9 @@ func Test_PrepareToLoad(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			preset := loadPresetFromYAML(t, tt.testData)
 			tt.args.preset = preset
+			if err := preset.Validate(); err != nil {
+				t.Errorf("Validate() error on validation source testdata = %v", err)
+			}
 			if err := preset.PrepareToLoad(tt.args.mididevs); (err != nil) != tt.wantErr {
 				t.Errorf("PrepareToLoad() error = %v, wantErr %v", err, tt.wantErr)
 			}
