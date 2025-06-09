@@ -78,13 +78,11 @@ func (s *PresetServer) SetValue(stream pb.ChannelControl_SetValueServer) error {
 			return err
 		}
 		// set value
-		// TODO: denormalize value
 		err = s.loadedPreset.SetControlValue(in.Key, float32(in.Value), s.ctrlHandler)
 		if err != nil {
 			return status.Errorf(codes.Internal, "failed to set control value: %v", err)
 		}
 		// send response
-		// TODO: return setted value
 		out := &pb.ControlValue{
 			Key:   in.Key,
 			Seq:   in.Seq,
@@ -135,13 +133,12 @@ func convertPresetToProto(kitPreset *model.KitPreset) (*pb.Preset, error) {
 		}
 
 		for ctrl := range ch.GetControls() {
+			val, min, max := ctrl.GetNormalizedValue()
 			if ctrl.Type == model.CtrlVolume {
-				val, min, max := normalizeVol(ctrl)
-				pbChannel.Volume = &pb.BaseControl{Key: string(ctrl.Key), Name: ctrl.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
+				pbChannel.Volume = &pb.BaseControl{Key: string(ctrl.Key), Name: ctrl.Name, Value: roundFloat(float64(val), 3), Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 			}
 			if ctrl.Type == model.CtrlPan {
-				val, min, max := normalizePan(ctrl)
-				pbChannel.Pan = &pb.BaseControl{Key: string(ctrl.Key), Name: ctrl.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
+				pbChannel.Pan = &pb.BaseControl{Key: string(ctrl.Key), Name: ctrl.Name, Value: roundFloat(float64(val), 3), Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 			}
 		}
 
@@ -163,13 +160,12 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 		}
 
 		for ctrl := range instr.GetControls() {
+			val, min, max := ctrl.GetNormalizedValue()
 			switch ctrl.Type {
 			case model.CtrlVolume:
-				val, min, max := normalizeVol(ctrl)
-				pbInstrument.Volume = &pb.BaseControl{Key: ctrl.Key, Name: ctrl.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
+				pbInstrument.Volume = &pb.BaseControl{Key: ctrl.Key, Name: ctrl.Name, Value: roundFloat(float64(val), 3), Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 			case model.CtrlPan:
-				val, min, max := normalizePan(ctrl)
-				pbInstrument.Pan = &pb.BaseControl{Key: ctrl.Key, Name: ctrl.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
+				pbInstrument.Pan = &pb.BaseControl{Key: ctrl.Key, Name: ctrl.Name, Value: roundFloat(float64(val), 3), Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 			default:
 				// Convert other controls to tunes
 				tune := &pb.FX{
@@ -181,10 +177,9 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 						Key:   ctrl.Key,
 						Name:  ctrl.Name,
 						Type:  pb.FXParamType_FX_PARAM_TYPE_RANGE,
-						Value: float64(ctrl.Value),
-						// TODO: detect class of contol: midiCC or sendFX. For midiCC set min and max as const 0 and 127
-						Min: makeFloat64Ptr(0),
-						Max: makeFloat64Ptr(127),
+						Value: roundFloat(float64(val), 3),
+						Min:   makeFloat64Ptr(min),
+						Max:   makeFloat64Ptr(max),
 					}},
 				}
 				pbInstrument.Tunes = append(pbInstrument.Tunes, tune)
@@ -198,13 +193,12 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 				Name: layer.Name,
 			}
 			for ctrl := range layer.GetControls() {
+				val, min, max := ctrl.GetNormalizedValue()
 				switch ctrl.Type {
 				case model.CtrlVolume:
-					val, min, max := normalizeVol(ctrl)
-					pbLayer.Volume = &pb.BaseControl{Key: ctrl.Key, Name: ctrl.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
+					pbLayer.Volume = &pb.BaseControl{Key: ctrl.Key, Name: ctrl.Name, Value: roundFloat(float64(val), 3), Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 				case model.CtrlPan:
-					val, min, max := normalizePan(ctrl)
-					pbLayer.Pan = &pb.BaseControl{Key: ctrl.Key, Name: ctrl.Name, Value: val, Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
+					pbLayer.Pan = &pb.BaseControl{Key: ctrl.Key, Name: ctrl.Name, Value: roundFloat(float64(val), 3), Min: makeFloat64Ptr(min), Max: makeFloat64Ptr(max)}
 				}
 			}
 
@@ -216,25 +210,9 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 	return res
 }
 
-// TODO: move to model
-func normalizeVol(ctrl *model.PresetControl) (val float64, min float64, max float64) {
-	if ctrl.MidiCC != 0 {
-		// val from 0 to 1 with 3 decimal places
-		return roundFloat(float64(ctrl.Value/127), 3), 0, 1
-	}
-	return roundFloat(float64(ctrl.Value), 3), 0, 1
-}
-
-// TODO: move to model
-func normalizePan(ctrl *model.PresetControl) (val float64, min float64, max float64) {
-	if ctrl.MidiCC != 0 {
-		return roundFloat(float64((ctrl.Value*2/127)-1), 3), -1, 1
-	}
-	return roundFloat(float64(ctrl.Value), 3), -1, 1
-}
-
-func makeFloat64Ptr(v float64) *float64 {
-	return &v
+func makeFloat64Ptr(v float32) *float64 {
+	res := float64(v)
+	return &res
 }
 
 func roundFloat(val float64, precision uint) float64 {

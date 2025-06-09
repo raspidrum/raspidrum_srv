@@ -299,7 +299,7 @@ func (c *PresetChannel) HandleControlValue(channelKey string, control *PresetCon
 		if len(control.linkedTo) > 0 {
 			for _, instr := range c.instruments {
 				if ictrl, ok := instr.Controls.FindControlByType(control.Type); ok {
-					err := csetter.SendChannelMidiCC(c.Key, ictrl.MidiCC, control.Value*ictrl.Value)
+					err := csetter.SendChannelMidiCC(c.Key, ictrl.MidiCC, roundFloat(control.Value*ictrl.Value, 0))
 					if err != nil {
 						return err
 					}
@@ -337,14 +337,14 @@ func (p *PresetInstrument) HandleControlValue(channelKey string, control *Preset
 	slog.Debug("HandleControlValue", "control", control, "value", value)
 	control.Value = value
 	if control.MidiCC != 0 {
-		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value)
+		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, roundFloat(control.Value, 0))
 	} else {
 		if (control.Type == CtrlVolume || control.Type == CtrlPan) && len(control.linkedTo) > 0 {
 			// do control via layers controls
 			for _, lr := range p.Layers {
 				if lctrl, ok := lr.Controls.FindControlByType(control.Type); ok {
 					// don't call layer HandleControlValue, because it store layer control value. It's not needed
-					err := csetter.SendChannelMidiCC(channelKey, lctrl.MidiCC, control.Value*lctrl.Value)
+					err := csetter.SendChannelMidiCC(channelKey, lctrl.MidiCC, roundFloat(control.Value*lctrl.Value, 0))
 					if err != nil {
 						return err
 					}
@@ -381,7 +381,7 @@ func (p *PresetLayer) HandleControlValue(channelKey string, control *PresetContr
 	}
 	control.Value = value
 	if control.MidiCC != 0 {
-		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value*instrCorr)
+		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, roundFloat(control.Value*instrCorr, 0))
 	}
 	return nil
 }

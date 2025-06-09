@@ -126,7 +126,7 @@ func Test_SetControlValue(t *testing.T) {
 				{
 					VolumeCall: false,
 					MidiCCCall: true,
-					Value:      0.95,
+					Value:      121.0,
 					MidiCC:     30,
 					ChannelKey: "ch1",
 				},
@@ -147,7 +147,7 @@ func Test_SetControlValue(t *testing.T) {
 				{
 					VolumeCall: false,
 					MidiCCCall: true,
-					Value:      0.54,
+					Value:      98.0,
 					MidiCC:     10,
 					ChannelKey: "ch1",
 				},
@@ -186,7 +186,7 @@ func Test_SetControlValue(t *testing.T) {
 				{
 					VolumeCall: false,
 					MidiCCCall: true,
-					Value:      0.75,
+					Value:      95,
 					MidiCC:     11,
 					ChannelKey: "ch1",
 				},
@@ -207,7 +207,7 @@ func Test_SetControlValue(t *testing.T) {
 				{
 					VolumeCall: false,
 					MidiCCCall: true,
-					Value:      0.75,
+					Value:      95,
 					MidiCC:     16,
 					ChannelKey: "ch1",
 				},
@@ -249,11 +249,11 @@ func Test_SetControlValue(t *testing.T) {
 				},
 			},
 			controlKey: "i0bellvolume",
-			value:      100,
+			value:      1.0,
 			wants: []callParam{
 				{
 					MidiCCCall: true,
-					Value:      95,
+					Value:      121,
 					MidiCC:     104,
 					ChannelKey: "ch1",
 				},

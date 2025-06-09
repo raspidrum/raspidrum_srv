@@ -1,5 +1,7 @@
 package model
 
+import "math"
+
 // PresetControl.Type values MUST match one of the ControlType values
 type ControlType int
 
@@ -74,5 +76,52 @@ func (c ControlMap) FindControlByType(t string) (*PresetControl, bool) {
 }
 
 func (c *PresetControl) SetValue(value float32, channelKey string, csetter SamplerControlSetter) error {
-	return c.owner.HandleControlValue(channelKey, c, value, csetter)
+	var val float32
+	if c.Type == CtrlPan {
+		val = c.denormalizePan(value)
+	} else {
+		val = c.denormalizeBase(value)
+	}
+	return c.owner.HandleControlValue(channelKey, c, val, csetter)
+}
+
+func (c *PresetControl) GetNormalizedValue() (val float32, min float32, max float32) {
+	if c.Type == CtrlPan {
+		return c.normalizePan()
+	}
+	return c.normalizeBase()
+}
+
+func (ctrl *PresetControl) normalizeBase() (val float32, min float32, max float32) {
+	if ctrl.MidiCC != 0 {
+		// val from 0 to 1 with 3 decimal places
+		return roundFloat(float32(ctrl.Value/127), 3), 0, 1
+	}
+	return roundFloat(float32(ctrl.Value), 3), 0, 1
+}
+
+func (ctrl *PresetControl) denormalizeBase(val float32) float32 {
+	if ctrl.MidiCC != 0 {
+		return roundFloat(float32(val*127), 0)
+	}
+	return roundFloat(val, 3)
+}
+
+func (ctrl *PresetControl) normalizePan() (val float32, min float32, max float32) {
+	if ctrl.MidiCC != 0 {
+		return roundFloat(float32((ctrl.Value*2/127)-1), 3), -1, 1
+	}
+	return roundFloat(float32(ctrl.Value), 3), -1, 1
+}
+
+func (ctrl *PresetControl) denormalizePan(val float32) float32 {
+	if ctrl.MidiCC != 0 {
+		return roundFloat(float32((val+1)*127/2), 0)
+	}
+	return roundFloat(val, 3)
+}
+
+func roundFloat(val float32, precision uint) float32 {
+	ratio := math.Pow(10, float64(precision))
+	return float32(math.Round(float64(val)*ratio) / ratio)
 }
