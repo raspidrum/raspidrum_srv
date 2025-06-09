@@ -1,30 +1,77 @@
 package model
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+type callParam struct {
+	VolumeCall bool
+	MidiCCCall bool
+	Value      float32
+	MidiCC     int
+	ChannelKey string
+}
 
 // MockSamplerControlSetter implements SamplerControlSetter interface for testing
 type MockSamplerControlSetter struct {
-	volumeCalled bool
-	midiCCCalled bool
-	volumeValue  float32
-	midiCCValue  float32
-	midiCC       int
-	channelKey   string
+	CallParams []callParam
 }
 
 func (m *MockSamplerControlSetter) SetChannelVolume(channelKey string, value float32) error {
-	m.volumeCalled = true
-	m.volumeValue = value
-	m.channelKey = channelKey
+	prm := callParam{
+		VolumeCall: true,
+		Value:      value,
+		ChannelKey: channelKey,
+	}
+	m.CallParams = append(m.CallParams, prm)
 	return nil
 }
 
 func (m *MockSamplerControlSetter) SendChannelMidiCC(channelKey string, cc int, value float32) error {
-	m.midiCCCalled = true
-	m.midiCCValue = value
-	m.midiCC = cc
-	m.channelKey = channelKey
+	prm := callParam{
+		MidiCCCall: true,
+		Value:      value,
+		MidiCC:     cc,
+		ChannelKey: channelKey,
+	}
+	m.CallParams = append(m.CallParams, prm)
 	return nil
+}
+
+func (m *MockSamplerControlSetter) Compare(t *testing.T, wants []callParam) {
+	wl := len(wants)
+	if len(m.CallParams) != wl {
+		if diff := cmp.Diff(wants, m.CallParams); diff != "" {
+			t.Errorf("callParams mismatch (-want +got):\n%s", diff)
+		}
+		return
+	}
+	// if len > 1 then compare by midiCC
+	if wl > 1 {
+		for _, prm := range wants {
+			// find callParam with same midiCC
+			foundIdx := -1
+			for ci, cprm := range m.CallParams {
+				if cprm.MidiCC == prm.MidiCC {
+					foundIdx = ci
+					break
+				}
+			}
+			if foundIdx == -1 {
+				t.Errorf("callParam with midiCC = %v not found", prm.MidiCC)
+			} else {
+				if diff := cmp.Diff(prm, m.CallParams[foundIdx]); diff != "" {
+					t.Errorf("callParam mismatch (-want +got):\n%s", diff)
+				}
+			}
+		}
+	} else {
+		if diff := cmp.Diff(wants[0], m.CallParams[0]); diff != "" {
+			t.Errorf("callParam mismatch (-want +got):\n%s", diff)
+		}
+	}
 }
 
 // Test doesn't handle case: use instrument control instead of channel control:
@@ -36,17 +83,13 @@ func Test_SetControlValue(t *testing.T) {
 		mididevs []MIDIDevice
 	}
 	type testCase struct {
-		name           string
-		testData       string
-		args           args
-		controlKey     string
-		value          float32
-		wantVolumeCall bool
-		wantMidiCCCall bool
-		wantValue      float32
-		wantMidiCC     int
-		wantChannelKey string
-		wantErr        bool
+		name       string
+		testData   string
+		args       args
+		controlKey string
+		value      float32
+		wants      []callParam
+		wantErr    bool
 	}
 	tests := []testCase{
 		{
@@ -57,13 +100,17 @@ func Test_SetControlValue(t *testing.T) {
 					&MockMMIDIDevice{},
 				},
 			},
-			controlKey:     "c0volume",
-			value:          0.75,
-			wantVolumeCall: true,
-			wantMidiCCCall: false,
-			wantValue:      0.75,
-			wantChannelKey: "ch1",
-			wantErr:        false,
+			controlKey: "c0volume",
+			value:      0.75,
+			wants: []callParam{
+				{
+					VolumeCall: true,
+					MidiCCCall: false,
+					Value:      0.75,
+					ChannelKey: "ch1",
+				},
+			},
+			wantErr: false,
 		},
 		{
 			name:     "set instrument volume with MIDI CC",
@@ -73,14 +120,18 @@ func Test_SetControlValue(t *testing.T) {
 					&MockMMIDIDevice{},
 				},
 			},
-			controlKey:     "i0volume",
-			value:          0.95,
-			wantVolumeCall: false,
-			wantMidiCCCall: true,
-			wantValue:      0.95,
-			wantMidiCC:     30,
-			wantChannelKey: "ch1",
-			wantErr:        false,
+			controlKey: "i0volume",
+			value:      0.95,
+			wants: []callParam{
+				{
+					VolumeCall: false,
+					MidiCCCall: true,
+					Value:      0.95,
+					MidiCC:     30,
+					ChannelKey: "ch1",
+				},
+			},
+			wantErr: false,
 		},
 		{
 			name:     "set instrument pan with MIDI CC",
@@ -90,14 +141,18 @@ func Test_SetControlValue(t *testing.T) {
 					&MockMMIDIDevice{},
 				},
 			},
-			controlKey:     "i0pan",
-			value:          0.54,
-			wantVolumeCall: false,
-			wantMidiCCCall: true,
-			wantValue:      0.54,
-			wantMidiCC:     10,
-			wantChannelKey: "ch1",
-			wantErr:        false,
+			controlKey: "i0pan",
+			value:      0.54,
+			wants: []callParam{
+				{
+					VolumeCall: false,
+					MidiCCCall: true,
+					Value:      0.54,
+					MidiCC:     10,
+					ChannelKey: "ch1",
+				},
+			},
+			wantErr: false,
 		},
 		{
 			name:     "set non-existent control",
@@ -107,28 +162,15 @@ func Test_SetControlValue(t *testing.T) {
 					&MockMMIDIDevice{},
 				},
 			},
-			controlKey:     "nonexistent",
-			value:          0.5,
-			wantVolumeCall: false,
-			wantMidiCCCall: false,
-			wantErr:        true,
-		},
-		{
-			name:     "set layers volume with MIDI CC",
-			testData: "single instr_with_layers.yaml",
-			args: args{
-				mididevs: []MIDIDevice{
-					&MockMMIDIDevice{},
+			controlKey: "nonexistent",
+			value:      0.5,
+			wants: []callParam{
+				{
+					VolumeCall: false,
+					MidiCCCall: false,
 				},
 			},
-			controlKey:     "i0l0volume",
-			value:          0.95,
-			wantVolumeCall: false,
-			wantMidiCCCall: true,
-			wantValue:      0.95,
-			wantMidiCC:     104,
-			wantChannelKey: "ch1",
-			wantErr:        false,
+			wantErr: true,
 		},
 		{
 			name:     "set pitch (tunes) control in instrument",
@@ -138,14 +180,18 @@ func Test_SetControlValue(t *testing.T) {
 					&MockMMIDIDevice{},
 				},
 			},
-			controlKey:     "i0pitch",
-			value:          0.75,
-			wantVolumeCall: false,
-			wantMidiCCCall: true,
-			wantValue:      0.75,
-			wantMidiCC:     11,
-			wantChannelKey: "ch1",
-			wantErr:        false,
+			controlKey: "i0pitch",
+			value:      0.75,
+			wants: []callParam{
+				{
+					VolumeCall: false,
+					MidiCCCall: true,
+					Value:      0.75,
+					MidiCC:     11,
+					ChannelKey: "ch1",
+				},
+			},
+			wantErr: false,
 		},
 		{
 			name:     "set pitch (tunes) control in layer",
@@ -155,17 +201,91 @@ func Test_SetControlValue(t *testing.T) {
 					&MockMMIDIDevice{},
 				},
 			},
-			controlKey:     "i0l0pitch",
-			value:          0.75,
-			wantVolumeCall: false,
-			wantMidiCCCall: true,
-			wantValue:      0.75,
-			wantMidiCC:     16,
-			wantChannelKey: "ch1",
-			wantErr:        false,
+			controlKey: "i0bellpitch",
+			value:      0.75,
+			wants: []callParam{
+				{
+					VolumeCall: false,
+					MidiCCCall: true,
+					Value:      0.75,
+					MidiCC:     16,
+					ChannelKey: "ch1",
+				},
+			},
+			wantErr: false,
 		},
-		// TODO: test instrument virtual vol and pan controls
-		// TODO: test channel pan (two_instruments.yaml)
+		{
+			name:     "set instrument virtual vol",
+			testData: "single instr_with_layers.yaml",
+			args: args{
+				mididevs: []MIDIDevice{
+					&MockMMIDIDevice{},
+				},
+			},
+			controlKey: "i0volume",
+			value:      0.5,
+			wants: []callParam{
+				{
+					MidiCCCall: true,
+					Value:      40,
+					MidiCC:     104,
+					ChannelKey: "ch1",
+				},
+				{
+					MidiCCCall: true,
+					Value:      45,
+					MidiCC:     103,
+					ChannelKey: "ch1",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:     "set layer vol with instrument correction",
+			testData: "single instr_with_layers.yaml",
+			args: args{
+				mididevs: []MIDIDevice{
+					&MockMMIDIDevice{},
+				},
+			},
+			controlKey: "i0bellvolume",
+			value:      100,
+			wants: []callParam{
+				{
+					MidiCCCall: true,
+					Value:      95,
+					MidiCC:     104,
+					ChannelKey: "ch1",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:     "set channel virtual pan",
+			testData: "two_instruments_channel_virtual_pan.yaml",
+			args: args{
+				mididevs: []MIDIDevice{
+					&MockMMIDIDevice{},
+				},
+			},
+			controlKey: "c0pan",
+			value:      0.50,
+			wants: []callParam{
+				{
+					MidiCCCall: true,
+					Value:      27,
+					MidiCC:     10,
+					ChannelKey: "ch1",
+				},
+				{
+					MidiCCCall: true,
+					Value:      43,
+					MidiCC:     11,
+					ChannelKey: "ch1",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -195,31 +315,8 @@ func Test_SetControlValue(t *testing.T) {
 				return
 			}
 
-			// Verify volume call
-			if mockSetter.volumeCalled != tt.wantVolumeCall {
-				t.Errorf("SetChannelVolume called = %v, want %v", mockSetter.volumeCalled, tt.wantVolumeCall)
-			}
-			if tt.wantVolumeCall && mockSetter.volumeValue != tt.wantValue {
-				t.Errorf("SetChannelVolume value = %v, want %v", mockSetter.volumeValue, tt.wantValue)
-			}
+			mockSetter.Compare(t, tt.wants)
 
-			// Verify MIDI CC call
-			if mockSetter.midiCCCalled != tt.wantMidiCCCall {
-				t.Errorf("SendChannelMidiCC called = %v, want %v", mockSetter.midiCCCalled, tt.wantMidiCCCall)
-			}
-			if tt.wantMidiCCCall {
-				if mockSetter.midiCCValue != tt.wantValue {
-					t.Errorf("SendChannelMidiCC value = %v, want %v", mockSetter.midiCCValue, tt.wantValue)
-				}
-				if mockSetter.midiCC != tt.wantMidiCC {
-					t.Errorf("SendChannelMidiCC cc = %v, want %v", mockSetter.midiCC, tt.wantMidiCC)
-				}
-			}
-
-			// Verify channel key
-			if mockSetter.channelKey != tt.wantChannelKey {
-				t.Errorf("channel key = %v, want %v", mockSetter.channelKey, tt.wantChannelKey)
-			}
 		})
 	}
 }

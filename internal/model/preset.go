@@ -144,8 +144,6 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 					}
 				}
 			}
-			// TODO: pan always linked to instrument pan.
-			// In case many instruments in channel pan is virtual and linked with pan of all instruments in channel
 			// In case one instrument in channel pan regulated in instrument
 			if ctrl.Type == CtrlPan {
 				hasPan = true
@@ -155,22 +153,41 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 			ctrl.Key = key
 			p.controls[key] = controlRef{channel: ch, control: ctrl}
 		}
-		if !hasPan && instrCount == 1 {
-			// add control for pan linked to instrument pan if not exists in channel controls
-			if ictrl, ok := ch.instruments[0].Controls.FindControlByType(CtrlPan); ok {
-				if ictrl.MidiCC != 0 {
-					ctrl := &PresetControl{
-						Name:  ictrl.Name,
-						Type:  ictrl.Type,
-						owner: ch,
+		if !hasPan {
+			if instrCount == 1 {
+				// add control for pan linked to instrument pan if not exists in channel controls
+				if ictrl, ok := ch.instruments[0].Controls.FindControlByType(CtrlPan); ok {
+					if ictrl.MidiCC != 0 {
+						ctrl := &PresetControl{
+							Name:  ictrl.Name,
+							Type:  ictrl.Type,
+							owner: ch,
+						}
+						key := fmt.Sprintf("c%d%s", channelIdx, CtrlPan)
+						ctrl.Key = key
+						ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
+						ictrl.linkedWith = ctrl
+						ch.Controls[CtrlPan] = ctrl
+						p.controls[key] = controlRef{channel: ch, control: ctrl}
 					}
-					key := fmt.Sprintf("c%d%s", channelIdx, CtrlPan)
-					ctrl.Key = key
-					ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
-					ictrl.linkedWith = ctrl
-					ch.Controls[CtrlPan] = ctrl
-					p.controls[key] = controlRef{channel: ch, control: ctrl}
 				}
+			} else {
+				// In case many instruments in channel pan is virtual and linked with pan of all instruments in channel
+				ctrl := &PresetControl{
+					Name:  "Pan",
+					Type:  CtrlPan,
+					owner: ch,
+				}
+				key := fmt.Sprintf("c%d%s", channelIdx, CtrlPan)
+				ctrl.Key = key
+				for _, instr := range ch.instruments {
+					if ictrl, ok := instr.Controls.FindControlByType(CtrlPan); ok {
+						ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
+						ictrl.linkedWith = ctrl
+					}
+				}
+				ch.Controls[CtrlPan] = ctrl
+				p.controls[key] = controlRef{channel: ch, control: ctrl}
 			}
 		}
 		channelIdx++
@@ -216,7 +233,6 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 			p.controls[key] = controlRef{channel: ch, control: ctrl}
 		}
 
-		layerIdx := 0
 		for lkey, lv := range instr.Layers {
 			if len(lv.MidiKey) > 0 {
 				mkeyid, err := MapMidiKey(lv.MidiKey, mididevs)
@@ -240,12 +256,11 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 				ctrl.CfgKey = ictrl.CfgKey
 				ctrl.owner = &lv
 				// Index layer controls
-				key := fmt.Sprintf("i%dl%d%s", instrumentIdx, layerIdx, k)
+				key := fmt.Sprintf("i%d%s%s", instrumentIdx, lkey, k)
 				ctrl.Key = key
 				p.controls[key] = controlRef{channel: ch, control: ctrl}
 			}
 			instr.Layers[lkey] = lv
-			layerIdx++
 		}
 		instrumentIdx++
 	}
@@ -278,7 +293,20 @@ func (c *PresetChannel) HandleControlValue(channelKey string, control *PresetCon
 			return csetter.SendChannelMidiCC(c.Key, control.MidiCC, control.Value)
 		}
 	}
-	// TODO: do pan control via instruments controls
+	// do pan control via instruments controls
+	if control.Type == CtrlPan {
+		control.Value = value
+		if len(control.linkedTo) > 0 {
+			for _, instr := range c.instruments {
+				if ictrl, ok := instr.Controls.FindControlByType(control.Type); ok {
+					err := csetter.SendChannelMidiCC(c.Key, ictrl.MidiCC, control.Value*ictrl.Value)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -312,7 +340,17 @@ func (p *PresetInstrument) HandleControlValue(channelKey string, control *Preset
 		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value)
 	} else {
 		if (control.Type == CtrlVolume || control.Type == CtrlPan) && len(control.linkedTo) > 0 {
-			// TODO: do control via layers controls
+			// do control via layers controls
+			for _, lr := range p.Layers {
+				if lctrl, ok := lr.Controls.FindControlByType(control.Type); ok {
+					// don't call layer HandleControlValue, because it store layer control value. It's not needed
+					err := csetter.SendChannelMidiCC(channelKey, lctrl.MidiCC, control.Value*lctrl.Value)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			return nil
 		}
 	}
 	return nil
@@ -334,12 +372,16 @@ func (c *PresetInstrument) GetControls() func(func(*PresetControl) bool) {
 
 func (p *PresetLayer) HandleControlValue(channelKey string, control *PresetControl, value float32, csetter SamplerControlSetter) error {
 	slog.Debug("HandleControlValue", "control", control, "value", value)
+	instrCorr := float32(1.0)
 	if control.Type == CtrlVolume || control.Type == CtrlPan {
-		// TODO: получить корректировку от инструмента
+		// get instrument correction value
+		if control.linkedWith != nil {
+			instrCorr = control.linkedWith.Value
+		}
 	}
 	control.Value = value
 	if control.MidiCC != 0 {
-		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value)
+		return csetter.SendChannelMidiCC(channelKey, control.MidiCC, control.Value*instrCorr)
 	}
 	return nil
 }

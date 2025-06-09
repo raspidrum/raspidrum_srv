@@ -1,0 +1,57 @@
+uuid: "preset-2"
+name: "virtual pan in channel"
+channels:
+  - key: ch1
+    name: Drums
+    controls:
+      volume:
+        name: Volume
+        type: volume
+        value: 1.00
+instruments:
+  - name: Kick
+    id: 0
+    channelKey: ch1
+    midiKey: kick1
+    instrument:
+      midiKey: KEYKICK
+      controls:
+        volume: 
+          type: volume
+          key: KICKV
+        pan:
+          type: pan
+          key: KICKP
+    controls:
+      volume:
+        name: Volume
+        midiCC: 30
+        type: volume
+        value: 95
+      pan:
+        name: Pan
+        type: pan
+        midiCC: 10
+        value: 54
+  - name: Tom
+    id: 1
+    channelKey: ch1
+    midiKey: tom1
+    instrument:
+      midiKey: KEYTOM1
+      controls:
+        volume: 
+          key: TOM1V
+        pan:
+          key: TOM1P
+    controls:
+      volume:
+        name: Volume
+        midiCC: 31
+        type: volume
+        value: 87
+      pan:
+        name: Pan
+        type: pan
+        midiCC: 11
+        value: 86
