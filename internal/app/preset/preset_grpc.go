@@ -8,6 +8,7 @@ import (
 
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/spf13/afero"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -68,7 +69,7 @@ func (s *PresetServer) GetPreset(ctx context.Context, req *pb.GetPresetRequest) 
 	}, nil
 }
 
-func (s *PresetServer) SetValue(stream pb.ChannelControl_SetValueServer) error {
+func (s *PresetServer) SetValue(stream grpc.BidiStreamingServer[pb.ControlValue, pb.ControlValue]) error {
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {

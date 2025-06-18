@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"path"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
@@ -28,12 +30,16 @@ type Config struct {
 		DB      string `mapstructure:"dbRoot"`
 		Sampler string `mapstructure:"samplerRoot"`
 	} `mapstructure:"data"`
+	Log struct {
+		Level string `mapstructure:"level"`
+	} `mapstructure:"log"`
 }
 
 var cfg Config
 
 func main() {
-	cfg, err := loadConfig("./configs")
+	var err error
+	cfg, err = loadConfig("./configs")
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
@@ -41,8 +47,7 @@ func main() {
 	_, projectPath, _, _ := runtime.Caller(0)
 	projectPath = path.Join(path.Dir(projectPath), "../../")
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	setLogging()
 
 	// Initialize LinuxSampler client
 	lsClient := lscp.NewClient("localhost", "8888", "1s")
@@ -76,8 +81,13 @@ func main() {
 		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to listen: %w", err)))
 		os.Exit(1)
 	}
-	var opts []grpc.ServerOption
-	s := grpc.NewServer(opts...)
+	s := grpc.NewServer(grpc.UnaryInterceptor(grpcUnaryLoggingInterceptor), grpc.StreamInterceptor(grpcStreamLoggingInterceptor))
+
+	//cleanup, err := admin.Register(s)
+	//if err != nil {
+	//	log.Fatalf("failed to register admin: %v", err)
+	//}
+	//defer cleanup()
 
 	// Register services
 	presetServer := preset.NewPresetServer(db, sampler, fs)
@@ -91,21 +101,95 @@ func main() {
 	}
 }
 
-func loadConfig(configPath string) (*Config, error) {
+func loadConfig(configPath string) (Config, error) {
 	v := viper.New()
 	// TODO: get config name from  env variable
 	v.SetConfigName("dev")
 	v.AddConfigPath(configPath)
 	v.SetConfigType("yaml")
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.BindEnv("log.level", "SRV_LOG_LEVEL")
 
 	if err := v.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return Config{}, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	return &cfg, nil
+	return cfg, nil
+}
+
+// UnaryInterceptor for grpc logging
+func grpcUnaryLoggingInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	// logging incoming request
+	slog.Debug(
+		"gRPC request",
+		slog.String("method", info.FullMethod),
+		slog.Any("request", req),
+	)
+
+	// handle request
+	resp, err := handler(ctx, req)
+
+	// logging response
+	if err != nil {
+		slog.Error("gRPC",
+			slog.String("method", info.FullMethod),
+			slog.Any("request", req),
+			slog.Any("error", err),
+		)
+	} else {
+		slog.Debug(
+			"gRPC response",
+			slog.String("method", info.FullMethod),
+			slog.Any("response", resp),
+		)
+	}
+	return resp, err
+}
+
+// StreamInterceptor for grpc logging
+func grpcStreamLoggingInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	// logging incoming request
+	slog.Debug(
+		"gRPC request",
+		slog.String("method", info.FullMethod),
+		slog.Any("request", srv),
+	)
+
+	err := handler(srv, ss)
+
+	// logging response
+	if err != nil {
+		slog.Error("gRPC",
+			slog.String("method", info.FullMethod),
+			slog.Any("error", err),
+		)
+	} else {
+		slog.Debug(
+			"gRPC response",
+			slog.String("method", info.FullMethod),
+			slog.Any("response", srv),
+		)
+	}
+
+	return err
+}
+
+func setLogging() {
+	//logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	//slog.SetDefault(logger)
+	var level slog.Level
+	switch cfg.Log.Level {
+	case "DEBUG": level = slog.LevelDebug
+	case "INFO": level = slog.LevelInfo
+	case "WARNING": level = slog.LevelWarn 
+	case "ERROR": level = slog.LevelError
+	default: level = slog.LevelInfo
+	}
+	slog.SetLogLoggerLevel(level)
 }
