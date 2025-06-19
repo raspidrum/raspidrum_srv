@@ -397,3 +397,21 @@ func (c *PresetLayer) GetControls() func(func(*PresetControl) bool) {
 		}
 	}
 }
+
+
+func (k *KitPreset) getSamplerVolume() *PresetControl {
+	return &PresetControl{
+			Key:   "s0volume",
+			Type:  "Volume",
+			Name:  "Volume",
+			Value: 1.0,
+		}
+}
+
+func (k *KitPreset) getSamplerChannel() *PresetChannel {
+	return &PresetChannel{
+		Key: "sampler",
+		Name: "Kit",
+		Controls: ControlMap{"volume": k.getSamplerVolume()},
+	}
+}
