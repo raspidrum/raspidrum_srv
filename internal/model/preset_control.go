@@ -58,12 +58,22 @@ type PresetControl struct {
 	linkedWith *PresetControl
 }
 
-func (c ControlMap) GetControlByKey(key string) (*PresetControl, bool) {
-	ctrl, ok := c[key]
-	if !ok {
-		return nil, false
+func (c ControlMap) GetControlByType(t string) (*PresetControl, bool) {
+	for _, c := range c {
+		if t == c.Type {
+			return c, true
+		}
 	}
-	return ctrl, true
+	return nil, false
+}
+
+func (c ControlMap) GetControlByKey(key string) (*PresetControl, bool) {
+	for _, c := range c {
+		if key == c.Key {
+			return c, true
+		}
+	}
+	return nil, false
 }
 
 func (c ControlMap) FindControlByType(t string) (*PresetControl, bool) {

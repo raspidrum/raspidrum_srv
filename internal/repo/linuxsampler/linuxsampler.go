@@ -91,3 +91,7 @@ func (l *LinuxSampler) SetChannelVolume(samplerChn int, volume float32) error {
 func (l *LinuxSampler) SendMidiCC(samplerChn int, cc int, value float32) error {
 	return l.Client.SendChannelMidiData(samplerChn, "CC", cc, int(value))
 }
+
+func (l *LinuxSampler) SetGlobalVolume(volume float32) error {
+	return l.Client.SetVolume(volume)
+}

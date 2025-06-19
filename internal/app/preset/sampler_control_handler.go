@@ -3,6 +3,7 @@ package preset
 import (
 	"fmt"
 
+	"github.com/raspidrum-srv/internal/model"
 	"github.com/raspidrum-srv/internal/repo"
 )
 
@@ -26,6 +27,9 @@ func (s *SamplerControlHandler) SendChannelMidiCC(channelKey string, cc int, val
 	return s.sampler.SendMidiCC(chnlId, cc, value)
 }
 func (s *SamplerControlHandler) SetChannelVolume(channelKey string, value float32) error {
+	if channelKey == model.SamplerChannelKey {
+		return s.sampler.SetGlobalVolume(value)
+	}
 	chnlId, ok := s.samplerChannels[channelKey]
 	if !ok {
 		return fmt.Errorf("failed set channel volume. invalid channel: %s", channelKey)

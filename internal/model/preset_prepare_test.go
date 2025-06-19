@@ -41,6 +41,13 @@ func Test_PrepareToLoad(t *testing.T) {
 							"pan":    {Key: "c0pan", Name: "Pan", Type: "pan"},
 						},
 					},
+					{
+						Key:  "sampler",
+						Name: "Kit",
+						Controls: map[string]*PresetControl{
+							"volume": {Key: "s0volume", Name: "Volume", Type: "volume", Value: 1.00},
+						},
+					},
 				},
 				Instruments: []PresetInstrument{
 					{
@@ -57,6 +64,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			},
 			wantErr: false,
 			expectedControls: ExpectedControls{
+				"s0volume": {Key: "s0volume", Name: "Volume", Type: "volume", Value: 1.00},
 				"c0volume": {Key: "c0volume", Name: "Volume", Type: "volume", Value: 1.00},
 				"c0pan":    {Key: "c0pan", Name: "Pan", Type: "pan"},
 				"i0volume": {Key: "i0volume", Name: "Volume", Type: "volume", MidiCC: 30, CfgKey: "KICKV", Value: 95},
@@ -78,6 +86,13 @@ func Test_PrepareToLoad(t *testing.T) {
 						Controls: map[string]*PresetControl{
 							"volume": {Key: "c0volume", Type: "volume", Value: 0.65},
 							"pan":    {Key: "c0pan", Name: "Pan", Type: "pan"},
+						},
+					},
+					{
+						Key:  "sampler",
+						Name: "Kit",
+						Controls: map[string]*PresetControl{
+							"volume": {Key: "s0volume", Name: "Volume", Type: "volume", Value: 1.00},
 						},
 					},
 				},
@@ -113,6 +128,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			},
 			wantErr: false,
 			expectedControls: ExpectedControls{
+				"s0volume":     {Key: "s0volume", Name: "Volume", Type: "volume", Value: 1.00},
 				"c0volume":     {Key: "c0volume", Type: "volume", Value: 0.65},
 				"c0pan":        {Key: "c0pan", Name: "Pan", Type: "pan"},
 				"i0pan":        {Key: "i0pan", Name: "Pan", MidiCC: 105, CfgKey: "RI17P", Type: "pan", Value: 75},
@@ -142,6 +158,13 @@ func Test_PrepareToLoad(t *testing.T) {
 							"pan":    {Key: "c0pan", Name: "Pan", Type: "pan", Value: 0.00},
 						},
 					},
+					{
+						Key:  "sampler",
+						Name: "Kit",
+						Controls: map[string]*PresetControl{
+							"volume": {Key: "s0volume", Name: "Volume", Type: "volume", Value: 1.00},
+						},
+					},
 				},
 				Instruments: []PresetInstrument{
 					{
@@ -168,6 +191,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			},
 			wantErr: false,
 			expectedControls: ExpectedControls{
+				"s0volume": {Key: "s0volume", Name: "Volume", Type: "volume", Value: 1.00},
 				"c0volume": {Key: "c0volume", Name: "Volume", Type: "volume", Value: 1.00},
 				"c0pan":    {Key: "c0pan", Name: "Pan", Type: "pan", Value: 0.00},
 				"i0volume": {Key: "i0volume", Name: "Volume", MidiCC: 30, CfgKey: "KICKV", Type: "volume", Value: 95},
@@ -196,6 +220,13 @@ func Test_PrepareToLoad(t *testing.T) {
 							"pan":    {Key: "c0pan", Name: "Pan", Type: "pan", Value: 0.00},
 						},
 					},
+					{
+						Key:  "sampler",
+						Name: "Kit",
+						Controls: map[string]*PresetControl{
+							"volume": {Key: "s0volume", Name: "Volume", Type: "volume", Value: 1.00},
+						},
+					},
 				},
 				Instruments: []PresetInstrument{
 					{
@@ -222,6 +253,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			},
 			wantErr: false,
 			expectedControls: ExpectedControls{
+				"s0volume": {Key: "s0volume", Name: "Volume", Type: "volume", Value: 1.00},
 				"c0volume": {Key: "c0volume", Name: "Volume", Type: "volume", Value: 1.00},
 				"c0pan":    {Key: "c0pan", Name: "Pan", Type: "pan", Value: 0.00},
 				"i0volume": {Key: "i0volume", Name: "Volume", MidiCC: 30, CfgKey: "KICKV", Type: "volume", Value: 95},

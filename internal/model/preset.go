@@ -5,6 +5,9 @@ import (
 	"log/slog"
 )
 
+const SamplerChannelKey = "sampler"
+const SamplerVolumeControlKey = "s0volume"
+
 type controlRef struct {
 	channel *PresetChannel
 	control *PresetControl
@@ -63,12 +66,14 @@ type PresetLayer struct {
 	Controls   ControlMap `yaml:"controls" json:"controls"`
 }
 
+// for sampler channel return empty slice
 func (p *KitPreset) GetChannelInstrumentsByIdx(idx int) ([]*PresetInstrument, error) {
 	if idx > len(p.Channels)-1 {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	ins := p.Channels[idx].instruments
-	if len(ins) == 0 {
+	// TODO: add type to channel and check it
+	if len(ins) == 0 && p.Channels[idx].Key != SamplerChannelKey {
 		err := p.indexInstruments()
 		if err != nil {
 			return nil, err
@@ -92,11 +97,21 @@ func (p *KitPreset) GetChannelInstrumentsByKey(key string) ([]*PresetInstrument,
 	return p.GetChannelInstrumentsByIdx(idx)
 }
 
+func (p *KitPreset) GetChannelByKey(key string) *PresetChannel {
+	for _, c := range p.Channels {
+		if c.Key == key {
+			return &c
+		}
+	}
+	return nil
+}
+
 // make instrument index for each channel
 func (p *KitPreset) indexInstruments() error {
 	chnls := make(map[string]int, len(p.Channels))
 	for j, c := range p.Channels {
 		chnls[c.Key] = j
+		// clear instruments slice
 		if len(c.instruments) > 0 {
 			p.Channels[j].instruments = p.Channels[j].instruments[:0]
 		}
@@ -114,7 +129,6 @@ func (p *KitPreset) indexInstruments() error {
 
 // PrepareToLoad augments preset controls and layers with data from instrument
 func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
-	cnlsIndex := make(map[string]*PresetChannel, len(p.Channels))
 	if err := p.indexInstruments(); err != nil {
 		return err
 	}
@@ -124,75 +138,118 @@ func (p *KitPreset) PrepareToLoad(mididevs []MIDIDevice) error {
 		p.controls = make(map[string]controlRef)
 	}
 
-	// Counter for generating unique control IDs
-	channelIdx := 0
+	// Prepare controls
+	cnlsIndex := p.prepareChannels()
+	
+	// Index instruments controls
+	if err := p.prepareInstruments(cnlsIndex, mididevs); err != nil {
+		return err
+	}
+	return nil
+}
 
-	// Index channel controls
-	for i := range p.Channels {
-		ch := &p.Channels[i]
-		cnlsIndex[ch.Key] = ch
-		instrCount := len(ch.instruments)
+
+func (p *KitPreset) prepareChannels() map[string]*PresetChannel {
+	cnlsIndex := make(map[string]*PresetChannel, len(p.Channels))	
+	// Counter for generating unique control IDs
+		channelIdx := 0
 		// Index channel controls
-		var hasPan bool
-		for k, ctrl := range ch.Controls {
-			// Link instrument volume or pan control for single instrument with MIDI CC
-			if instrCount == 1 && (ctrl.Type == CtrlVolume || ctrl.Type == CtrlPan) {
-				if ictrl, ok := ch.instruments[0].Controls.FindControlByType(ctrl.Type); ok {
-					if ictrl.MidiCC != 0 {
-						ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
-						ictrl.linkedWith = ctrl
-					}
-				}
-			}
-			// In case one instrument in channel pan regulated in instrument
-			if ctrl.Type == CtrlPan {
-				hasPan = true
-			}
-			ctrl.owner = ch
-			key := fmt.Sprintf("c%d%s", channelIdx, k)
-			ctrl.Key = key
-			p.controls[key] = controlRef{channel: ch, control: ctrl}
-		}
-		if !hasPan {
-			if instrCount == 1 {
-				// add control for pan linked to instrument pan if not exists in channel controls
-				if ictrl, ok := ch.instruments[0].Controls.FindControlByType(CtrlPan); ok {
-					if ictrl.MidiCC != 0 {
-						ctrl := &PresetControl{
-							Name:  ictrl.Name,
-							Type:  ictrl.Type,
-							owner: ch,
+		for i := range p.Channels {
+			ch := &p.Channels[i]
+			cnlsIndex[ch.Key] = ch
+			instrCount := len(ch.instruments)
+			// Index channel controls
+			var hasPan bool
+			for k, ctrl := range ch.Controls {
+				// Link instrument volume or pan control for single instrument with MIDI CC
+				if instrCount == 1 && (ctrl.Type == CtrlVolume || ctrl.Type == CtrlPan) {
+					if ictrl, ok := ch.instruments[0].Controls.FindControlByType(ctrl.Type); ok {
+						if ictrl.MidiCC != 0 {
+							ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
+							ictrl.linkedWith = ctrl
 						}
-						key := fmt.Sprintf("c%d%s", channelIdx, CtrlPan)
-						ctrl.Key = key
-						ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
-						ictrl.linkedWith = ctrl
-						ch.Controls[CtrlPan] = ctrl
-						p.controls[key] = controlRef{channel: ch, control: ctrl}
 					}
 				}
-			} else {
-				// In case many instruments in channel pan is virtual and linked with pan of all instruments in channel
-				ctrl := &PresetControl{
-					Name:  "Pan",
-					Type:  CtrlPan,
-					owner: ch,
+				// In case one instrument in channel pan regulated in instrument
+				if ctrl.Type == CtrlPan {
+					hasPan = true
 				}
-				key := fmt.Sprintf("c%d%s", channelIdx, CtrlPan)
+				ctrl.owner = ch
+				key := fmt.Sprintf("c%d%s", channelIdx, k)
 				ctrl.Key = key
-				for _, instr := range ch.instruments {
-					if ictrl, ok := instr.Controls.FindControlByType(CtrlPan); ok {
-						ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
-						ictrl.linkedWith = ctrl
-					}
-				}
-				ch.Controls[CtrlPan] = ctrl
 				p.controls[key] = controlRef{channel: ch, control: ctrl}
 			}
+			if !hasPan {
+				if instrCount == 1 {
+					// add control for pan linked to instrument pan if not exists in channel controls
+					if ictrl, ok := ch.instruments[0].Controls.FindControlByType(CtrlPan); ok {
+						if ictrl.MidiCC != 0 {
+							ctrl := &PresetControl{
+								Name:  ictrl.Name,
+								Type:  ictrl.Type,
+								owner: ch,
+							}
+							key := fmt.Sprintf("c%d%s", channelIdx, CtrlPan)
+							ctrl.Key = key
+							ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
+							ictrl.linkedWith = ctrl
+							ch.Controls[CtrlPan] = ctrl
+							p.controls[key] = controlRef{channel: ch, control: ctrl}
+						}
+					}
+				} else {
+					// In case many instruments in channel pan is virtual and linked with pan of all instruments in channel
+					ctrl := &PresetControl{
+						Name:  "Pan",
+						Type:  CtrlPan,
+						owner: ch,
+					}
+					key := fmt.Sprintf("c%d%s", channelIdx, CtrlPan)
+					ctrl.Key = key
+					for _, instr := range ch.instruments {
+						if ictrl, ok := instr.Controls.FindControlByType(CtrlPan); ok {
+							ctrl.linkedTo = append(ctrl.linkedTo, ictrl)
+							ictrl.linkedWith = ctrl
+						}
+					}
+					ch.Controls[CtrlPan] = ctrl
+					p.controls[key] = controlRef{channel: ch, control: ctrl}
+				}
+			}
+			channelIdx++
 		}
-		channelIdx++
-	}
 
+		// add sampler channel
+		ch := p.getSamplerChannel()
+		p.Channels = append(p.Channels, *ch)
+		cnlsIndex[ch.Key] = ch
+		ctrl := ch.Controls[CtrlVolume]
+		p.controls[ctrl.Key] = controlRef{channel: ch, control: ctrl}
+
+		return cnlsIndex
+}
+
+func (k *KitPreset) getSamplerVolume() *PresetControl {
+	return &PresetControl{
+			Key:   SamplerVolumeControlKey,
+			Type:  CtrlVolume,
+			Name:  "Volume",
+			Value: 1.0,
+		}
+}
+
+func (k *KitPreset) getSamplerChannel() *PresetChannel {
+	res := &PresetChannel{
+		Key: SamplerChannelKey,
+		Name: "Kit",
+	}
+	ctrl := k.getSamplerVolume()
+	ctrl.owner = res
+	res.Controls = ControlMap{CtrlVolume: ctrl}
+	return res
+}
+
+func (p *KitPreset) prepareInstruments(cnlsIndex map[string]*PresetChannel, mididevs []MIDIDevice) error {
 	instrumentIdx := 0
 	for i := range p.Instruments {
 		instr := &p.Instruments[i]
@@ -395,23 +452,5 @@ func (c *PresetLayer) GetControls() func(func(*PresetControl) bool) {
 				return
 			}
 		}
-	}
-}
-
-
-func (k *KitPreset) getSamplerVolume() *PresetControl {
-	return &PresetControl{
-			Key:   "s0volume",
-			Type:  "Volume",
-			Name:  "Volume",
-			Value: 1.0,
-		}
-}
-
-func (k *KitPreset) getSamplerChannel() *PresetChannel {
-	return &PresetChannel{
-		Key: "sampler",
-		Name: "Kit",
-		Controls: ControlMap{"volume": k.getSamplerVolume()},
 	}
 }

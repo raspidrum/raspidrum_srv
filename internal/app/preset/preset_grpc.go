@@ -103,28 +103,16 @@ func convertPresetToProto(kitPreset *model.KitPreset) (*pb.Preset, error) {
 		Name: kitPreset.Name,
 	}
 
-	// Add global sampler channel first
-	samplerChannel := &pb.Channel{
-		// TODO: extract const "sampler"
-		Key:  "sampler",
-		Name: "Kit",
-		Type: pb.ChannelType_CHANNEL_TYPE_SAMPLER,
-		Volume: &pb.BaseControl{
-			Key:   "s0volume",
-			Name:  "Volume",
-			Value: 1.0,
-			Min:   makeFloat64Ptr(0),
-			Max:   makeFloat64Ptr(1),
-		},
-	}
-	pbPreset.Channels = append(pbPreset.Channels, samplerChannel)
-
 	// Convert instrument channels
 	for _, ch := range kitPreset.Channels {
 		pbChannel := &pb.Channel{
 			Key:  ch.Key,
 			Name: ch.Name,
-			Type: pb.ChannelType_CHANNEL_TYPE_INSTRUMENT,
+		}
+		if ch.Key == model.SamplerChannelKey {
+			pbChannel.Type = pb.ChannelType_CHANNEL_TYPE_SAMPLER
+		} else {
+			pbChannel.Type = pb.ChannelType_CHANNEL_TYPE_INSTRUMENT
 		}
 
 		// Get instruments in this channel
@@ -147,6 +135,11 @@ func convertPresetToProto(kitPreset *model.KitPreset) (*pb.Preset, error) {
 		pbChannel.Instruments = convertInstrumentToProto(instruments)
 
 		pbPreset.Channels = append(pbPreset.Channels, pbChannel)
+		// TODO: add order field to channel
+		// move sampler channel to the start of the list
+		if ch.Key == model.SamplerChannelKey {
+			pbPreset.Channels[0], pbPreset.Channels[len(pbPreset.Channels)-1] = pbPreset.Channels[len(pbPreset.Channels)-1], pbPreset.Channels[0]
+		}
 	}
 
 	return pbPreset, nil
@@ -207,6 +200,9 @@ func convertInstrumentToProto(instruments []*model.PresetInstrument) []*pb.Instr
 		}
 
 		res = append(res, pbInstrument)
+	}
+	if len(res) == 0 {
+		return nil
 	}
 	return res
 }

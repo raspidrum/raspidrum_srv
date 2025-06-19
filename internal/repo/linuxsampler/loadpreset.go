@@ -31,6 +31,13 @@ func (l *LinuxSampler) LoadPreset(audioDevId, midiDevId int, preset *m.KitPreset
 	if err != nil {
 		return nil, fmt.Errorf("failed load instrument config and samples to sampler: %w", err)
 	}
+	// set sampler volume
+	chnl := preset.GetChannelByKey(m.SamplerChannelKey)
+	if chnl != nil {
+		if ctrl, ok := chnl.Controls.GetControlByKey(m.SamplerVolumeControlKey); ok {
+			l.SetGlobalVolume(ctrl.Value)
+		}
+	}
 	return chnls, nil
 }
 
@@ -94,6 +101,10 @@ func (l *LinuxSampler) genPresetFiles(preset *m.KitPreset, fs afero.Fs) (map[str
 
 	// write channel files
 	for k, v := range chnlFiles {
+		// skip empty channels. Channel for sampler (global volume) doesn't have instruments and not needed to load
+		if len(v) == 0 {
+			continue
+		}
 		chnlName := "channel_" + k
 		fname := path.Join(presetDir, fmt.Sprintf("%s.sfz", chnlName))
 		cont := []string{}
@@ -140,6 +151,10 @@ func (l *LinuxSampler) loadToSampler(audDevId, midiDevId int, preset *m.KitPrese
 
 	//loading instruments
 	for _, cv := range preset.Channels {
+		// skip sampler channel
+		if cv.Key == m.SamplerChannelKey {
+			continue
+		}
 		// create channel
 		chnlId, err := l.CreateChannel(audDevId, midiDevId)
 		if err != nil {
