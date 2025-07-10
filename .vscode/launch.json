@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Server debug",
+      "name": "Srv debug",
       "type": "go",
       "request": "launch",
       "mode": "auto",
@@ -16,7 +16,7 @@
       "buildFlags": ""
     },
     {
-      "name": "Server",
+      "name": "Srv",
       "type": "go",
       "request": "launch",
       "mode": "auto",
@@ -27,6 +27,35 @@
       },
       "args": [], // Аргументы командной строки
       "buildFlags": ""
+    },
+    {
+      "name": "Srv RPi debug",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "/opt/raspidrum/raspidrum",
+      "port": 2345,
+      "host": "${input:rpiHost}",
+      "preLaunchTask": "srv: debug on RPi",
+      "postDebugTask": "srv: stop debug on RPi"
+    },
+    {
+      "name": "Srv RPi attach",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "/opt/raspidrum/raspidrum",
+      "port": 2345,
+      "host": "${input:rpiHost}",
+      "apiVersion": 2
     }
+  ],
+  "inputs": [
+    {
+      "id": "rpiHost",
+      "description": "Raspberry Pi IP address",
+      "default": "raspidrum-aabf.local",
+      "type": "promptString"
+      }
   ]
 }

@@ -1,6 +1,6 @@
 module github.com/raspidrum-srv
 
-go 1.24.1
+go 1.24.4
 
 require (
 	github.com/goccy/go-yaml v1.17.1
