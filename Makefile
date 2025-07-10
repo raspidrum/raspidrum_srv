@@ -12,32 +12,80 @@ SRC_CFG_DIR=configs
 BOLD=\033[1m
 REGULAR=\033[0m
 
-.PHONY: build build-debug deploy deploy-full clean start-service stop-service restart-service status-service enable-service disable-service start-debug debug-remote stop-debug test-connection logs logs-tail update-service help
+.PHONY: build build-debug clean prepare-builder
+
+prepare-builder:
+	docker buildx build \
+		--cache-from type=local,src=/tmp/buildkit-cache \
+  	--cache-to type=local,dest=/tmp/buildkit-cache,mode=max \
+		--file build.Dockerfile \
+		--output type=docker \
+		-t raspidrum-builder .
 
 # Build for Raspberry Pi
-build:
+build: prepare-builder
 	@echo "Building for Raspberry Pi ARM64... (without debug info)"
 	@mkdir -p build
-	CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/$(APP_NAME) $(SRC_DIR)
+	docker run --rm \
+		--platform linux/arm64 \
+		--mount type=bind,src=.,dst=/src \
+	  -v /tmp/buildkit-cache:/root/.cache/go-build \
+	  -v /tmp/buildkit-cache:/go/pkg/mod \
+	  --name raspidrum-builder \
+	  raspidrum-builder \
+	 	go build -ldflags="-s -w" -o ./build/$(APP_NAME) ./$(SRC_DIR)
 
 # Build debug version
-build-debug:
+build-debug: prepare-builder
 	@echo "Building debug version for Raspberry Pi ARM64..."
 	@mkdir -p build
-	CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -gcflags "all=-N -l" -o build/$(APP_NAME) $(SRC_DIR)
+	docker run --rm \
+		--platform linux/arm64 \
+		--mount type=bind,src=.,dst=/src \
+	  -v /tmp/buildkit-cache:/root/.cache/go-build \
+	  -v /tmp/buildkit-cache:/go/pkg/mod \
+	  --name raspidrum-builder \
+	  raspidrum-builder \
+	  go build -gcflags "all=-N -l" -o ./build/$(APP_NAME) ./$(SRC_DIR)
 
+# Clean build files
+clean:
+	@echo "Cleaning build directory..."
+	rm -rf build
+
+
+.PHONY: deploy deploy-full
 deploy:
 	@echo "Deploying to Raspberry Pi..."
 	ssh $(RD_USER)@$(RD_HOST) "mkdir -p $(APP_PATH)"
 	scp -r $(SRC_CFG_DIR) build/$(APP_NAME) $(RD_USER)@$(RD_HOST):$(APP_PATH)/
 	ssh $(RD_USER)@$(RD_HOST) "chmod +x $(APP_PATH)/$(APP_NAME)"
 
-deploy-full: build-debug
+deploy-full:
 	@echo "Deploying to Raspberry Pi..."
 	ssh $(RD_USER)@$(RD_HOST) "mkdir -p $(APP_PATH)"
 	scp -r $(SRC_DB_DIR) $(SRC_CFG_DIR) build/$(APP_NAME) $(RD_USER)@$(RD_HOST):$(APP_PATH)/
 	ssh $(RD_USER)@$(RD_HOST) "chmod +x $(APP_PATH)/$(APP_NAME)"
 
+.PHONY: start-debug debug-remote stop-debug
+# Start remote debugging
+debug-remote: build-debug deploy start-debug
+
+start-debug:
+	@echo "Starting remote debugger..."
+	ssh $(RD_USER)@$(RD_HOST) "cd $(APP_PATH) && ~/go/bin/dlv exec --headless --listen=:2345 --api-version=2 --accept-multiclient ./$(APP_NAME)" &
+	@echo "Debugger started on $(RD_HOST):2345"
+	@echo "Connect via VS Code or run: dlv connect $(RD_HOST):2345"
+
+# Stop debugger
+stop-debug:
+	@echo "Stopping remote debugger..."
+	ssh $(RD_USER)@$(RD_HOST) "pkill -f dlv" || true
+
+
+
+
+.PHONY: start-service stop-service restart-service status-service enable-service disable-service update-service
 # Install service
 install-service:
 	@echo "Deploying service $(APP_NAME) on $(RD_USER)@$(RD_HOST)..."
@@ -88,26 +136,12 @@ disable-service:
 	@echo "Disabling $(APP_NAME) service auto-start..."
 	ssh $(RD_USER)@$(RD_HOST) "sudo systemctl disable $(APP_NAME)"
 
-# Start remote debugging
-debug-remote: deploy start-debug
-
-start-debug:
-	@echo "Starting remote debugger..."
-	ssh $(RD_USER)@$(RD_HOST) "cd $(APP_PATH) && ~/go/bin/dlv exec --headless --listen=:2345 --api-version=2 --accept-multiclient ./$(APP_NAME)" &
-	@echo "Debugger started on $(RD_HOST):2345"
-	@echo "Connect via VS Code or run: dlv connect $(RD_HOST):2345"
-
-# Stop debugger
-stop-debug:
-	@echo "Stopping remote debugger..."
-	ssh $(RD_USER)@$(RD_HOST) "pkill -f dlv" || true
-
-# Clean build files
-clean:
-	@echo "Cleaning build directory..."
-	rm -rf build
+# Update and restart service (for quick updates)
+update-service: stop-service deploy start-service
+	@echo "Service updated and restarted"
 
 
+.PHONY: test-connection logs logs-tail
 # Test connection to Raspberry Pi
 test-connection:
 	@echo "Testing connection to Raspberry Pi..."
@@ -121,10 +155,24 @@ logs-tail:
 	@echo "Showing last 50 lines of $(APP_NAME) service logs..."
 	ssh $(RD_USER)@$(RD_HOST) "sudo journalctl -n 50 -u $(APP_NAME)"
 
-# Update and restart service (for quick updates)
-update-service: stop-service deploy start-service
-	@echo "Service updated and restarted"
 
+# Build release
+PACKAGE_NAME          := github.com/raspidrum-srv
+GOLANG_CROSS_VERSION  ?= v1.21.5
+
+.PHONY: release-it
+release-it:
+	@docker run \
+		--rm \
+		-e CGO_ENABLED=1 \
+		-e GOPROXY="direct" \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/$(PACKAGE_NAME) \
+		-w /go/src/$(PACKAGE_NAME) \
+		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+		--clean --skip=validate --skip=publish --snapshot
+
+.PHONY: help
 # Show help
 help:
 	@echo "Usage: make <target>"
@@ -133,6 +181,7 @@ help:
 	@echo "  ${BOLD}build${REGULAR} - Build for Raspberry Pi ARM64"
 	@echo "  ${BOLD}build-debug${REGULAR} - Build debug version for Raspberry Pi ARM64"
 	@echo "  ${BOLD}clean${REGULAR} - Clean build files"
+	@echo "  ${BOLD}release-it${REGULAR} - Build multiplatform release and pack"
 	@echo "\n# Deploy"
 	@echo "  ${BOLD}update-service${REGULAR} - Update and restart $(APP_NAME) service"
 	@echo "  ${BOLD}deploy${REGULAR} - Deploy to Raspberry Pi"
@@ -153,50 +202,3 @@ help:
 	@echo "  ${BOLD}logs${REGULAR} - Show $(APP_NAME) service logs"
 	@echo "  ${BOLD}logs-tail${REGULAR} - Show last 50 lines of $(APP_NAME) service logs"
 
-
-PACKAGE_NAME          := github.com/raspidrum-srv
-GOLANG_CROSS_VERSION  ?= v1.21.5
-
-.PHONY: sysroot-pack
-sysroot-pack:
-	@tar cf - $(SYSROOT_DIR) -P | pv -s $[$(du -sk $(SYSROOT_DIR) | awk '{print $1}') * 1024] | pbzip2 > $(SYSROOT_ARCHIVE)
-
-.PHONY: sysroot-unpack
-sysroot-unpack:
-	@pv $(SYSROOT_ARCHIVE) | pbzip2 -cd | tar -xf -
-
-.PHONY: release-dry-run
-release-dry-run:
-	@finch run \
-		--rm \
-		-e CGO_ENABLED=1 \
-		-e GOPROXY="direct" \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v `pwd`:/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--clean --skip=validate --skip=publish --snapshot
-
-#		-v `pwd`/sysroot:/sysroot \
-
-.PHONY: docker-prepare
-
-docker-prepare:
-	docker buildx build \
-		--cache-from type=local,src=/tmp/buildkit-cache \
-  	--cache-to type=local,dest=/tmp/buildkit-cache,mode=max \
-		--file build.Dockerfile \
-		--progress=plain \
-		--output type=docker \
-		-t raspidrum-builder .
-
-
-.PHONY: docker-run
-docker-run:
-	docker run --rm \
-	  --platform linux/arm64 \
-	  --mount type=bind,src=.,dst=/src \
-	  -v /tmp/buildkit-cache:/root/.cache/go-build \
-	  -v /tmp/buildkit-cache:/go/pkg/mod \
-	  --name raspidrum-builder \
-	  raspidrum-builder
