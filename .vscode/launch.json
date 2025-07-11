@@ -40,7 +40,15 @@
       "substitutePath": [
         {
           "from": "${workspaceFolder}",
-          "to": "/opt/raspidrum"
+          "to": "/src"
+        },
+        {
+          "from": "${env:HOME}/go/pkg/mod/github.com",
+          "to": "github.com",
+        },
+        {
+          "from": "${env:HOME}/go/pkg/mod/golang.org",
+          "to": "golang.org",
         },
       ],
       "preLaunchTask": "srv: debug on RPi",
