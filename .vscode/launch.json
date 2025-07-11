@@ -31,11 +31,18 @@
     {
       "name": "Srv RPi debug",
       "type": "go",
-      "request": "attach",
-      "mode": "remote",
-      "remotePath": "/opt/raspidrum/raspidrum",
+      "debugAdapter": "dlv-dap",
+      "request": "launch",
+      "mode": "exec",
+      "program": "/opt/raspidrum/raspidrum",
       "port": 2345,
-      "host": "${input:rpiHost}",
+      "host": "raspidrum-aabf.local",
+      "substitutePath": [
+        {
+          "from": "${workspaceFolder}",
+          "to": "/opt/raspidrum"
+        },
+      ],
       "preLaunchTask": "srv: debug on RPi",
       "postDebugTask": "srv: stop debug on RPi"
     },
@@ -46,16 +53,8 @@
       "mode": "remote",
       "remotePath": "/opt/raspidrum/raspidrum",
       "port": 2345,
-      "host": "${input:rpiHost}",
+      "host": "raspidrum-aabf.local",
       "apiVersion": 2
     }
-  ],
-  "inputs": [
-    {
-      "id": "rpiHost",
-      "description": "Raspberry Pi IP address",
-      "default": "raspidrum-aabf.local",
-      "type": "promptString"
-      }
   ]
 }

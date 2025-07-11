@@ -13,3 +13,5 @@ go install github.com/go-delve/delve/cmd/dlv@latest
 # Add delve to PATH
 echo 'export PATH=$PATH:~/go/bin' >> ~/.bashrc
 source ~/.bashrc
+
+sudo apt install tmux -y

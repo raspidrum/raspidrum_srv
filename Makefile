@@ -46,7 +46,7 @@ build-debug: prepare-builder
 	  -v /tmp/buildkit-cache:/go/pkg/mod \
 	  --name raspidrum-builder \
 	  raspidrum-builder \
-	  go build -gcflags "all=-N -l" -o ./build/$(APP_NAME) ./$(SRC_DIR)
+	  go build -gcflags="all=-N -l" -o ./build/$(APP_NAME) ./$(SRC_DIR)
 
 # Clean build files
 clean:
@@ -71,9 +71,9 @@ deploy-full:
 # Start remote debugging
 debug-remote: build-debug deploy start-debug
 
-start-debug:
+start-debug: stop-debug
 	@echo "Starting remote debugger..."
-	ssh $(RD_USER)@$(RD_HOST) "cd $(APP_PATH) && ~/go/bin/dlv exec --headless --listen=:2345 --api-version=2 --accept-multiclient ./$(APP_NAME)" &
+	ssh $(RD_USER)@$(RD_HOST) "cd $(APP_PATH) && tmux new-session -d '~/go/bin/dlv dap --listen=:2345 > /tmp/dlv.log 2>&1'"
 	@echo "Debugger started on $(RD_HOST):2345"
 	@echo "Connect via VS Code or run: dlv connect $(RD_HOST):2345"
 
@@ -141,20 +141,23 @@ update-service: stop-service deploy start-service
 	@echo "Service updated and restarted"
 
 
-.PHONY: test-connection logs logs-tail
+.PHONY: test-connection service-logs service-logs-tail logs
 # Test connection to Raspberry Pi
 test-connection:
 	@echo "Testing connection to Raspberry Pi..."
 	ssh $(RD_USER)@$(RD_HOST) "echo 'Connection successful'"
 
-logs:
+service-logs:
 	@echo "Showing $(APP_NAME) service logs..."
 	ssh $(RD_USER)@$(RD_HOST) "sudo journalctl -f -u $(APP_NAME)"
 
-logs-tail:
+service-logs-tail:
 	@echo "Showing last 50 lines of $(APP_NAME) service logs..."
 	ssh $(RD_USER)@$(RD_HOST) "sudo journalctl -n 50 -u $(APP_NAME)"
 
+logs:
+	@echo "Showing $(APP_NAME) debug logs..."
+	ssh $(RD_USER)@$(RD_HOST) "tail -f /tmp/dlv.log"
 
 # Build release
 PACKAGE_NAME          := github.com/raspidrum-srv
