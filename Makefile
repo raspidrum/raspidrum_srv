@@ -1,13 +1,16 @@
+include .env_rpi
 APP_NAME=raspidrum
 RD_USER=drum
-RD_HOST=raspidrum-aabf.local
+#RD_HOST=raspidrum-aabf.local
+RD_HOST=$(RHOST)
 APP_PATH=/opt/raspidrum
 SRC_SERVICE_DIR=linux
 SERVICE_FILE=raspidrum.service
 REMOTE_SYSTEMD_DIR=/etc/systemd/system
-SRC_DIR=cmd/server/main.go
+SRC_DIR=cmd/server
 SRC_DB_DIR=db
 SRC_CFG_DIR=configs
+RD_CONFIG=$(RDRUM_CONFIG)
 
 BOLD=\033[1m
 REGULAR=\033[0m
@@ -33,7 +36,7 @@ build: prepare-builder
 	  -v /tmp/buildkit-cache:/go/pkg/mod \
 	  --name raspidrum-builder \
 	  raspidrum-builder \
-	 	go build -ldflags="-s -w" -o ./build/$(APP_NAME) ./$(SRC_DIR)
+	 	go build -ldflags="-s -w" -buildvcs=false -trimpath -o ./build/$(APP_NAME) ./$(SRC_DIR)
 
 # Build debug version
 build-debug: prepare-builder
@@ -46,7 +49,7 @@ build-debug: prepare-builder
 	  -v /tmp/buildkit-cache:/go/pkg/mod \
 	  --name raspidrum-builder \
 	  raspidrum-builder \
-	  go build -gcflags="all=-N -l" -o ./build/$(APP_NAME) ./$(SRC_DIR)
+	  go build -gcflags="all=-N -l" -buildvcs=false -trimpath -o ./build/$(APP_NAME) ./$(SRC_DIR)
 
 # Clean build files
 clean:
@@ -73,7 +76,7 @@ debug-remote: build-debug deploy start-debug
 
 start-debug: stop-debug
 	@echo "Starting remote debugger..."
-	ssh $(RD_USER)@$(RD_HOST) "cd $(APP_PATH) && tmux new-session -d '~/go/bin/dlv dap --listen=:2345 > /tmp/dlv.log 2>&1'"
+	ssh $(RD_USER)@$(RD_HOST) "cd $(APP_PATH) && tmux new-session -d 'env RDRUM_CONFIG=$(RD_CONFIG) ~/go/bin/dlv dap --listen=:2345 > /tmp/dlv.log 2>&1'"
 	@echo "Debugger started on $(RD_HOST):2345"
 	@echo "Connect via VS Code or run: dlv connect $(RD_HOST):2345"
 

@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 
 	"github.com/spf13/afero"
@@ -19,6 +18,7 @@ import (
 	"github.com/raspidrum-srv/internal/repo/db"
 	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
+	"github.com/raspidrum-srv/util"
 )
 
 type Config struct {
@@ -38,16 +38,15 @@ type Config struct {
 var cfg Config
 
 func main() {
+	setLogging()
+	
 	var err error
 	cfg, err = loadConfig("./configs")
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	_, projectPath, _, _ := runtime.Caller(0)
-	projectPath = path.Join(path.Dir(projectPath), "../../")
-
-	setLogging()
+	projectPath := util.AbsPathify(".")
 
 	// Initialize LinuxSampler client
 	lsClient := lscp.NewClient("localhost", "8888", "1s")
@@ -103,8 +102,12 @@ func main() {
 
 func loadConfig(configPath string) (Config, error) {
 	v := viper.New()
-	// TODO: get config name from  env variable
-	v.SetConfigName("dev")
+	// get config name from  env variable. default: dev
+	configName := os.Getenv("RDRUM_CONFIG")
+    if configName == "" {
+        configName = "dev"
+    }
+	v.SetConfigName(configName)
 	v.AddConfigPath(configPath)
 	v.SetConfigType("yaml")
 	v.AutomaticEnv()

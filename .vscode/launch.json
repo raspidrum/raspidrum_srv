@@ -36,11 +36,11 @@
       "mode": "exec",
       "program": "/opt/raspidrum/raspidrum",
       "port": 2345,
-      "host": "raspidrum-aabf.local",
+      "host": "192.168.2.2",
       "substitutePath": [
         {
           "from": "${workspaceFolder}",
-          "to": "/src"
+          "to": "github.com/raspidrum-srv",
         },
         {
           "from": "${env:HOME}/go/pkg/mod/github.com",
@@ -50,7 +50,12 @@
           "from": "${env:HOME}/go/pkg/mod/golang.org",
           "to": "golang.org",
         },
+        {
+          "from": "${env:HOME}/go/pkg",
+          "to": ""
+        }
       ],
+      //"preLaunchTask": "show env",
       "preLaunchTask": "srv: debug on RPi",
       "postDebugTask": "srv: stop debug on RPi"
     },

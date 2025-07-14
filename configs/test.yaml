@@ -1,0 +1,7 @@
+host:
+  addr: localhost
+  port: 50051
+
+data:
+  dbRoot: ./db
+  samplerRoot: ~/_presets

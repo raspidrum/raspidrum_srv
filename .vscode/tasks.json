@@ -53,7 +53,7 @@
 			"type": "shell",
 			"command": "make",
 			"args": [
-				"start-debug"
+				"debug-remote"
 			],
 			"group": "build",
 			"presentation": {
@@ -79,6 +79,14 @@
 				"panel": "shared",
 				"showReuseMessage": false
 			}
+		},
+		{
+			"label": "show env",
+			"type": "shell",
+			"command": "echo",
+			"args": [
+				"${env:RHOST}"
+			]
 		},
 	]
 }
