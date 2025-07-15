@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Server debug",
+      "name": "Srv debug",
       "type": "go",
       "request": "launch",
       "mode": "auto",
@@ -16,7 +16,7 @@
       "buildFlags": ""
     },
     {
-      "name": "Server",
+      "name": "Srv",
       "type": "go",
       "request": "launch",
       "mode": "auto",
@@ -27,6 +27,47 @@
       },
       "args": [], // Аргументы командной строки
       "buildFlags": ""
+    },
+    {
+      "name": "Srv RPi debug",
+      "type": "go",
+      "debugAdapter": "dlv-dap",
+      "request": "launch",
+      "mode": "exec",
+      "program": "/opt/raspidrum/raspidrum",
+      "port": 2345,
+      "host": "192.168.2.2",
+      "substitutePath": [
+        {
+          "from": "${workspaceFolder}",
+          "to": "github.com/raspidrum-srv",
+        },
+        {
+          "from": "${env:HOME}/go/pkg/mod/github.com",
+          "to": "github.com",
+        },
+        {
+          "from": "${env:HOME}/go/pkg/mod/golang.org",
+          "to": "golang.org",
+        },
+        {
+          "from": "${env:HOME}/go/pkg",
+          "to": ""
+        }
+      ],
+      //"preLaunchTask": "show env",
+      "preLaunchTask": "srv: debug on RPi",
+      "postDebugTask": "srv: stop debug on RPi"
+    },
+    {
+      "name": "Srv RPi attach",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "/opt/raspidrum/raspidrum",
+      "port": 2345,
+      "host": "raspidrum-aabf.local",
+      "apiVersion": 2
     }
   ]
 }

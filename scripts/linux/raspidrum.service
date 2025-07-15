@@ -1,0 +1,25 @@
+[Unit]
+Description=Raspidrum Service
+After=network.target sound.target
+Wants=network.target sound.target
+
+[Service]
+Type=simple
+User=drum
+Group=drum
+WorkingDirectory=/opt/raspidrum
+ExecStart=/opt/raspidrum/raspidrum
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=raspidrum
+
+# Security options
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/raspidrum
+
+[Install]
+WantedBy=multi-user.target

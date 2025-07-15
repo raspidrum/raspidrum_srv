@@ -1,0 +1,92 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "srv: build for RPi",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"build"
+			],
+			"group": "build"
+		},
+		{
+			"label": "srv: build debug for RPi",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"build-debug"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false
+			},
+			"problemMatcher": [
+				"$go"
+			]
+		},
+		{
+			"label": "srv: deploy to RPi",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"deploy"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false
+			},
+			"problemMatcher": [
+				"$go"
+			]
+		},
+		{
+			"label": "srv: debug on RPi",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"debug-remote"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false
+			}
+		},
+		{
+			"label": "srv: stop debug on RPi",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"stop-debug"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false
+			}
+		},
+		{
+			"label": "show env",
+			"type": "shell",
+			"command": "echo",
+			"args": [
+				"${env:RHOST}"
+			]
+		},
+	]
+}

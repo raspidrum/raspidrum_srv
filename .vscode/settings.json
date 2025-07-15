@@ -7,5 +7,6 @@
     "GRPC_GO_LOG_VERBOSITY_LEVEL": "99"
   },
   "editor.formatOnSave": true,
-  "editor.formatOnSaveMode": "modifications"
+  "editor.formatOnSaveMode": "modifications",
+  "makefile.configureOnOpen": false
 }
