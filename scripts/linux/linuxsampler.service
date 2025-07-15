@@ -1,0 +1,24 @@
+[Unit]
+Description=LinuxSampler Service
+After=network.target sound.target
+Wants=network.target sound.target
+
+[Service]
+Type=simple
+User=drum
+Group=drum
+WorkingDirectory=/home/drum
+ExecStart=/usr/bin/linuxsampler
+Restart=no
+#RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=linuxsampler
+
+# Security options
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target
