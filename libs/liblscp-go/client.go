@@ -757,3 +757,16 @@ func (c *Client) RemoveEffectInstanceFromChain(audioDevId, chainId, pos int) err
 	_, err := c.retrieveIndex(cmd)
 	return err
 }
+
+// Add accessors for host, port, timeout
+func (c *Client) Host() string {
+	return c.host
+}
+
+func (c *Client) Port() string {
+	return c.port
+}
+
+func (c *Client) Timeout() string {
+	return c.conTimeout
+}

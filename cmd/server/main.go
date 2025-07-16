@@ -57,6 +57,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Start healthcheck goroutine for LinuxSampler
+	sampler.StartHealthCheck(context.Background(), &sampler.Client)
+
 	// Initialize database
 	db, err := db.NewSqlite(cfg.Data.DB)
 	if err != nil {
