@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"path"
 	"runtime"
 	"strings"
 	"time"
@@ -49,9 +48,10 @@ func main() {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	projectPath := util.AbsPathify(".")
+	projectPath := util.AbsPathify("", ".")
 
-	sampler, err := connectLinuxSamper(path.Join(projectPath, cfg.Data.Sampler))
+	samplerDataPath := util.AbsPathify(projectPath, cfg.Data.Sampler)
+	sampler, err := connectLinuxSamper(samplerDataPath)
 	if err != nil {
 		slog.Error(fmt.Sprintln(err))
 		os.Exit(1)
