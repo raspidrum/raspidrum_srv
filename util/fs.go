@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 )
 
-func AbsPathify(inPath string) string {
-	slog.Info("trying to resolve absolute path", "path", inPath)
+func AbsPathify(basePath, inPath string) string {
+	slog.Info("trying to resolve absolute path", "basePath", basePath, "path", inPath)
 
 	if inPath == "$HOME" || strings.HasPrefix(inPath, "$HOME"+string(os.PathSeparator)) {
 		inPath = userHomeDir() + inPath[5:]
@@ -22,7 +23,14 @@ func AbsPathify(inPath string) string {
 		return filepath.Clean(inPath)
 	}
 
-	p, err := filepath.Abs(inPath)
+	var pt string
+	if basePath != "" {
+		pt = path.Join(basePath, inPath)
+	} else {
+		pt = inPath
+	}
+
+	p, err := filepath.Abs(pt)
 	if err == nil {
 		return filepath.Clean(p)
 	}

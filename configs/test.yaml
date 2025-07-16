@@ -4,4 +4,4 @@ host:
 
 data:
   dbRoot: ./db
-  samplerRoot: ~/_presets
+  samplerRoot: $HOME/_presets

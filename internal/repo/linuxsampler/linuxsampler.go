@@ -1,7 +1,12 @@
 package linuxsampler
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	repo "github.com/raspidrum-srv/internal/repo"
+	"github.com/raspidrum-srv/internal/repo/dbus"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 )
 
@@ -10,6 +15,8 @@ type LinuxSampler struct {
 	Client  lscp.Client
 	Engine  string
 	DataDir string // root dir for sfz-files, samples and presets
+	// Systemd is used to control and check the state of the linuxsampler systemd service. Linux only
+	Systemd dbus.SystemdManager
 }
 
 // Connect
@@ -94,4 +101,25 @@ func (l *LinuxSampler) SendMidiCC(samplerChn int, cc int, value float32) error {
 
 func (l *LinuxSampler) SetGlobalVolume(volume float32) error {
 	return l.Client.SetVolume(volume)
+}
+
+// EnsureLinuxSamplerRunning checks if the linuxsampler systemd service is running, starts it if needed, and waits for it to become active.
+// It uses the provided context for cancellation and timeout.
+func (l *LinuxSampler) EnsureLinuxSamplerRunning(ctx context.Context) error {
+	const serviceName = "linuxsampler.service"
+	active, err := l.Systemd.IsServiceActive(ctx, serviceName)
+	if err != nil {
+		return fmt.Errorf("systemd check failed: %w", err)
+	}
+	if active {
+		return nil // Already running
+	}
+	if err := l.Systemd.StartService(ctx, serviceName); err != nil {
+		return fmt.Errorf("failed to start linuxsampler service: %w", err)
+	}
+	// Wait up to 10 seconds for the service to become active
+	if err := l.Systemd.WaitForServiceActive(ctx, serviceName, 10*time.Second); err != nil {
+		return fmt.Errorf("linuxsampler service did not become active: %w", err)
+	}
+	return nil
 }
