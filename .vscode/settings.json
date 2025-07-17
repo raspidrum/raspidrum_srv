@@ -3,10 +3,10 @@
   "go.testTags": "",
   "go.testEnvVars": {},
   "go.toolsEnvVars": {
-    "GRPC_GO_LOG_SEVERITY_LEVEL": "info",
-    "GRPC_GO_LOG_VERBOSITY_LEVEL": "99"
+    //"GRPC_GO_LOG_SEVERITY_LEVEL": "info",
+    //"GRPC_GO_LOG_VERBOSITY_LEVEL": "99"
   },
-  "editor.formatOnSave": true,
-  "editor.formatOnSaveMode": "modifications",
-  "makefile.configureOnOpen": false
+  //"editor.formatOnSave": true,
+  //"editor.formatOnSaveMode": "modifications",
+  "go.alternateTools": {}
 }

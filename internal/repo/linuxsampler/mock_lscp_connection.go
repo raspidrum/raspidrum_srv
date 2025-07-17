@@ -2,10 +2,62 @@ package linuxsampler
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
+	"sync/atomic"
+
+	"github.com/raspidrum-srv/libs/liblscp-go"
 )
+
+var errNoError = errors.New("no error")
+
+// mockLscpDriver implements LscpDriver interface
+// (GetServerInfo, Connect, Host, Port, Timeout)
+type mockLscpDriver struct {
+	pingErr    atomic.Value // error
+	connectErr atomic.Value // error
+	connected  atomic.Bool
+	conn       net.Conn
+}
+
+func (m *mockLscpDriver) Ping() error {
+	err, _ := m.pingErr.Load().(error)
+	if err == errNoError {
+		return nil
+	}
+	return err
+}
+
+func (m *mockLscpDriver) Connect() error {
+	err, _ := m.connectErr.Load().(error)
+	if err == errNoError {
+		m.connected.Store(true)
+		return nil
+	}
+	if err == nil {
+		m.connected.Store(true)
+	}
+	return err
+}
+
+func (m *mockLscpDriver) Disconnect() error {
+	return nil
+}
+
+func (m *mockLscpDriver) RetrieveInfo(lscpCmd string, isMultiResult bool) (liblscp.ResultSet, error) {
+	if m.conn == nil {
+		return liblscp.ResultSet{}, fmt.Errorf("not connected")
+	}
+	cmd := strings.Trim(lscpCmd, " ")
+	_, err := fmt.Fprintf(m.conn, "%s\r\n", cmd)
+	if err != nil {
+		return liblscp.ResultSet{}, fmt.Errorf("failed lscp command: %s : %w", lscpCmd, err)
+	}
+	return liblscp.GetResultSetFromConn(m.conn, isMultiResult)
+}
 
 // MockPipeServer управляет in-memory сервером
 type MockPipeServer struct {

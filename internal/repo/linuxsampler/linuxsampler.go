@@ -12,15 +12,6 @@ import (
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 )
 
-// LinuxSamplerClient определяет интерфейс для клиента LinuxSampler (минимум: GetServerInfo, Connect, Host, Port, Timeout)
-type LinuxSamplerClient interface {
-	GetServerInfo() (lscp.ServerInfo, error)
-	Connect() error
-}
-
-// Убедимся, что lscp.Client реализует интерфейс LinuxSamplerClient
-var _ LinuxSamplerClient = (*lscp.Client)(nil)
-
 // Engine - LinuxSampler engine: gig, sfz, sf2
 type LinuxSampler struct {
 	Client  lscp.Client
@@ -29,7 +20,7 @@ type LinuxSampler struct {
 	// Systemd is used to control and check the state of the linuxsampler systemd service. Linux only
 	Systemd dbus.SystemdManager
 
-	clientMu          sync.Mutex
+	//clientMu          sync.Mutex
 	healthcheckCancel context.CancelFunc
 	healthcheckWg     sync.WaitGroup
 }
@@ -142,13 +133,10 @@ func (l *LinuxSampler) EnsureLinuxSamplerRunning(ctx context.Context) error {
 // StartHealthCheck launches a background goroutine that checks the connection to LinuxSampler every 2 seconds.
 // On connection loss, it attempts to restart the service and reconnect the client as needed.
 // hc — клиент для healthcheck (может быть mock в тестах). Если nil, используется l.Client.
-func (l *LinuxSampler) StartHealthCheck(ctx context.Context, hc LinuxSamplerClient) {
+func (l *LinuxSampler) StartHealthCheck(ctx context.Context) {
 	if l.healthcheckCancel != nil {
 		// Already running
 		return
-	}
-	if hc == nil {
-		hc = &l.Client
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	l.healthcheckCancel = cancel
@@ -162,10 +150,10 @@ func (l *LinuxSampler) StartHealthCheck(ctx context.Context, hc LinuxSamplerClie
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				l.clientMu.Lock()
+				//l.clientMu.Lock()
 				client := l.Client
-				l.clientMu.Unlock()
-				_, err := client.GetServerInfo()
+				//l.clientMu.Unlock()
+				err := client.Ping()
 				if err == nil {
 					continue
 				}
@@ -177,15 +165,11 @@ func (l *LinuxSampler) StartHealthCheck(ctx context.Context, hc LinuxSamplerClie
 					slog.Error("[HealthCheck] Failed to ensure linuxsampler running", slog.Any("error", errRun))
 					continue
 				}
-				// If service was restarted, need a new client
-				newClient := lscp.NewClient(client.Host(), client.Port(), client.Timeout())
-				if err := newClient.Connect(); err != nil {
+				// If service was restarted, need reconnect
+				if err := client.Connect(); err != nil {
 					slog.Error("[HealthCheck] Failed to reconnect to linuxsampler", slog.Any("error", err))
 					continue
 				}
-				l.clientMu.Lock()
-				l.Client = newClient
-				l.clientMu.Unlock()
 				slog.Info("[HealthCheck] Reconnected to linuxsampler")
 			}
 		}

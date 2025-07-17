@@ -11,8 +11,6 @@ import (
 )
 
 func AbsPathify(basePath, inPath string) string {
-	slog.Info("trying to resolve absolute path", "basePath", basePath, "path", inPath)
-
 	if inPath == "$HOME" || strings.HasPrefix(inPath, "$HOME"+string(os.PathSeparator)) {
 		inPath = userHomeDir() + inPath[5:]
 	}
