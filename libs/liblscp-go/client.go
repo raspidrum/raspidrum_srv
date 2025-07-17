@@ -9,80 +9,84 @@ import (
 	"time"
 )
 
-type Client struct {
+// LscpDriver defines the interface for LSCP protocol driver
+// Provides connection, ping, disconnect, and command execution
+type LscpDriver interface {
+	Connect() error
+	Disconnect() error
+	Ping() error
+	RetrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, error)
+}
+
+// lscpDriver is a concrete implementation of LscpDriver
+// Handles TCP connection and LSCP protocol
+type lscpDriver struct {
 	host       string
 	port       string
 	conTimeout string
-	Conn       net.Conn
+	conn       net.Conn
 }
 
-func NewClient(host, port string, timeout string) Client {
-	return Client{
+func newLscpDriver(host, port, timeout string) *lscpDriver {
+	return &lscpDriver{
 		host:       host,
 		port:       port,
 		conTimeout: timeout,
 	}
 }
 
-func (c *Client) Connect() error {
-	t, err := time.ParseDuration(c.conTimeout)
+func (d *lscpDriver) Connect() error {
+	t, err := time.ParseDuration(d.conTimeout)
 	if err != nil {
-		return fmt.Errorf("failed parse timeout duration: '%s' %w", c.conTimeout, err)
+		return fmt.Errorf("failed parse timeout duration: '%s' %w", d.conTimeout, err)
 	}
-
-	if c.Conn != nil {
-		c.Conn.Close()
+	if d.conn != nil {
+		d.conn.Close()
 	}
-
-	c.Conn, err = net.DialTimeout("tcp", net.JoinHostPort(c.host, c.port), t)
+	d.conn, err = net.DialTimeout("tcp", net.JoinHostPort(d.host, d.port), t)
 	if err != nil {
-		return fmt.Errorf("failed connect to: '%s:%s' %w", c.host, c.port, err)
-	}
-
-	si, err := c.GetServerInfo()
-	if err != nil {
-		return fmt.Errorf("failed get server info: %w", err)
-	}
-	slog.Info("connected to LinuxSampler", slog.String("ver", si.Version))
-
-	//defer c.conn.Close()
-	return nil
-}
-
-func (c *Client) Disconnect() error {
-	if err := c.Conn.Close(); err != nil {
-		return fmt.Errorf("failed disconnect from LinuxSampler: %w", err)
+		return fmt.Errorf("failed connect to: '%s:%s' %w", d.host, d.port, err)
 	}
 	return nil
 }
 
-func (c *Client) retrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, error) {
+func (d *lscpDriver) Disconnect() error {
+	if d.conn != nil {
+		if err := d.conn.Close(); err != nil {
+			return fmt.Errorf("failed disconnect from LinuxSampler: %w", err)
+		}
+		d.conn = nil
+	}
+	return nil
+}
+
+func (d *lscpDriver) Ping() error {
+	// Use a simple command to check connection, e.g. GET SERVER INFO
+	if d.conn == nil {
+		return fmt.Errorf("not connected")
+	}
+	_, err := fmt.Fprintf(d.conn, "%s\r\n", "GET SERVER INFO")
+	return err
+}
+
+func (d *lscpDriver) RetrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, error) {
+	if d.conn == nil {
+		return ResultSet{}, fmt.Errorf("not connected")
+	}
 	cmd := strings.Trim(lscpCmd, " ")
-	_, err := fmt.Fprintf(c.Conn, "%s\r\n", cmd)
+	_, err := fmt.Fprintf(d.conn, "%s\r\n", cmd)
 	if err != nil {
 		return ResultSet{}, fmt.Errorf("failed lscp command: %s : %w", lscpCmd, err)
 	}
-
-	ResultSet, err := c.getResultSet(isMultiResult)
-	if err != nil {
-		return ResultSet, err
-	}
-	return ResultSet, nil
+	return GetResultSetFromConn(d.conn, isMultiResult)
 }
 
-func (c *Client) retrieveIndex(lscpCmd string) (int, error) {
-	rs, err := c.retrieveInfo(lscpCmd, false)
-	if err != nil {
-		return 0, err
-	}
-	return rs.Index, nil
-}
-
-func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
+// getResultSetFromConn is a helper for lscpDriver
+func GetResultSetFromConn(conn net.Conn, isMultiResult bool) (ResultSet, error) {
 	rs := ResultSet{}
-	rd := bufio.NewReader(c.Conn)
+	rd := bufio.NewReader(conn)
 
-	ln, err := c.getLine(rd)
+	ln, err := getLineFromReader(rd)
 	if err != nil {
 		return rs, err
 	}
@@ -120,7 +124,7 @@ func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
 	// it's multuline result
 	for ln != "." {
 		rs.AddLine(ln)
-		ln, err = c.getLine(rd)
+		ln, err = getLineFromReader(rd)
 		if err != nil {
 			return rs, err
 		}
@@ -129,7 +133,7 @@ func (c *Client) getResultSet(isMultiResult bool) (ResultSet, error) {
 	return rs, nil
 }
 
-func (c *Client) getLine(r *bufio.Reader) (string, error) {
+func getLineFromReader(r *bufio.Reader) (string, error) {
 	for {
 		s, err := r.ReadString('\n')
 		if err != nil {
@@ -139,6 +143,45 @@ func (c *Client) getLine(r *bufio.Reader) (string, error) {
 			return strings.TrimSuffix(s, "\r\n"), nil
 		}
 	}
+}
+
+// Client now uses LscpDriver
+
+type Client struct {
+	driver LscpDriver
+}
+
+func NewClient(host, port, timeout string) Client {
+	drv := newLscpDriver(host, port, timeout)
+	return Client{driver: drv}
+}
+
+func NewClientWithDriver(driver LscpDriver) Client {
+	return Client{driver: driver}
+}
+
+func (c *Client) Connect() error {
+	return c.driver.Connect()
+}
+
+func (c *Client) Disconnect() error {
+	return c.driver.Disconnect()
+}
+
+func (c *Client) Ping() error {
+	return c.driver.Ping()
+}
+
+func (c *Client) retrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet, error) {
+	return c.driver.RetrieveInfo(lscpCmd, isMultiResult)
+}
+
+func (c *Client) retrieveIndex(lscpCmd string) (int, error) {
+	rs, err := c.retrieveInfo(lscpCmd, false)
+	if err != nil {
+		return 0, err
+	}
+	return rs.Index, nil
 }
 
 func (c *Client) getIntegerList(lscpCmd string) ([]int, error) {

@@ -14,6 +14,7 @@ import (
 	m "github.com/raspidrum-srv/internal/model"
 	repo "github.com/raspidrum-srv/internal/repo"
 	"github.com/raspidrum-srv/internal/repo/file"
+	"github.com/raspidrum-srv/libs/liblscp-go"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 	"github.com/spf13/afero"
 )
@@ -457,7 +458,6 @@ func Test_compareLines(t *testing.T) {
 func TestLinuxSampler_loadToSampler(t *testing.T) {
 	rootDir := ""
 	type fields struct {
-		Client lscp.Client
 		Engine string
 	}
 	type args struct {
@@ -479,7 +479,6 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 		{
 			name: "one channel, one instrument",
 			fields: fields{
-				Client: lscp.NewClient("pipe", "0", "1s"),
 				Engine: "sfz",
 			},
 			args: args{
@@ -527,7 +526,6 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 		{
 			name: "one channel, two instrument",
 			fields: fields{
-				Client: lscp.NewClient("pipe", "0", "1s"),
 				Engine: "sfz",
 			},
 			args: args{
@@ -575,7 +573,6 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 		{
 			name: "two channel, two instrument",
 			fields: fields{
-				Client: lscp.NewClient("pipe", "0", "1s"),
 				Engine: "sfz",
 			},
 			args: args{
@@ -633,10 +630,13 @@ func TestLinuxSampler_loadToSampler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// start mock server
 			clientConn, serverConn := net.Pipe()
-			tt.fields.Client.Conn = clientConn
+			lscpDrv := &mockLscpDriver{
+				conn: clientConn,
+			}
+			client := liblscp.NewClientWithDriver(lscpDrv)
 			mockServer := startMockPipeServer(serverConn)
 			l := &LinuxSampler{
-				Client:  tt.fields.Client,
+				Client:  client,
 				Engine:  tt.fields.Engine,
 				DataDir: rootDir,
 			}

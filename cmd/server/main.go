@@ -41,7 +41,7 @@ var cfg Config
 
 func main() {
 	setLogging()
-	
+
 	var err error
 	cfg, err = loadConfig("./configs")
 	if err != nil {
@@ -51,6 +51,7 @@ func main() {
 	projectPath := util.AbsPathify("", ".")
 
 	samplerDataPath := util.AbsPathify(projectPath, cfg.Data.Sampler)
+	slog.Info("Working dir: " + samplerDataPath)
 	sampler, err := connectLinuxSamper(samplerDataPath)
 	if err != nil {
 		slog.Error(fmt.Sprintln(err))
@@ -98,9 +99,9 @@ func loadConfig(configPath string) (Config, error) {
 	v := viper.New()
 	// get config name from  env variable. default: dev
 	configName := os.Getenv("RDRUM_CONFIG")
-    if configName == "" {
-        configName = "dev"
-    }
+	if configName == "" {
+		configName = "dev"
+	}
 	v.SetConfigName(configName)
 	v.AddConfigPath(configPath)
 	v.SetConfigType("yaml")
@@ -182,15 +183,19 @@ func setLogging() {
 	//slog.SetDefault(logger)
 	var level slog.Level
 	switch cfg.Log.Level {
-	case "DEBUG": level = slog.LevelDebug
-	case "INFO": level = slog.LevelInfo
-	case "WARNING": level = slog.LevelWarn 
-	case "ERROR": level = slog.LevelError
-	default: level = slog.LevelInfo
+	case "DEBUG":
+		level = slog.LevelDebug
+	case "INFO":
+		level = slog.LevelInfo
+	case "WARNING":
+		level = slog.LevelWarn
+	case "ERROR":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
 	}
 	slog.SetLogLoggerLevel(level)
 }
-
 
 func connectLinuxSamper(samplesPath string) (*lsampler.LinuxSampler, error) {
 	// Initialize sampler
@@ -224,9 +229,13 @@ func connectLinuxSamper(samplesPath string) (*lsampler.LinuxSampler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed connect to LinuxSampler: %w", err)
 	}
-	
+
 	// Initialize sampler
-	sampler.Client =  lsClient
+	sampler.Client = lsClient
+
+	if runtime.GOOS == "linux" {
+		sampler.StartHealthCheck(context.Background())
+	}
 
 	return &sampler, nil
 }
