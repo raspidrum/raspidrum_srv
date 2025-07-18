@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"sync"
 	"time"
 
@@ -23,6 +24,50 @@ type LinuxSampler struct {
 	//clientMu          sync.Mutex
 	healthcheckCancel context.CancelFunc
 	healthcheckWg     sync.WaitGroup
+}
+
+func InitLinuxSampler(samplesPath string) (*LinuxSampler, error) {
+
+	// Initialize sampler
+	sampler := LinuxSampler{
+		Engine:  "sfz",
+		DataDir: samplesPath,
+	}
+
+	if runtime.GOOS == "linux" {
+		// startup linuxsampler service
+		// TODO: move to config
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Initialize systemd manager
+		systemd, err := dbus.NewDbusSystemdManager()
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to systemd: %w", err)
+		}
+
+		// Ensure linuxsampler service is running
+		sampler.Systemd = systemd
+		if err := sampler.EnsureLinuxSamplerRunning(ctx); err != nil {
+			return nil, fmt.Errorf("failed to ensure linuxsampler service is running: %w", err)
+		}
+	}
+
+	// Initialize LinuxSampler client
+	lsClient := lscp.NewClient("localhost", "8888", "1s")
+	err := lsClient.Connect()
+	if err != nil {
+		return nil, fmt.Errorf("Failed connect to LinuxSampler: %w", err)
+	}
+
+	// Initialize sampler
+	sampler.Client = lsClient
+
+	if runtime.GOOS == "linux" {
+		sampler.StartHealthCheck(context.Background())
+	}
+
+	return &sampler, nil
 }
 
 // Connect

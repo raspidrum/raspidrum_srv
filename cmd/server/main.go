@@ -6,9 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"runtime"
 	"strings"
-	"time"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
@@ -17,9 +15,7 @@ import (
 	"github.com/raspidrum-srv/internal/app/preset"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/raspidrum-srv/internal/repo/db"
-	"github.com/raspidrum-srv/internal/repo/dbus"
 	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
-	lscp "github.com/raspidrum-srv/libs/liblscp-go"
 	"github.com/raspidrum-srv/util"
 )
 
@@ -52,7 +48,7 @@ func main() {
 
 	samplerDataPath := util.AbsPathify(projectPath, cfg.Data.Sampler)
 	slog.Info("Working dir: " + samplerDataPath)
-	sampler, err := connectLinuxSamper(samplerDataPath)
+	sampler, err := lsampler.InitLinuxSampler(samplerDataPath)
 	if err != nil {
 		slog.Error(fmt.Sprintln(err))
 		os.Exit(1)
@@ -195,47 +191,4 @@ func setLogging() {
 		level = slog.LevelInfo
 	}
 	slog.SetLogLoggerLevel(level)
-}
-
-func connectLinuxSamper(samplesPath string) (*lsampler.LinuxSampler, error) {
-	// Initialize sampler
-	sampler := lsampler.LinuxSampler{
-		Engine:  "sfz",
-		DataDir: samplesPath,
-	}
-
-	if runtime.GOOS == "linux" {
-		// startup linuxsampler service
-		// TODO: move to config
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		// Initialize systemd manager
-		systemd, err := dbus.NewDbusSystemdManager()
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to systemd: %w", err)
-		}
-
-		// Ensure linuxsampler service is running
-		sampler.Systemd = systemd
-		if err := sampler.EnsureLinuxSamplerRunning(ctx); err != nil {
-			return nil, fmt.Errorf("failed to ensure linuxsampler service is running: %w", err)
-		}
-	}
-
-	// Initialize LinuxSampler client
-	lsClient := lscp.NewClient("localhost", "8888", "1s")
-	err := lsClient.Connect()
-	if err != nil {
-		return nil, fmt.Errorf("Failed connect to LinuxSampler: %w", err)
-	}
-
-	// Initialize sampler
-	sampler.Client = lsClient
-
-	if runtime.GOOS == "linux" {
-		sampler.StartHealthCheck(context.Background())
-	}
-
-	return &sampler, nil
 }
