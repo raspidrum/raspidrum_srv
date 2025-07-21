@@ -208,3 +208,9 @@ help:
 	@echo "  ${BOLD}logs${REGULAR} - Show $(APP_NAME) service logs"
 	@echo "  ${BOLD}logs-tail${REGULAR} - Show last 50 lines of $(APP_NAME) service logs"
 
+.PHONY: build-cli-debug
+# Build debug version of CLI (cmd/cli/main.go) for Linux arm64
+build-cli-debug:
+	@echo "Building debug CLI (cmd/cli/main.go) for linux/arm64..."
+	GOOS=linux GOARCH=arm64 go build -gcflags="all=-N -l" -o ./build/raspidrum_cli ./cmd/cli/main.go
+

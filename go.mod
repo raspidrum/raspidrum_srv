@@ -4,7 +4,9 @@ go 1.24.4
 
 require (
 	github.com/goccy/go-yaml v1.17.1
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/google/go-cmp v0.7.0
+	github.com/google/gousb v1.1.3
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.24
@@ -16,7 +18,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

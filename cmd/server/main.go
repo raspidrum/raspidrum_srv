@@ -6,13 +6,16 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
 	"github.com/raspidrum-srv/internal/app/preset"
+	"github.com/raspidrum-srv/internal/app/usbmonitor"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/raspidrum-srv/internal/repo/db"
 	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
@@ -44,6 +47,10 @@ func main() {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
+	// Create a context that can be cancelled.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	projectPath := util.AbsPathify("", ".")
 
 	samplerDataPath := util.AbsPathify(projectPath, cfg.Data.Sampler)
@@ -65,6 +72,14 @@ func main() {
 	// Initialize filesystem
 	fs := afero.NewOsFs()
 
+	// Initialize and start USB monitor service
+	usbMon, err := usbmonitor.NewMonitorService()
+	if err != nil {
+		slog.Error("Failed to initialize USB monitor", "error", err)
+		os.Exit(1)
+	}
+	usbMon.Start(ctx)
+
 	// start GRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))
 	if err != nil {
@@ -85,10 +100,22 @@ func main() {
 	pb.RegisterChannelControlServer(s, presetServer)
 
 	slog.Info("Server is running", slog.Int("port:", cfg.Host.Port))
-	if err := s.Serve(lis); err != nil {
-		slog.Error(fmt.Sprintln(fmt.Errorf("Server error: %w", err)))
-		os.Exit(1)
-	}
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			slog.Error(fmt.Sprintln(fmt.Errorf("Server error: %w", err)))
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for termination signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	slog.Info("Shutting down server...")
+	s.GracefulStop()
+	cancel() // broadcast the cancellation to all services
+	slog.Info("Server gracefully stopped")
 }
 
 func loadConfig(configPath string) (Config, error) {
