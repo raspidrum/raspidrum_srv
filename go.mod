@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.24
+	github.com/rakyll/portmidi v0.0.0-20201020180702-d436ceaa537a
 	github.com/spf13/afero v1.14.0
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.70.0

@@ -6,6 +6,15 @@ ENV CGO_ENABLED=1
 ENV GOOS=linux
 ENV GOARCH=arm64
 
+RUN apt install 
+
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+		libportmidi-dev \
+	; \
+	rm -rf /var/lib/apt/lists/*
+
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

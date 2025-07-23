@@ -210,7 +210,15 @@ help:
 
 .PHONY: build-cli-debug
 # Build debug version of CLI (cmd/cli/main.go) for Linux arm64
-build-cli-debug:
+build-cli-debug: prepare-builder
 	@echo "Building debug CLI (cmd/cli/main.go) for linux/arm64..."
-	GOOS=linux GOARCH=arm64 go build -gcflags="all=-N -l" -o ./build/raspidrum_cli ./cmd/cli/main.go
+	@mkdir -p build
+	docker run --rm \
+		--platform linux/arm64 \
+		--mount type=bind,src=.,dst=/src \
+	  -v /tmp/buildkit-cache:/root/.cache/go-build \
+	  -v /tmp/buildkit-cache:/go/pkg/mod \
+	  --name raspidrum-builder \
+	  raspidrum-builder \
+		go build -gcflags="all=-N -l" -o ./build/raspidrum_cli ./cmd/cli/main.go
 
