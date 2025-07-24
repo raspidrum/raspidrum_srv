@@ -4,4 +4,4 @@ set -e
 
 echo "Installing development libraries for udev and usb..."
 sudo apt update
-sudo apt install -y libudev-dev libusb-1.0-0-dev libportmidi-dev
+sudo apt install -y libudev-dev libusb-1.0-0-dev libasound2-dev

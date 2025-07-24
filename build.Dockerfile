@@ -11,7 +11,7 @@ RUN apt install
 RUN set -eux; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
-		libportmidi-dev \
+		libasound2-dev \
 	; \
 	rm -rf /var/lib/apt/lists/*
 

@@ -220,5 +220,5 @@ build-cli-debug: prepare-builder
 	  -v /tmp/buildkit-cache:/go/pkg/mod \
 	  --name raspidrum-builder \
 	  raspidrum-builder \
-		go build -gcflags="all=-N -l" -o ./build/raspidrum_cli ./cmd/cli/main.go
+		go build -gcflags="all=-N -l" -buildvcs=false -trimpath -o ./build/raspidrum_cli ./cmd/cli/main.go
 

@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rakyll/portmidi"
+	"gitlab.com/gomidi/rtmididrv"
 
 	"github.com/raspidrum-srv/internal/repo/udev"
 )
@@ -83,18 +83,22 @@ func atoi(s string) int {
 	return n
 }
 
-// listMidiDevices returns a slice of info about MIDI devices
-func listMidiDevices() []string {
-	var devices []string
-	portmidi.Initialize()
-	defer portmidi.Terminate()
-	for i := 0; i < portmidi.CountDevices(); i++ {
-		info := portmidi.Info(portmidi.DeviceID(i))
-		if info.IsInputAvailable || info.IsOutputAvailable {
-			devices = append(devices, fmt.Sprintf("card=%s name=%s", info.Interface, info.Name))
-		}
+// listMidiDevices returns a slice of info about MIDI devices using gomidi/rtmididrv
+func listMidiDevices() ([]string, error) {
+	drv, err := rtmididrv.New()
+	if err != nil {
+		return nil, fmt.Errorf("could not init rtmididrv: %w", err)
 	}
-	return devices
+	defer drv.Close()
+	ins, err := drv.Ins()
+	if err != nil {
+		return nil, fmt.Errorf("could not get MIDI inputs: %w", err)
+	}
+	var devices []string
+	for _, in := range ins {
+		devices = append(devices, fmt.Sprintf("id=%d name=%s", in.Number(), in.String(), drv.String()))
+	}
+	return devices, nil
 }
 
 func main() {
@@ -134,12 +138,16 @@ func main() {
 			if event.Action == "add" && strings.Contains(event.DevPath, "seq-midi-") {
 				card, port, ok := getCardPortFromDevPath(event.DevPath)
 				fmt.Println("MIDI devices in system:")
-				devices := listMidiDevices()
-				for _, dev := range devices {
-					if ok && strings.Contains(dev, fmt.Sprintf("card=%d port=%d", card, port)) {
-						fmt.Printf("* %s <-- just connected\n", dev)
-					} else {
-						fmt.Printf("  %s\n", dev)
+				devices, err := listMidiDevices()
+				if err != nil {
+					fmt.Printf("Error listing MIDI devices: %v\n", err)
+				} else {
+					for _, dev := range devices {
+						if ok && strings.Contains(dev, fmt.Sprintf("card=%d port=%d", card, port)) {
+							fmt.Printf("* %s <-- just connected\n", dev)
+						} else {
+							fmt.Printf("  %s\n", dev)
+						}
 					}
 				}
 			}
