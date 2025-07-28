@@ -129,14 +129,14 @@ func (m *Monitor) receiveEvent() (*Event, error) {
 }
 
 // Start begins monitoring for udev events.
-func (m *Monitor) Start(ctx context.Context) (<-chan *Event, error) {
+func (m *Monitor) Start(ctx context.Context) (<-chan *Event, <-chan error, error) {
 	eventsCh := make(chan *Event)
+	errCh := make(chan error, 1)
 
 	go func() {
 		defer close(eventsCh)
+		defer close(errCh)
 		for {
-			// This select ensures we check for shutdown signal before blocking on read.
-			// However, the read itself can still block, which is why a socket timeout is needed.
 			select {
 			case <-m.stopCh:
 				return
@@ -145,17 +145,15 @@ func (m *Monitor) Start(ctx context.Context) (<-chan *Event, error) {
 
 			event, err := m.receiveEvent()
 			if err != nil {
-				// EAGAIN is the error code for a timeout. This is expected.
 				if err == syscall.EAGAIN || err == syscall.EWOULDBLOCK {
-					continue // Timeout occurred, just loop again to check stopCh.
+					continue
 				}
-
-				// For any other error, log it if it wasn't a clean shutdown, then exit.
 				select {
 				case <-m.stopCh:
-					// Error occurred because the socket was closed. This is a clean shutdown.
+					// clean shutdown
 				default:
 					slog.Error("Udev receive error", "error", err)
+					errCh <- err
 				}
 				return
 			}
@@ -175,5 +173,5 @@ func (m *Monitor) Start(ctx context.Context) (<-chan *Event, error) {
 		m.Close()
 	}()
 
-	return eventsCh, nil
+	return eventsCh, errCh, nil
 }

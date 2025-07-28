@@ -7,6 +7,21 @@ To build the `raspidrum_srv` application on macOS, you need to have Go and some 
 - [Go](https://golang.org/doc/install) (version 1.21 or higher)
 - [Homebrew](https://brew.sh/)
 
+## Prepare VSCode
+
+1. **Add to .vscode/settings.json:**
+
+    ```json
+    {
+      "go.buildTags": "linux",
+      "go.toolsEnvVars": {
+        "GOOS": "linux",
+        "GOARCH": "arm64",
+        "CGO_ENABLED": "1"
+      }
+    }
+    ```
+
 ## Installation
 
 1.  **Install system dependencies:**
@@ -26,7 +41,13 @@ To build the `raspidrum_srv` application on macOS, you need to have Go and some 
     LIBUSB_PATH=$(brew --prefix libusb)/include/libusb-1.0/libusb.h
     ```
 
-3.  **Build the application:**
+3. **Install stdlib for Linux**
+
+    ```bash
+    env GOOS=linux GOARCH=arm64 go install std
+    ```
+   
+4.  **Build the application:**
 
     Navigate to the `raspidrum_srv` directory and run the build command:
 

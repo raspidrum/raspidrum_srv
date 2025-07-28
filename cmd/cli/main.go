@@ -1,4 +1,5 @@
 //go:build linux
+// +build linux
 
 package main
 
@@ -14,9 +15,8 @@ import (
 	"syscall"
 	"time"
 
-	"gitlab.com/gomidi/rtmididrv"
-
 	"github.com/raspidrum-srv/internal/repo/udev"
+	libalsa "github.com/raspidrum-srv/libs/libalsa"
 )
 
 // formatEvent formats the event for output
@@ -57,12 +57,12 @@ func formatEvent(e *udev.Event) string {
 
 // printHelp prints help message
 func printHelp() {
-	fmt.Println("Udev device monitoring")
-	fmt.Println("Usage: ./udev_monitor [options]")
-	fmt.Println("\nOptions:")
-	fmt.Println("  -h, --help     Show this message")
-	fmt.Println("  -v, --verbose  Verbose output (not implemented)")
-	fmt.Println("\nPress Ctrl+C to stop")
+	fmt.Println("Udev device monitoring CLI")
+	fmt.Println("Usage:")
+	fmt.Println("  --cards      Show ALSA sound and MIDI cards, then exit")
+	fmt.Println("  --monitor    Monitor device connect/disconnect events")
+	fmt.Println("  -h, --help   Show this help message")
+	fmt.Println("\nNo arguments: show this help")
 }
 
 // getCardPortFromDevPath extracts card and port from DEVPATH string
@@ -83,76 +83,130 @@ func atoi(s string) int {
 	return n
 }
 
-// listMidiDevices returns a slice of info about MIDI devices using gomidi/rtmididrv
-func listMidiDevices() ([]string, error) {
-	drv, err := rtmididrv.New()
+// getAlsaCards возвращает список устройств ALSA и ошибки
+func getAlsaCards() ([]string, error) {
+	var result []string
+	cards, err := libalsa.GetAllCards()
 	if err != nil {
-		return nil, fmt.Errorf("could not init rtmididrv: %w", err)
+		return nil, err
 	}
-	defer drv.Close()
-	ins, err := drv.Ins()
+	for _, cardNum := range cards {
+		cardInfo, err := libalsa.GetCardInfo(cardNum)
+		if err != nil {
+			result = append(result, fmt.Sprintf("Error getting info for card %d: %v", cardNum, err))
+			continue
+		}
+		hwInfo, _ := libalsa.GetHardwareInfo(cardNum)
+		info := fmt.Sprintf("Card %d: %s (%s), Driver: %s, Mixer: %s, Playback: %s, Capture: %s",
+			cardInfo.ID, cardInfo.Name, cardInfo.LongName, cardInfo.Driver, cardInfo.Mixer,
+			hwInfo["playback_devices"], hwInfo["capture_devices"])
+		result = append(result, info)
+	}
+
+	// Print MIDI sequencer clients/ports
+	midiPorts, err := libalsa.ListMidiPorts()
+	if err == nil {
+		for _, port := range midiPorts {
+			result = append(result, fmt.Sprintf("MIDI: client=%d port=%d card=%d name=%s portname=%s",
+				port.ClientID, port.PortID, port.CardID, port.ClientName, port.PortName))
+		}
+	}
+	return result, nil
+}
+
+func listCards() {
+	devices, err := getAlsaCards()
 	if err != nil {
-		return nil, fmt.Errorf("could not get MIDI inputs: %w", err)
+		fmt.Printf("Error listing ALSA devices: %v\n", err)
+		os.Exit(1)
 	}
-	var devices []string
-	for _, in := range ins {
-		devices = append(devices, fmt.Sprintf("id=%d name=%s", in.Number(), in.String(), drv.String()))
+	fmt.Println("ALSA cards (sound and MIDI):")
+	for _, dev := range devices {
+		fmt.Println(dev)
 	}
-	return devices, nil
+}
+
+func runMonitor() {
+	for {
+		monitor, err := udev.NewMonitor()
+		if err != nil {
+			log.Fatalf("Failed to create monitor: %v", err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		signalCh := make(chan os.Signal, 1)
+		signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+		terminatedBySignal := false
+		go func() {
+			<-signalCh
+			terminatedBySignal = true
+			fmt.Println("\nTermination signal received...")
+			cancel()
+		}()
+		eventsCh, errCh, err := monitor.Start(ctx)
+		if err != nil {
+			log.Fatalf("Failed to start monitoring: %v", err)
+		}
+		fmt.Println("Starting udev device monitoring...")
+		fmt.Println("Press Ctrl+C to stop")
+		monitoringStopped := false
+		for !monitoringStopped {
+			select {
+			case event, ok := <-eventsCh:
+				if !ok {
+					fmt.Println("Monitoring stopped. Restarting in 1s...")
+					monitoringStopped = true
+					break
+				}
+				fmt.Println(formatEvent(event))
+				if (event.Subsystem == "sound" || event.Subsystem == "snd_seq") && (event.Action == "add" || event.Action == "bind" || event.Action == "remove") {
+					if event.Action == "add" && strings.Contains(event.DevPath, "seq-midi-") {
+						card, port, ok := getCardPortFromDevPath(event.DevPath)
+						devices, err := getAlsaCards()
+						if err != nil {
+							fmt.Printf("Error listing ALSA devices: %v\n", err)
+						} else {
+							for _, dev := range devices {
+								if ok && strings.Contains(dev, fmt.Sprintf("port=%d card=%d", port, card)) {
+									fmt.Printf("* %s <-- just connected\n", dev)
+								} else {
+									fmt.Printf("  %s\n", dev)
+								}
+							}
+						}
+					}
+				}
+			case err, ok := <-errCh:
+				if ok && err != nil {
+					fmt.Printf("Monitor error: %v\n", err)
+				}
+				fmt.Println("Monitoring stopped due to error. Restarting in 1s...")
+				monitoringStopped = true
+			}
+		}
+		cancel()
+		if terminatedBySignal {
+			fmt.Println("Exiting monitor loop due to termination signal.")
+			break
+		}
+		time.Sleep(1 * time.Second)
+		fmt.Println("Restarting udev monitor...")
+	}
 }
 
 func main() {
-	if len(os.Args) > 1 && (os.Args[1] == "-h" || os.Args[1] == "--help") {
+	if len(os.Args) == 1 {
 		printHelp()
 		return
 	}
 
-	monitor, err := udev.NewMonitor()
-	if err != nil {
-		log.Fatalf("Failed to create monitor: %v", err)
+	switch os.Args[1] {
+	case "--cards":
+		listCards()
+	case "--monitor":
+		runMonitor()
+	case "-h", "--help":
+		printHelp()
+	default:
+		printHelp()
 	}
-	// The monitor's lifecycle is managed by the context, no need for defer.
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-signalCh
-		fmt.Println("\nTermination signal received...")
-		cancel()
-	}()
-
-	eventsCh, err := monitor.Start(ctx)
-	if err != nil {
-		log.Fatalf("Failed to start monitoring: %v", err)
-	}
-
-	fmt.Println("Starting udev device monitoring...")
-	fmt.Println("Press Ctrl+C to stop")
-
-	for event := range eventsCh {
-		if (event.Subsystem == "sound" || event.Subsystem == "snd_seq") && (event.Action == "add" || event.Action == "remove") {
-			fmt.Println(formatEvent(event))
-			if event.Action == "add" && strings.Contains(event.DevPath, "seq-midi-") {
-				card, port, ok := getCardPortFromDevPath(event.DevPath)
-				fmt.Println("MIDI devices in system:")
-				devices, err := listMidiDevices()
-				if err != nil {
-					fmt.Printf("Error listing MIDI devices: %v\n", err)
-				} else {
-					for _, dev := range devices {
-						if ok && strings.Contains(dev, fmt.Sprintf("card=%d port=%d", card, port)) {
-							fmt.Printf("* %s <-- just connected\n", dev)
-						} else {
-							fmt.Printf("  %s\n", dev)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	fmt.Println("Monitoring stopped.")
 }
