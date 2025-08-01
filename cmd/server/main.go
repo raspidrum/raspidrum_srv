@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
+	"github.com/raspidrum-srv/internal/app/devmonitor"
 	"github.com/raspidrum-srv/internal/app/preset"
-	"github.com/raspidrum-srv/internal/app/usbmonitor"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/raspidrum-srv/internal/repo/db"
 	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
@@ -47,10 +47,6 @@ func main() {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	// Create a context that can be cancelled.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	projectPath := util.AbsPathify("", ".")
 
 	samplerDataPath := util.AbsPathify(projectPath, cfg.Data.Sampler)
@@ -72,13 +68,29 @@ func main() {
 	// Initialize filesystem
 	fs := afero.NewOsFs()
 
+	//TODO: extract to function
 	// Initialize and start USB monitor service
-	usbMon, err := usbmonitor.NewMonitorService()
+	devMon, err := devmonitor.NewMonitorService()
 	if err != nil {
-		slog.Error("Failed to initialize USB monitor", "error", err)
+		slog.Error("Failed to initialize device monitor", "error", err)
 		os.Exit(1)
 	}
-	usbMon.Start(ctx)
+	// Initialize and start the ALSA MIDI provider
+
+	// Create a context that can be cancelled.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-signalCh
+		slog.Info("\nTermination signal received...")
+		cancel()
+	}()
+	if err := devMon.Start(ctx); err != nil {
+		slog.Error(fmt.Sprintf("Failed to start device monitor: %v", err))
+		os.Exit(1)
+	}
 
 	// start GRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))

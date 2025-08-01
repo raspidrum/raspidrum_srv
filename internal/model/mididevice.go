@@ -1,15 +1,13 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
 
-// MIDIDevice interface defines methods required for MIDI device operations
-type MIDIDevice interface {
-	Name() string
-	GetKeysMapping() (map[string]int, error)
-}
+	"github.com/raspidrum-srv/internal/app/midi"
+)
 
 // MapMidiKey maps a MIDI key string to its numeric value using the provided MIDI devices
-func MapMidiKey(mkey string, mdevs []MIDIDevice) (int, error) {
+func MapMidiKey(mkey string, mdevs []midi.MIDIDevice) (int, error) {
 	devlist := make([]string, len(mdevs))
 	for i, d := range mdevs {
 		kmap, err := d.GetKeysMapping()

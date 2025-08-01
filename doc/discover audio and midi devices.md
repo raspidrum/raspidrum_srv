@@ -81,7 +81,7 @@ lrwxrwxrwx 1 root root 0 Jul 22 09:12 /sys/class/sound/card3 -> ../../devices/pl
 Совпадение имени клиента ALSA с именем модели USB, например:
 
 ```bash
-$ aconnect -i -l
+$ aconnect -o -l
 ...
 client 28: 'SAMSUNG_Android' [type=kernel,card=3]
     0 'SAMSUNG_Android MIDI 1'
@@ -90,8 +90,9 @@ $ lsusb -d 04e8:686c -v
 ...
  iProduct                2 SAMSUNG_Android
 ...
-```
 
+$ cat /proc/asound/devices
+...
 [ 3- 0]: raw midi
    3 - соответствует card3 (/proc/asound/card3/, в событиях udev .../sound/card3)
    0 - /proc/asound/card3/midi0, порт 0 в aconnect -i -l (0 'SAMSUNG_Android MIDI 1')
@@ -100,7 +101,7 @@ $ lsusb -d 04e8:686c -v
 ## UDEV
 
 ```bash
-$ aconnect -i -l
+$ aconnect -o -l
 ...
 client 28: 'SAMSUNG_Android' [type=kernel,card=3]
     0 'SAMSUNG_Android MIDI 1'
