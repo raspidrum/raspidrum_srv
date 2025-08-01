@@ -150,9 +150,9 @@ func GetAllCards() ([]int, error) {
 
 // MidiPortInfo represents ALSA sequencer MIDI port info
 type MidiPortInfo struct {
-	ClientID   int
-	PortID     int
-	CardID     int
+	ClientId   int
+	PortId     int
+	CardId     int
 	ClientName string
 	PortName   string
 }
@@ -190,9 +190,9 @@ func ListMidiPorts() ([]MidiPortInfo, error) {
 			portName := C.GoString(C.snd_seq_port_info_get_name(portInfo))
 			// Only show MIDI ports (filter by type/capability if needed)
 			result = append(result, MidiPortInfo{
-				ClientID:   clientID,
-				PortID:     portID,
-				CardID:     cardID,
+				ClientId:   clientID,
+				PortId:     portID,
+				CardId:     cardID,
 				ClientName: clientName,
 				PortName:   portName,
 			})

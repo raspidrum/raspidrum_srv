@@ -20,7 +20,7 @@ import (
 )
 
 // formatEvent formats the event for output
-func formatEvent(e *udev.Event) string {
+func formatEvent(e *udev.Event, verbose bool) string {
 	if e.Action == "" || e.Subsystem == "" {
 		return ""
 	}
@@ -52,6 +52,12 @@ func formatEvent(e *udev.Event) string {
 	if val, ok := e.Env["ID_MODEL_ENC"]; ok {
 		result += fmt.Sprintf(", model=%s", val)
 	}
+	result += "\n"
+	if verbose {
+		for key, val := range e.Env {
+			result += fmt.Sprintf("  %s=%s\n", key, val)
+		}
+	}
 	return result
 }
 
@@ -61,14 +67,15 @@ func printHelp() {
 	fmt.Println("Usage:")
 	fmt.Println("  --cards      Show ALSA sound and MIDI cards, then exit")
 	fmt.Println("  --monitor    Monitor device connect/disconnect events")
+	fmt.Println("  -v           Enable verbose output. Only for --monitor")
 	fmt.Println("  -h, --help   Show this help message")
 	fmt.Println("\nNo arguments: show this help")
 }
 
 // getCardPortFromDevPath extracts card and port from DEVPATH string
 func getCardPortFromDevPath(devPath string) (card, port int, ok bool) {
-	// Example: /devices/platform/.../sound/card3/seq-midi-3-0
-	re := regexp.MustCompile(`sound/card(\d+)/seq-midi-(\d+)-(\d+)`)
+	// Example: /devices/platform/.../sound/card3/midiC3D0
+	re := regexp.MustCompile(`sound/card(\d+)/midiC(\d+)D(\d+)`)
 	matches := re.FindStringSubmatch(devPath)
 	if len(matches) == 4 {
 		card = atoi(matches[1])
@@ -76,6 +83,15 @@ func getCardPortFromDevPath(devPath string) (card, port int, ok bool) {
 		return card, port, true
 	}
 	return 0, 0, false
+}
+
+func endsWithCardNumber(path string) bool {
+	// Регулярное выражение для проверки /card и числа в конце
+	re, err := regexp.Compile(`/card\d+$`)
+	if err != nil {
+		return false
+	}
+	return re.MatchString(path)
 }
 
 func atoi(s string) int {
@@ -108,7 +124,7 @@ func getAlsaCards() ([]string, error) {
 	if err == nil {
 		for _, port := range midiPorts {
 			result = append(result, fmt.Sprintf("MIDI: client=%d port=%d card=%d name=%s portname=%s",
-				port.ClientID, port.PortID, port.CardID, port.ClientName, port.PortName))
+				port.ClientId, port.PortId, port.CardId, port.ClientName, port.PortName))
 		}
 	}
 	return result, nil
@@ -126,7 +142,7 @@ func listCards() {
 	}
 }
 
-func runMonitor() {
+func runMonitor(verbose bool) {
 	for {
 		monitor, err := udev.NewMonitor()
 		if err != nil {
@@ -142,6 +158,7 @@ func runMonitor() {
 			fmt.Println("\nTermination signal received...")
 			cancel()
 		}()
+
 		eventsCh, errCh, err := monitor.Start(ctx)
 		if err != nil {
 			log.Fatalf("Failed to start monitoring: %v", err)
@@ -157,9 +174,9 @@ func runMonitor() {
 					monitoringStopped = true
 					break
 				}
-				fmt.Println(formatEvent(event))
-				if (event.Subsystem == "sound" || event.Subsystem == "snd_seq") && (event.Action == "add" || event.Action == "bind" || event.Action == "remove") {
-					if event.Action == "add" && strings.Contains(event.DevPath, "seq-midi-") {
+				fmt.Println(formatEvent(event, verbose))
+				if (event.Subsystem == "sound" || event.Subsystem == "snd_seq") && (event.Action == "add" || event.Action == "change" || event.Action == "remove") {
+					if event.Action == "change" && strings.Contains(event.DevPath, "card") {
 						card, port, ok := getCardPortFromDevPath(event.DevPath)
 						devices, err := getAlsaCards()
 						if err != nil {
@@ -171,6 +188,16 @@ func runMonitor() {
 								} else {
 									fmt.Printf("  %s\n", dev)
 								}
+							}
+						}
+					}
+					if event.Action == "delete" && endsWithCardNumber(event.DevPath) {
+						devices, err := getAlsaCards()
+						if err != nil {
+							fmt.Printf("Error listing ALSA devices: %v\n", err)
+						} else {
+							for _, dev := range devices {
+								fmt.Printf("  %s\n", dev)
 							}
 						}
 					}
@@ -199,14 +226,33 @@ func main() {
 		return
 	}
 
-	switch os.Args[1] {
-	case "--cards":
-		listCards()
-	case "--monitor":
-		runMonitor()
-	case "-h", "--help":
-		printHelp()
-	default:
-		printHelp()
+	// Parse flags manually
+	args := os.Args[1:]
+	var monitor, verbose, cards, help bool
+	for _, arg := range args {
+		switch arg {
+		case "--monitor":
+			monitor = true
+		case "-v":
+			verbose = true
+		case "--cards":
+			cards = true
+		case "-h", "--help":
+			help = true
+		}
 	}
+
+	if help {
+		printHelp()
+		return
+	}
+	if cards {
+		listCards()
+		return
+	}
+	if monitor {
+		runMonitor(verbose)
+		return
+	}
+	printHelp()
 }
