@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/raspidrum-srv/internal/app/midi"
 )
 
 type callParam struct {
@@ -80,7 +81,7 @@ func (m *MockSamplerControlSetter) Compare(t *testing.T, wants []callParam) {
 func Test_SetControlValue(t *testing.T) {
 	type args struct {
 		preset   *KitPreset
-		mididevs []MIDIDevice
+		mididevs []midi.MIDIDevice
 	}
 	type testCase struct {
 		name       string
@@ -96,7 +97,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set channel volume",
 			testData: "single_instrument.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -116,7 +117,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set instrument volume with MIDI CC",
 			testData: "single_instrument.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -137,7 +138,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set instrument pan with MIDI CC",
 			testData: "single_instrument.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -158,7 +159,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set non-existent control",
 			testData: "single_instrument.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -176,7 +177,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set pitch (tunes) control in instrument",
 			testData: "single_instrument_with_tunes.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -197,7 +198,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set pitch (tunes) control in layer",
 			testData: "layer_with_tune.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -218,7 +219,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set instrument virtual vol",
 			testData: "single instr_with_layers.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -244,7 +245,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set layer vol with instrument correction",
 			testData: "single instr_with_layers.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -264,7 +265,7 @@ func Test_SetControlValue(t *testing.T) {
 			name:     "set channel virtual pan",
 			testData: "two_instruments_channel_virtual_pan.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},

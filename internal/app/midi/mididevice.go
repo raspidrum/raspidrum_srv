@@ -13,7 +13,8 @@ type MIDIDeviceProvider interface {
 
 type MIDIDevice interface {
 	GetKeysMapping() (map[string]int, error)
-	GetOutPorts(isConnected bool) ([]MIDIPortInfo, error)
+	//GetOutPorts(isConnected bool) ([]MIDIPortInfo, error)
+	DevId() string
 	Name() string
 }
 
@@ -50,6 +51,15 @@ func (m *usbMIDIDevice) GetOutPorts(isConnected bool) ([]MIDIPortInfo, error) {
 		}
 	}
 	return res, nil
+}
+
+func (m *usbMIDIDevice) DevId() string {
+	for _, port := range m.outPorts {
+		if port.State == MIDIPortStateConnected {
+			return port.PortId
+		}
+	}
+	return ""
 }
 
 // find new connected ports

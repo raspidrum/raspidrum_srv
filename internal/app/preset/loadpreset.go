@@ -6,14 +6,13 @@ import (
 	"github.com/spf13/afero"
 
 	midi "github.com/raspidrum-srv/internal/app/mididevice"
-	m "github.com/raspidrum-srv/internal/model"
 	"github.com/raspidrum-srv/internal/repo"
 	d "github.com/raspidrum-srv/internal/repo/db"
 )
 
 // TODO: init MIDI device on connect/reconnect (and startup)
 var mdev = midi.NewMIDIDevice("0:0", "Dummy")
-var midiDevices = []m.MIDIDevice{
+var midiDevices = []midi.MIDIDevice{
 	&mdev,
 }
 

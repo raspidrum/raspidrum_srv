@@ -5,12 +5,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/raspidrum-srv/internal/app/midi"
 )
 
 func Test_PrepareToLoad(t *testing.T) {
 	type args struct {
 		preset   *KitPreset
-		mididevs []MIDIDevice
+		mididevs []midi.MIDIDevice
 	}
 	type testCase struct {
 		name             string
@@ -25,7 +26,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			name:     "channel with one instrument without layers",
 			testData: "single_instrument.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -75,7 +76,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			name:     "with layers",
 			testData: "single instr_with_layers.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -142,7 +143,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			name:     "two instruments",
 			testData: "two_instruments.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -204,7 +205,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			name:     "virtual pan in channel",
 			testData: "two_instruments_channel_virtual_pan.yaml",
 			args: args{
-				mididevs: []MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},

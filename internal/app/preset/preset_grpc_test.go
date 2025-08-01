@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	midi "github.com/raspidrum-srv/internal/app/mididevice"
 	"github.com/raspidrum-srv/internal/model"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/stretchr/testify/assert"
@@ -13,7 +14,7 @@ import (
 func TestConvertPresetToProto(t *testing.T) {
 	type args struct {
 		preset   *model.KitPreset
-		mididevs []model.MIDIDevice
+		mididevs []midi.MIDIDevice
 	}
 	tests := []struct {
 		name     string
@@ -26,7 +27,7 @@ func TestConvertPresetToProto(t *testing.T) {
 			name:     "basic preset with single instrument channel",
 			testData: "single_instrument.yaml",
 			args: args{
-				mididevs: []model.MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -35,9 +36,9 @@ func TestConvertPresetToProto(t *testing.T) {
 				Name: "Single Instrument",
 				Channels: []*pb.Channel{
 					{
-						Key:  "sampler",
-						Name: "Kit",
-						Type: pb.ChannelType_CHANNEL_TYPE_SAMPLER,
+						Key:    "sampler",
+						Name:   "Kit",
+						Type:   pb.ChannelType_CHANNEL_TYPE_SAMPLER,
 						Volume: &pb.BaseControl{Key: "s0volume", Name: "Volume", Value: 1.0, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
 					},
 					{
@@ -60,7 +61,7 @@ func TestConvertPresetToProto(t *testing.T) {
 			name:     "basic preset with single instrument channel, controls without MidiCC",
 			testData: "single_instrument_controls_wo_midicc.yaml",
 			args: args{
-				mididevs: []model.MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -69,9 +70,9 @@ func TestConvertPresetToProto(t *testing.T) {
 				Name: "Single Instrument controls without MidiCC",
 				Channels: []*pb.Channel{
 					{
-						Key:  "sampler",
-						Name: "Kit",
-						Type: pb.ChannelType_CHANNEL_TYPE_SAMPLER,
+						Key:    "sampler",
+						Name:   "Kit",
+						Type:   pb.ChannelType_CHANNEL_TYPE_SAMPLER,
 						Volume: &pb.BaseControl{Key: "s0volume", Name: "Volume", Value: 1.0, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
 					},
 					{
@@ -95,7 +96,7 @@ func TestConvertPresetToProto(t *testing.T) {
 			name:     "preset with multiple instruments in channel",
 			testData: "two_instruments.yaml",
 			args: args{
-				mididevs: []model.MIDIDevice{
+				mididevs: []midi.MIDIDevice{
 					&MockMMIDIDevice{},
 				},
 			},
@@ -104,9 +105,9 @@ func TestConvertPresetToProto(t *testing.T) {
 				Name: "multiple instruments in channel",
 				Channels: []*pb.Channel{
 					{
-						Key:  "sampler",
-						Name: "Kit",
-						Type: pb.ChannelType_CHANNEL_TYPE_SAMPLER,
+						Key:    "sampler",
+						Name:   "Kit",
+						Type:   pb.ChannelType_CHANNEL_TYPE_SAMPLER,
 						Volume: &pb.BaseControl{Key: "s0volume", Name: "Volume", Value: 1.0, Min: makeFloat64Ptr(0), Max: makeFloat64Ptr(1)},
 					},
 					{
