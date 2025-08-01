@@ -12,7 +12,7 @@ import (
 )
 
 // TODO: init MIDI device on connect/reconnect (and startup)
-var mdev = midi.NewUSBMIDIDevice("0:0", "Dummy")
+var mdev = midi.NewMIDIDevice("0:0", "Dummy")
 var midiDevices = []m.MIDIDevice{
 	&mdev,
 }
