@@ -8,7 +8,7 @@ ENV GOARCH=arm64
 
 RUN apt-get update; \
 	apt-get install -y --no-install-recommends \
-		libasound2-dev build-essential\
+		libasound2-dev build-essential libusb-1.0-0-dev libudev-dev\
 	; \
 	rm -rf /var/lib/apt/lists/*
 

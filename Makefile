@@ -51,6 +51,23 @@ build-debug: prepare-builder
 	  raspidrum-builder \
 	  go build -gcflags="all=-N -l" -buildvcs=false -trimpath -o ./build/$(APP_NAME) ./$(SRC_DIR)
 
+# Run unit tests in Docker (for ARM64)
+# Usage: make test-debug [TestNameRegex] [package]
+test-debug: prepare-builder
+	@echo "Running unit tests in Docker for Raspberry Pi ARM64..."
+	docker run --rm \
+		--platform linux/arm64 \
+		--mount type=bind,src=.,dst=/src \
+	  -v /tmp/buildkit-cache:/root/.cache/go-build \
+	  -v /tmp/buildkit-cache:/go/pkg/mod \
+	  --name raspidrum-builder-test \
+	  raspidrum-builder \
+	  sh -c 'if [ -n "$(PKG)" ]; then \
+            go test -v -timeout 30s $(PKG); \
+        else \
+            go test -v ./...; \
+        fi'
+
 # Clean build files
 clean:
 	@echo "Cleaning build directory..."
@@ -207,6 +224,8 @@ help:
 	@echo "  ${BOLD}test-connection${REGULAR} - Test connection to Raspberry Pi"
 	@echo "  ${BOLD}logs${REGULAR} - Show $(APP_NAME) service logs"
 	@echo "  ${BOLD}logs-tail${REGULAR} - Show last 50 lines of $(APP_NAME) service logs"
+	@echo "\n# Testing"
+	@echo "  ${BOLD}test-debug${REGULAR} - Run unit tests in Docker for ARM64. Usage: make test-debug [PKG=package]"
 
 .PHONY: build-cli-debug
 # Build debug version of CLI (cmd/cli/main.go) for Linux arm64
