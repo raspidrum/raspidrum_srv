@@ -5,19 +5,14 @@ import (
 
 	"github.com/spf13/afero"
 
-	midi "github.com/raspidrum-srv/internal/app/mididevice"
+	"github.com/raspidrum-srv/internal/app/midi"
+	"github.com/raspidrum-srv/internal/model"
 	"github.com/raspidrum-srv/internal/repo"
 	d "github.com/raspidrum-srv/internal/repo/db"
 )
 
-// TODO: init MIDI device on connect/reconnect (and startup)
-var mdev = midi.NewMIDIDevice("0:0", "Dummy")
-var midiDevices = []midi.MIDIDevice{
-	&mdev,
-}
-
 // Loads the specified preset into the sampler and returns information about the loaded preset
-func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) (*m.KitPreset, repo.SamplerChannels, error) {
+func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs, midiDEv midi.MIDIDevice) (*model.KitPreset, repo.SamplerChannels, error) {
 
 	// 1st step: get preset info from db
 	pst, err := db.GetPreset(d.ById(presetId))
@@ -26,7 +21,7 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 	}
 
 	// 2nd step: augment channels and layers info from instrument and instrument preset
-	err = pst.PrepareToLoad(midiDevices)
+	err = pst.PrepareToLoad([]midi.MIDIDevice{midiDEv})
 	if err != nil {
 		return nil, nil, err
 	}

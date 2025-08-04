@@ -1,7 +1,7 @@
 //go:build linux
 // +build linux
 
-package alsa
+package midiprovider
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ type AlsaMidiProvider struct {
 	devPathRegexp  *regexp.Regexp
 }
 
-func NewAlsaMidiProvider(monitor *devmonitor.MonitorService) (*AlsaMidiProvider, error) {
+func NewMidiProvider(monitor *devmonitor.MonitorService) (midi.MIDIDeviceProvider, error) {
 	p := AlsaMidiProvider{
 		deviceListener: nil,
 	}
@@ -48,16 +48,18 @@ func (p *AlsaMidiProvider) GetMIDIPorts() ([]midi.MIDIPortInfo, error) {
 
 	res := make([]midi.MIDIPortInfo, 0)
 	for _, port := range ports {
-		// TODO: filter port: only hardware needed
-		mport := midi.MIDIPortInfo{
-			Driver:     "ALSA",
-			DevId:      p.getDevIdFromMidiPort(port),
-			PortId:     fmt.Sprintf("%d:%d", port.ClientId, port.PortId),
-			Name:       port.ClientName,
-			State:      midi.MIDIPortStateConnected,
-			DeviceType: midi.MIDIPortTypeHardware,
+		// filter port: only hardware and output needed
+		if port.IsOutput && port.PortType == libalsa.MidiPortTypeHardware {
+			mport := midi.MIDIPortInfo{
+				Driver:     "ALSA",
+				DevId:      p.getDevIdFromMidiPort(port),
+				PortId:     fmt.Sprintf("%d:%d", port.ClientId, port.PortId),
+				Name:       port.ClientName,
+				State:      midi.MIDIPortStateConnected,
+				DeviceType: midi.MIDIPortTypeHardware,
+			}
+			res = append(res, mport)
 		}
-		res = append(res, mport)
 	}
 	return res, nil
 }

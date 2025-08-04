@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	midi "github.com/raspidrum-srv/internal/app/mididevice"
+	"github.com/raspidrum-srv/internal/app/midi"
 	"github.com/raspidrum-srv/internal/model"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/stretchr/testify/assert"

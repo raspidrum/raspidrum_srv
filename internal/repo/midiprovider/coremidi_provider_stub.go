@@ -1,17 +1,18 @@
 //go:build darwin
 // +build darwin
 
-package coremidi
+package midiprovider
 
 import (
+	"github.com/raspidrum-srv/internal/app/devmonitor"
 	"github.com/raspidrum-srv/internal/app/midi"
 )
 
 type CoreMidiProvider struct {
 }
 
-func NewCoreMidiProvider() *CoreMidiProvider {
-	return &CoreMidiProvider{}
+func NewMidiProvider(monitor *devmonitor.MonitorService) (midi.MIDIDeviceProvider, error) {
+	return &CoreMidiProvider{}, nil
 }
 
 func (p *CoreMidiProvider) GetMIDIPorts() ([]midi.MIDIPortInfo, error) {

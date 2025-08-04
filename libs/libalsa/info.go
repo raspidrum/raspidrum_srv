@@ -22,6 +22,13 @@ import (
 	"unsafe"
 )
 
+type MidiPortType int
+
+const (
+	MidiPortTypeHardware MidiPortType = iota
+	MidiPortTypeSoftware
+)
+
 // AlsaCard represents ALSA sound card information
 type AlsaCard struct {
 	ID       int
@@ -155,6 +162,9 @@ type MidiPortInfo struct {
 	CardId     int
 	ClientName string
 	PortName   string
+	PortType   MidiPortType
+	IsInput    bool // true if port supports input
+	IsOutput   bool // true if port supports output
 }
 
 // ListMidiPorts returns a list of all ALSA sequencer MIDI ports with client, port, card and names
@@ -188,13 +198,28 @@ func ListMidiPorts() ([]MidiPortInfo, error) {
 		for C.snd_seq_query_next_port(seq, portInfo) >= 0 {
 			portID := int(C.snd_seq_port_info_get_port(portInfo))
 			portName := C.GoString(C.snd_seq_port_info_get_name(portInfo))
-			// Only show MIDI ports (filter by type/capability if needed)
+			cap := C.snd_seq_port_info_get_capability(portInfo)
+			isInput := (cap & C.SND_SEQ_PORT_CAP_READ) != 0
+			isOutput := (cap & C.SND_SEQ_PORT_CAP_WRITE) != 0
+
+			// Determine port type based on capabilities
+			portType := C.snd_seq_port_info_get_type(portInfo)
+			var pType MidiPortType
+			if (portType & C.SND_SEQ_PORT_TYPE_HARDWARE) != 0 {
+				pType = MidiPortTypeHardware
+			} else {
+				pType = MidiPortTypeSoftware
+			}
+
 			result = append(result, MidiPortInfo{
 				ClientId:   clientID,
 				PortId:     portID,
 				CardId:     cardID,
 				ClientName: clientName,
 				PortName:   portName,
+				PortType:   pType,
+				IsInput:    isInput,
+				IsOutput:   isOutput,
 			})
 		}
 	}

@@ -123,8 +123,15 @@ func getAlsaCards() ([]string, error) {
 	midiPorts, err := libalsa.ListMidiPorts()
 	if err == nil {
 		for _, port := range midiPorts {
-			result = append(result, fmt.Sprintf("MIDI: client=%d port=%d card=%d name=%s portname=%s",
-				port.ClientId, port.PortId, port.CardId, port.ClientName, port.PortName))
+			var portType string
+			switch port.PortType {
+			case libalsa.MidiPortTypeHardware:
+				portType = "hardware"
+			case libalsa.MidiPortTypeSoftware:
+				portType = "software"
+			}
+			result = append(result, fmt.Sprintf("MIDI: client=%d port=%d card=%d name=%s portname=%s\n type=%s input=%t output=%t",
+				port.ClientId, port.PortId, port.CardId, port.ClientName, port.PortName, portType, port.IsInput, port.IsOutput))
 		}
 	}
 	return result, nil

@@ -20,7 +20,7 @@ func (m *MockMMIDIDevice) Name() string {
 	return "Dummy"
 }
 
-func (m *MockMMIDIDevice) DevID() string {
+func (m *MockMMIDIDevice) DevId() string {
 	return "0:0"
 }
 
