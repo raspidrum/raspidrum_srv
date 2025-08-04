@@ -3,27 +3,40 @@ package preset
 import (
 	"fmt"
 
+	"github.com/raspidrum-srv/internal/app/midi"
 	"github.com/raspidrum-srv/internal/repo"
 )
 
 // TODO: убрать хардкод
 const audioDriver = "COREAUDIO"
-const midiDriver = "COREMIDI"
 
 // TODO: может сделать тип Sampler, в который сохранять созданные идентификаторы устройств и каналов
 
-func InitSampler(sampler repo.SamplerRepo) (audioDevId, midiDevId int, err error) {
-	audioId, err := sampler.ConnectAudioOutput(audioDriver, nil)
+func InitSampler(sampler repo.SamplerRepo, midiDev midi.MIDIDevice) (audioDevId, midiDevId int, err error) {
+	// Init MIDI
+	var midiBindings repo.Param[string]
+	mport, err := midiDev.GetOutPort()
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed get MIDI out port: %w", err)
+	}
+	if mport == nil {
+		return 0, 0, fmt.Errorf("no MIDI out port available for device %s", midiDev.Name())
+	}
+	switch mport.Driver {
+	case "COREMIDI":
+		midiBindings.Name = "CORE_MIDI_BINDINGS"
+	case "ALSA":
+		midiBindings.Name = "ALSA_SEQ_BINDINGS"
+	}
+	midiBindings.Value = mport.PortId
+
+	midiId, err := sampler.ConnectMidiInput(mport.Driver, []repo.Param[string]{midiBindings})
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed init sampler: %w", err)
 	}
 
-	// TODO: убрать хардкод
-	midiBindings := repo.Param[string]{
-		Name:  "CORE_MIDI_BINDINGS",
-		Value: "vmpk vmpk out",
-	}
-	midiId, err := sampler.ConnectMidiInput(midiDriver, []repo.Param[string]{midiBindings})
+	// Init Audio
+	audioId, err := sampler.ConnectAudioOutput(audioDriver, nil)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed init sampler: %w", err)
 	}

@@ -13,7 +13,7 @@ type MIDIDeviceProvider interface {
 
 type MIDIDevice interface {
 	GetKeysMapping() (map[string]int, error)
-	//GetOutPorts(isConnected bool) ([]MIDIPortInfo, error)
+	GetOutPort() (*MIDIPortInfo, error)
 	DevId() string
 	Name() string
 }
@@ -30,7 +30,20 @@ func NewMIDIDevice(provider MIDIDeviceProvider) (MIDIDevice, error) {
 	m := &usbMIDIDevice{
 		provider: provider,
 	}
-	provider.SubscribeDeviceState(m.providerEventHandler)
+
+	ports, err := m.provider.GetMIDIPorts()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get MIDI ports from provider: %w", err)
+	}
+	m.outPorts = make(MIDIPorts, len(ports))
+	for _, p := range ports {
+		m.outPorts[p.DevId] = p
+	}
+
+	err = provider.SubscribeDeviceState(m.providerEventHandler)
+	if err != nil {
+		return nil, fmt.Errorf("failed to subscribe to device state changes: %w", err)
+	}
 	return m, nil
 }
 
@@ -43,14 +56,13 @@ func (m *usbMIDIDevice) Name() string {
 	return ""
 }
 
-func (m *usbMIDIDevice) GetOutPorts(isConnected bool) ([]MIDIPortInfo, error) {
-	res := make([]MIDIPortInfo, 0)
+func (m *usbMIDIDevice) GetOutPort() (*MIDIPortInfo, error) {
 	for _, port := range m.outPorts {
-		if port.State == MIDIPortStateConnected || !isConnected {
-			res = append(res, port)
+		if port.State == MIDIPortStateConnected {
+			return &port, nil
 		}
 	}
-	return res, nil
+	return nil, nil
 }
 
 func (m *usbMIDIDevice) DevId() string {

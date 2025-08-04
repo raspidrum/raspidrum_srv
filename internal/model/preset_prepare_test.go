@@ -11,7 +11,7 @@ import (
 func Test_PrepareToLoad(t *testing.T) {
 	type args struct {
 		preset   *KitPreset
-		mididevs []midi.MIDIDevice
+		mididevs midi.MIDIDevice
 	}
 	type testCase struct {
 		name             string
@@ -26,9 +26,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			name:     "channel with one instrument without layers",
 			testData: "single_instrument.yaml",
 			args: args{
-				mididevs: []midi.MIDIDevice{
-					&MockMMIDIDevice{},
-				},
+				mididevs: &MockMMIDIDevice{},
 			},
 			want: KitPreset{
 				Uid:  "preset-1",
@@ -76,9 +74,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			name:     "with layers",
 			testData: "single instr_with_layers.yaml",
 			args: args{
-				mididevs: []midi.MIDIDevice{
-					&MockMMIDIDevice{},
-				},
+				mididevs: &MockMMIDIDevice{},
 			},
 			want: KitPreset{
 				Channels: []PresetChannel{
@@ -143,9 +139,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			name:     "two instruments",
 			testData: "two_instruments.yaml",
 			args: args{
-				mididevs: []midi.MIDIDevice{
-					&MockMMIDIDevice{},
-				},
+				mididevs: &MockMMIDIDevice{},
 			},
 			want: KitPreset{
 				Uid:  "preset-2",
@@ -205,9 +199,7 @@ func Test_PrepareToLoad(t *testing.T) {
 			name:     "virtual pan in channel",
 			testData: "two_instruments_channel_virtual_pan.yaml",
 			args: args{
-				mididevs: []midi.MIDIDevice{
-					&MockMMIDIDevice{},
-				},
+				mididevs: &MockMMIDIDevice{},
 			},
 			want: KitPreset{
 				Uid:  "preset-2",

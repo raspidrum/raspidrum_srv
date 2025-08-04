@@ -14,7 +14,7 @@ import (
 func TestConvertPresetToProto(t *testing.T) {
 	type args struct {
 		preset   *model.KitPreset
-		mididevs []midi.MIDIDevice
+		mididevs midi.MIDIDevice
 	}
 	tests := []struct {
 		name     string
@@ -27,9 +27,7 @@ func TestConvertPresetToProto(t *testing.T) {
 			name:     "basic preset with single instrument channel",
 			testData: "single_instrument.yaml",
 			args: args{
-				mididevs: []midi.MIDIDevice{
-					&MockMMIDIDevice{},
-				},
+				mididevs: &MockMMIDIDevice{},
 			},
 			want: &pb.Preset{
 				Key:  "preset-1",
@@ -61,9 +59,7 @@ func TestConvertPresetToProto(t *testing.T) {
 			name:     "basic preset with single instrument channel, controls without MidiCC",
 			testData: "single_instrument_controls_wo_midicc.yaml",
 			args: args{
-				mididevs: []midi.MIDIDevice{
-					&MockMMIDIDevice{},
-				},
+				mididevs: &MockMMIDIDevice{},
 			},
 			want: &pb.Preset{
 				Key:  "preset-1",
@@ -96,9 +92,7 @@ func TestConvertPresetToProto(t *testing.T) {
 			name:     "preset with multiple instruments in channel",
 			testData: "two_instruments.yaml",
 			args: args{
-				mididevs: []midi.MIDIDevice{
-					&MockMMIDIDevice{},
-				},
+				mididevs: &MockMMIDIDevice{},
 			},
 			want: &pb.Preset{
 				Key:  "preset-2",

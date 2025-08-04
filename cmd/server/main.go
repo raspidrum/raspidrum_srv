@@ -205,18 +205,6 @@ func initMidi(ctx context.Context, cancel context.CancelFunc) midi.MIDIDevice {
 		os.Exit(1)
 	}
 	// Initialize and start the ALSA MIDI provider
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-signalCh
-		slog.Info("\nTermination signal received...")
-		cancel()
-	}()
-
-	if err := devMon.Start(ctx); err != nil {
-		slog.Error(fmt.Sprintf("Failed to start device monitor: %v", err))
-		os.Exit(1)
-	}
 	midiPr, err := midiprovider.NewMidiProvider(devMon)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to initialize MIDI provider: %v", err))
@@ -228,6 +216,21 @@ func initMidi(ctx context.Context, cancel context.CancelFunc) midi.MIDIDevice {
 		slog.Error(fmt.Sprintf("Failed to initialize MIDI device: %v", err))
 		os.Exit(1)
 	}
+
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-signalCh
+		slog.Info("\nTermination signal received...")
+		cancel()
+	}()
+
+	// TODO: start monitoring for device changes
+	//if err := devMon.Start(ctx); err != nil {
+	//	slog.Error(fmt.Sprintf("Failed to start device monitor: %v", err))
+	//	os.Exit(1)
+	//}
+
 	return midiDev
 }
 

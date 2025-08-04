@@ -130,7 +130,7 @@ func (p *KitPreset) indexInstruments() error {
 }
 
 // PrepareToLoad augments preset controls and layers with data from instrument
-func (p *KitPreset) PrepareToLoad(mididevs []midi.MIDIDevice) error {
+func (p *KitPreset) PrepareToLoad(mididevs midi.MIDIDevice) error {
 	if err := p.indexInstruments(); err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func (k *KitPreset) getSamplerChannel() *PresetChannel {
 	return res
 }
 
-func (p *KitPreset) prepareInstruments(cnlsIndex map[string]*PresetChannel, mididevs []midi.MIDIDevice) error {
+func (p *KitPreset) prepareInstruments(cnlsIndex map[string]*PresetChannel, mididevs midi.MIDIDevice) error {
 	instrumentIdx := 0
 	for i := range p.Instruments {
 		instr := &p.Instruments[i]
