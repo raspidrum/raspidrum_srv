@@ -70,13 +70,13 @@ func main() {
 	// Initialize filesystem
 	fs := afero.NewOsFs()
 
-	// init midi device. Get current and start monitorign for changes
+	// Initialize midi device. Get current and start monitoring for changes
 	// Create a context that can be cancelled.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	midiDev := initMidi(ctx, cancel)
 
-	// start GRPC server
+	// start gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))
 	if err != nil {
 		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to listen: %w", err)))
@@ -90,7 +90,7 @@ func main() {
 	//}
 	//defer cleanup()
 
-	// Register services
+	// Register gRPC services
 	presetServer := preset.NewPresetServer(db, sampler, fs, midiDev)
 	pb.RegisterKitPresetServer(s, presetServer)
 	pb.RegisterChannelControlServer(s, presetServer)
@@ -103,8 +103,10 @@ func main() {
 		}
 	}()
 
-	// Wait for termination signal
+	// Wait for termination signal before shutting down
+	slog.Info("Press Ctrl+C to stop the server")
 	sigChan := make(chan os.Signal, 1)
+	// Handle SIGINT (Ctrl+C) and SIGTERM (termination) for graceful shutdown
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
@@ -210,26 +212,21 @@ func initMidi(ctx context.Context, cancel context.CancelFunc) midi.MIDIDevice {
 		slog.Error(fmt.Sprintf("Failed to initialize MIDI provider: %v", err))
 		os.Exit(1)
 	}
-	// init midi device
+	// Initialize midi device
 	midiDev, err := midi.NewMIDIDevice(midiPr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to initialize MIDI device: %v", err))
 		os.Exit(1)
 	}
 
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	// Start monitoring for device changes
 	go func() {
-		<-signalCh
-		slog.Info("\nTermination signal received...")
-		cancel()
+		if err := devMon.Start(ctx); err != nil {
+			slog.Error(fmt.Sprintf("Failed to start device monitor: %v", err))
+			cancel()
+			os.Exit(1)
+		}
 	}()
-
-	// TODO: start monitoring for device changes
-	//if err := devMon.Start(ctx); err != nil {
-	//	slog.Error(fmt.Sprintf("Failed to start device monitor: %v", err))
-	//	os.Exit(1)
-	//}
 
 	return midiDev
 }

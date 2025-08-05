@@ -83,7 +83,7 @@ func (s *MonitorService) Start(ctx context.Context) error {
 				monitoringStopped = true
 			}
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 		slog.Info("Restarting udev monitor...")
 	}
 }
@@ -100,7 +100,7 @@ func (s *MonitorService) AddListener(key, action, subsystem, devPath string, lis
 	if s.listeners == nil {
 		s.listeners = make(map[string]deviceListenerInfo)
 	}
-	devPathRegex, err := regexp.Compile(`/card\d+$`)
+	devPathRegex, err := regexp.Compile(devPath)
 	if err != nil {
 		return fmt.Errorf("failed to compile regex for devPath: %w", err)
 	}

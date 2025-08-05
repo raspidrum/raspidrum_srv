@@ -16,7 +16,7 @@ import (
 
 const (
 	uDevMidiSubsystem = "sound"
-	uDevDevPath       = `/card(\d+)/midiC(\d+)D(\d+)`
+	uDevDevPath       = `.*/sound/card(\d+)/midiC(\d+)D(\d+)$`
 )
 
 type AlsaMidiProvider struct {
@@ -29,7 +29,7 @@ func NewMidiProvider(monitor *devmonitor.MonitorService) (midi.MIDIDeviceProvide
 		deviceListener: nil,
 	}
 	var err error
-	p.devPathRegexp, err = regexp.Compile(`sound/card(\d+)/midiC(\d+)D(\d+)`)
+	p.devPathRegexp, err = regexp.Compile(uDevDevPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile udev device path regex: %w", err)
 	}
