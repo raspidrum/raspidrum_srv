@@ -54,7 +54,7 @@ func (dm *DeviceManager) GetDeviceDetails(ctx context.Context, vendorID, product
 
 	// Assume we are interested in the first device found.
 	dev := devs[0]
-	//defer dev.Close()
+	defer dev.Close()
 
 	manufacturer, _ := dev.Manufacturer()
 	product, _ := dev.Product()

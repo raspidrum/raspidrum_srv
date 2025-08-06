@@ -101,7 +101,7 @@ func (p *AlsaMidiProvider) HandleUDevEvent(devId string, subsystem string, actio
 	case "remove":
 		p.notifyDeviceState(did, midi.MIDIPortStateDisconnected)
 	default:
-		slog.Info("Unhandled udev action: %s for device %s\n", action, devId)
+		slog.Info("Unhandled udev action: %s for device %s", action, devId)
 	}
 }
 

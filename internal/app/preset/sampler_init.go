@@ -7,7 +7,7 @@ import (
 	"github.com/raspidrum-srv/internal/repo"
 )
 
-// TODO: убрать хардкод
+// TODO: remove hardcoded value
 const audioDriver = "COREAUDIO"
 
 // TODO: может сделать тип Sampler, в который сохранять созданные идентификаторы устройств и каналов

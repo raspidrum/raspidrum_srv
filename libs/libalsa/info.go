@@ -25,7 +25,6 @@ import (
 // GetCardInfo retrieves information about a specific card
 func GetCardInfo(cardNum int) (*AlsaCard, error) {
 	var card *C.snd_ctl_t
-	//var info *C.snd_ctl_card_info_t
 
 	// Form device name
 	deviceName := C.CString(fmt.Sprintf("hw:%d", cardNum))
@@ -39,8 +38,6 @@ func GetCardInfo(cardNum int) (*AlsaCard, error) {
 	defer C.snd_ctl_close(card)
 
 	// Allocate memory for info structure
-	//C.snd_ctl_card_info_alloca(&info)
-
 	size := C.snd_ctl_card_info_sizeof()
 	infoBytes := make([]byte, size)
 	// make C-pointer
@@ -80,8 +77,6 @@ func GetHardwareInfo(cardNum int) (map[string]string, error) {
 	hwInfo := make(map[string]string)
 
 	// Get PCM device information
-	//var pcmInfo *C.snd_pcm_info_t
-	//C.snd_pcm_info_alloca(&pcmInfo)
 	size := C.snd_pcm_info_sizeof()
 	infoBytes := make([]byte, size)
 	pcmInfo := (*C.snd_pcm_info_t)(unsafe.Pointer(&infoBytes[0]))
