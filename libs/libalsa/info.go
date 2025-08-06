@@ -22,22 +22,6 @@ import (
 	"unsafe"
 )
 
-type MidiPortType int
-
-const (
-	MidiPortTypeHardware MidiPortType = iota
-	MidiPortTypeSoftware
-)
-
-// AlsaCard represents ALSA sound card information
-type AlsaCard struct {
-	ID       int
-	Name     string
-	LongName string
-	Driver   string
-	Mixer    string
-}
-
 // GetCardInfo retrieves information about a specific card
 func GetCardInfo(cardNum int) (*AlsaCard, error) {
 	var card *C.snd_ctl_t
@@ -153,18 +137,6 @@ func GetAllCards() ([]int, error) {
 	}
 
 	return cards, nil
-}
-
-// MidiPortInfo represents ALSA sequencer MIDI port info
-type MidiPortInfo struct {
-	ClientId   int
-	PortId     int
-	CardId     int
-	ClientName string
-	PortName   string
-	PortType   MidiPortType
-	IsInput    bool // true if port supports input
-	IsOutput   bool // true if port supports output
 }
 
 // ListMidiPorts returns a list of all ALSA sequencer MIDI ports with client, port, card and names
