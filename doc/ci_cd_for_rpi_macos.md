@@ -99,3 +99,12 @@
 - https://github.com/docker/buildx
 - https://github.com/abiosoft/colima
 - https://goreleaser.com/ 
+
+
+## 10. Notes
+
+Если в виртуалке на go get .. возникают сетевые ошибки (TLS Handshake timeout, Connection reset by pear), можно попробовать:
+
+  ```bash
+  sudo ip link set dev enp0s1 mtu 1350
+  ```

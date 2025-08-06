@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/goccy/go-yaml"
+	"github.com/raspidrum-srv/internal/app/midi"
 	m "github.com/raspidrum-srv/internal/model"
 	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
 	lscp "github.com/raspidrum-srv/libs/liblscp-go"
@@ -20,8 +21,19 @@ func (m *MockMMIDIDevice) Name() string {
 	return "Dummy"
 }
 
-func (m *MockMMIDIDevice) DevID() string {
+func (m *MockMMIDIDevice) DevId() string {
 	return "0:0"
+}
+
+func (m *MockMMIDIDevice) GetOutPort() (*midi.MIDIPortInfo, error) {
+	return &midi.MIDIPortInfo{
+		Driver:     "DUMMY",
+		Name:       "Dummy Out Port",
+		PortId:     "0:0",
+		DevId:      "0:0",
+		State:      midi.MIDIPortStateConnected,
+		DeviceType: midi.MIDIPortTypeHardware,
+	}, nil
 }
 
 func (m *MockMMIDIDevice) GetKeysMapping() (map[string]int, error) {

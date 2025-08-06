@@ -5,20 +5,14 @@ import (
 
 	"github.com/spf13/afero"
 
-	midi "github.com/raspidrum-srv/internal/app/mididevice"
-	m "github.com/raspidrum-srv/internal/model"
+	"github.com/raspidrum-srv/internal/app/midi"
+	"github.com/raspidrum-srv/internal/model"
 	"github.com/raspidrum-srv/internal/repo"
 	d "github.com/raspidrum-srv/internal/repo/db"
 )
 
-// TODO: init MIDI device on connect/reconnect (and startup)
-var mdev = midi.NewUSBMIDIDevice("0:0", "Dummy")
-var midiDevices = []m.MIDIDevice{
-	&mdev,
-}
-
 // Loads the specified preset into the sampler and returns information about the loaded preset
-func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) (*m.KitPreset, repo.SamplerChannels, error) {
+func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs, midiDev midi.MIDIDevice) (*model.KitPreset, repo.SamplerChannels, error) {
 
 	// 1st step: get preset info from db
 	pst, err := db.GetPreset(d.ById(presetId))
@@ -27,7 +21,7 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 	}
 
 	// 2nd step: augment channels and layers info from instrument and instrument preset
-	err = pst.PrepareToLoad(midiDevices)
+	err = pst.PrepareToLoad(midiDev)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -36,7 +30,7 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 	// skipped: substitute MIDI Keys needed only for generation sfz-ctrl files. MIDI CC stored in db and not needed for substitute
 
 	// 4rd step: init sampler
-	audioDevId, midiDevId, err := InitSampler(sampler)
+	audioDevId, midiDevId, err := InitSampler(sampler, midiDev)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed init sampler: %w", err)
 	}

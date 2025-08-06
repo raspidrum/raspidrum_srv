@@ -6,6 +6,7 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/raspidrum-srv/internal/app/midi"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/spf13/afero"
 	"google.golang.org/grpc"
@@ -25,18 +26,20 @@ type PresetServer struct {
 	ctrlHandler  *SamplerControlHandler
 	fs           afero.Fs
 	loadedPreset *model.KitPreset
+	midiDevice   midi.MIDIDevice
 }
 
-func NewPresetServer(db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs) *PresetServer {
+func NewPresetServer(db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs, midiDevice midi.MIDIDevice) *PresetServer {
 	return &PresetServer{
-		db:      db,
-		sampler: sampler,
-		fs:      fs,
+		db:         db,
+		sampler:    sampler,
+		fs:         fs,
+		midiDevice: midiDevice,
 	}
 }
 
 func (s *PresetServer) LoadPreset(ctx context.Context, req *pb.GetPresetRequest) (*pb.PresetResponse, error) {
-	preset, chnls, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs)
+	preset, chnls, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs, s.midiDevice)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to load preset: %v", err)
 	}

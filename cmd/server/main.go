@@ -6,16 +6,21 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
+	"github.com/raspidrum-srv/internal/app/devmonitor"
+	"github.com/raspidrum-srv/internal/app/midi"
 	"github.com/raspidrum-srv/internal/app/preset"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/raspidrum-srv/internal/repo/db"
 	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
+	"github.com/raspidrum-srv/internal/repo/midiprovider"
 	"github.com/raspidrum-srv/util"
 )
 
@@ -65,7 +70,13 @@ func main() {
 	// Initialize filesystem
 	fs := afero.NewOsFs()
 
-	// start GRPC server
+	// Initialize midi device. Get current and start monitoring for changes
+	// Create a context that can be cancelled.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	midiDev := initMidi(ctx, cancel)
+
+	// start gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))
 	if err != nil {
 		slog.Error(fmt.Sprintln(fmt.Errorf("Failed to listen: %w", err)))
@@ -79,16 +90,30 @@ func main() {
 	//}
 	//defer cleanup()
 
-	// Register services
-	presetServer := preset.NewPresetServer(db, sampler, fs)
+	// Register gRPC services
+	presetServer := preset.NewPresetServer(db, sampler, fs, midiDev)
 	pb.RegisterKitPresetServer(s, presetServer)
 	pb.RegisterChannelControlServer(s, presetServer)
 
 	slog.Info("Server is running", slog.Int("port:", cfg.Host.Port))
-	if err := s.Serve(lis); err != nil {
-		slog.Error(fmt.Sprintln(fmt.Errorf("Server error: %w", err)))
-		os.Exit(1)
-	}
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			slog.Error(fmt.Sprintln(fmt.Errorf("Server error: %w", err)))
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for termination signal before shutting down
+	slog.Info("Press Ctrl+C to stop the server")
+	sigChan := make(chan os.Signal, 1)
+	// Handle SIGINT (Ctrl+C) and SIGTERM (termination) for graceful shutdown
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	slog.Info("Shutting down server...")
+	s.GracefulStop()
+	cancel() // broadcast the cancellation to all services
+	slog.Info("Server gracefully stopped")
 }
 
 func loadConfig(configPath string) (Config, error) {
@@ -172,6 +197,38 @@ func grpcStreamLoggingInterceptor(srv any, ss grpc.ServerStream, info *grpc.Stre
 	}
 
 	return err
+}
+
+func initMidi(ctx context.Context, cancel context.CancelFunc) midi.MIDIDevice {
+	// Initialize and start USB monitor service
+	devMon, err := devmonitor.NewMonitorService()
+	if err != nil {
+		slog.Error("Failed to initialize device monitor", "error", err)
+		os.Exit(1)
+	}
+	// Initialize and start the ALSA MIDI provider
+	midiPr, err := midiprovider.NewMidiProvider(devMon)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to initialize MIDI provider: %v", err))
+		os.Exit(1)
+	}
+	// Initialize midi device
+	midiDev, err := midi.NewMIDIDevice(midiPr)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to initialize MIDI device: %v", err))
+		os.Exit(1)
+	}
+
+	// Start monitoring for device changes
+	go func() {
+		if err := devMon.Start(ctx); err != nil {
+			slog.Error(fmt.Sprintf("Failed to start device monitor: %v", err))
+			cancel()
+			os.Exit(1)
+		}
+	}()
+
+	return midiDev
 }
 
 func setLogging() {
