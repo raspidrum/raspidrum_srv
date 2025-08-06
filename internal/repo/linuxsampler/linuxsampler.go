@@ -26,7 +26,7 @@ type LinuxSampler struct {
 	healthcheckWg     sync.WaitGroup
 }
 
-func InitLinuxSampler(samplesPath string) (*LinuxSampler, error) {
+func InitLinuxSampler(samplesPath string, systemd dbus.SystemdManager) (*LinuxSampler, error) {
 
 	// Initialize sampler
 	sampler := LinuxSampler{
@@ -39,12 +39,6 @@ func InitLinuxSampler(samplesPath string) (*LinuxSampler, error) {
 		// TODO: move to config
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-
-		// Initialize systemd manager
-		systemd, err := dbus.NewDbusSystemdManager()
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to systemd: %w", err)
-		}
 
 		// Ensure linuxsampler service is running
 		sampler.Systemd = systemd

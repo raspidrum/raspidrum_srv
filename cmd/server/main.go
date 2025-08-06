@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/raspidrum-srv/internal/app/preset"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/raspidrum-srv/internal/repo/db"
+	"github.com/raspidrum-srv/internal/repo/dbus"
 	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
 	"github.com/raspidrum-srv/internal/repo/midiprovider"
 	"github.com/raspidrum-srv/util"
@@ -49,11 +51,21 @@ func main() {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
+	// Initialize systemd manager
+	var systemd dbus.SystemdManager
+	if runtime.GOOS == "linux" {
+		systemd, err = dbus.NewDbusSystemdManager()
+		if err != nil {
+			slog.Error(fmt.Sprintln("failed to connect to systemd: %w", err))
+			os.Exit(1)
+		}
+	}
+
 	projectPath := util.AbsPathify("", ".")
 
 	samplerDataPath := util.AbsPathify(projectPath, cfg.Data.Sampler)
 	slog.Info("Working dir: " + samplerDataPath)
-	sampler, err := lsampler.InitLinuxSampler(samplerDataPath)
+	sampler, err := lsampler.InitLinuxSampler(samplerDataPath, systemd)
 	if err != nil {
 		slog.Error(fmt.Sprintln(err))
 		os.Exit(1)
