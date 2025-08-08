@@ -12,5 +12,14 @@
   },
   //"editor.formatOnSave": true,
   //"editor.formatOnSaveMode": "modifications",
-  "go.alternateTools": {}
+  "go.alternateTools": {},
+  "gopls": {
+    "buildFlags": [
+      "-tags=linux"
+    ],
+    "env": {
+      "GOOS": "linux",
+      "GOARCH": "arm64"
+    }
+  }
 }
