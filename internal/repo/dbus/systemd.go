@@ -17,6 +17,8 @@ type SystemdManager interface {
 	StartService(ctx context.Context, name string) error
 	// WaitForServiceActive waits until the service is active or timeout/context is done.
 	WaitForServiceActive(ctx context.Context, name string, timeout time.Duration) error
+	// StartTransientUnit starts a transient unit with the specified properties via systemd D-Bus API.
+	StartTransientUnit(ctx context.Context, unitName string, description string, execPath string, execArgs []string, env []string, unitType string) error
 }
 
 // DbusSystemdManager implements SystemdManager using D-Bus API.
@@ -101,4 +103,66 @@ func (m *DbusSystemdManager) getUnitPath(ctx context.Context, name string) (dbus
 		return "", fmt.Errorf("failed to parse GetUnit response: %w", err)
 	}
 	return unitPath, nil
-} 
+}
+
+// StartTransientUnit starts a transient unit with provided ExecStart and Environment using systemd D-Bus API.
+// unitType is typically "simple" for simple long-running processes.
+func (m *DbusSystemdManager) StartTransientUnit(
+	ctx context.Context,
+	unitName string,
+	description string,
+	execPath string,
+	execArgs []string,
+	env []string,
+	unitType string,
+) error {
+	type execStartItem struct {
+		Path          string
+		Arguments     []string
+		IgnoreFailure bool
+	}
+
+	if unitType == "" {
+		unitType = "simple"
+	}
+
+	// Build properties for StartTransientUnit
+	props := []struct {
+		Name  string
+		Value dbus.Variant
+	}{
+		{Name: "Description", Value: dbus.MakeVariant(description)},
+		{Name: "Type", Value: dbus.MakeVariant(unitType)},
+		{Name: "ExecStart", Value: dbus.MakeVariant([]execStartItem{{
+			Path:          execPath,
+			Arguments:     execArgs,
+			IgnoreFailure: false,
+		}})},
+	}
+
+	if len(env) > 0 {
+		props = append(props, struct {
+			Name  string
+			Value dbus.Variant
+		}{Name: "Environment", Value: dbus.MakeVariant(env)})
+	}
+
+	obj := m.conn.Object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
+	var jobPath dbus.ObjectPath
+	call := obj.CallWithContext(
+		ctx,
+		"org.freedesktop.systemd1.Manager.StartTransientUnit",
+		0,
+		unitName,
+		"replace",
+		props,
+		[]struct{}{}, // No auxiliary units
+	)
+	if call.Err != nil {
+		return fmt.Errorf("failed to start transient unit %s: %w", unitName, call.Err)
+	}
+	if err := call.Store(&jobPath); err != nil {
+		return fmt.Errorf("failed to parse StartTransientUnit response: %w", err)
+	}
+	return nil
+}

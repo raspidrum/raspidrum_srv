@@ -4,14 +4,31 @@
 package audioprovider
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/raspidrum-srv/internal/app/audio"
+	"github.com/raspidrum-srv/internal/repo/dbus"
 	"github.com/raspidrum-srv/libs/libalsa"
 )
 
 type jackProvider struct {
 	device *jackDevice
+}
+
+// startJackTransient starts JACK as a transient systemd unit using provided ALSA hw card string (e.g., "hw:0").
+func startJackTransient(ctx context.Context, systemd dbus.SystemdManager, hwCard string) error {
+	env := []string{fmt.Sprintf("AUDIO_CARD=%s", hwCard)}
+	return systemd.StartTransientUnit(
+		ctx,
+		"jack.service",
+		fmt.Sprintf("JACK Audio Server (%s)", hwCard),
+		"/usr/bin/jackd",
+		[]string{"-d", "alsa", "-d", hwCard},
+		env,
+		"simple",
+	)
 }
 
 func NewAudioProvider(blackList []string) (audio.AudioDeviceProvider, error) {
@@ -40,7 +57,14 @@ func NewAudioProvider(blackList []string) (audio.AudioDeviceProvider, error) {
 			continue
 		}
 
-		// Found suitable card
+		// Found suitable card: start JACK transient unit bound to this card
+		if sysd, err := dbus.NewDbusSystemdManager(); err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := startJackTransient(ctx, sysd, fmt.Sprintf("hw:%d", cardNum)); err == nil {
+				_ = sysd.WaitForServiceActive(ctx, "jack.service", 5*time.Second)
+			}
+		}
 		return &jackProvider{
 			device: &jackDevice{
 				cardInfo: cardInfo,

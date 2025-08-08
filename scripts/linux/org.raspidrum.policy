@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
+<policyconfig>
+  <vendor>RaspiDrum</vendor>
+  <vendor_url>https://raspidrum.local</vendor_url>
+
+  <!-- Allow members of the 'audio' group to manage transient units at runtime without authentication -->
+  <action id="org.freedesktop.systemd1.manage-units.raspidrum">
+    <description>Manage systemd units for RaspiDrum</description>
+    <message>Authentication is required to manage systemd units for RaspiDrum</message>
+    <defaults allow_inactive="auth_admin" allow_active="yes"/>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/loginctl</annotate>
+    <annotate key="org.freedesktop.policykit.owner">root</annotate>
+    <allow_any>no</allow_any>
+    <allow_inactive>auth_admin</allow_inactive>
+    <allow_active>yes</allow_active>
+  </action>
+</policyconfig>
+
+
