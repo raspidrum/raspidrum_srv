@@ -31,6 +31,11 @@ func (m *mockSystemdManager) WaitForServiceActive(ctx context.Context, name stri
 	return nil
 }
 
+// Satisfy dbus.SystemdManager after adding StartTransientUnit to the interface
+func (m *mockSystemdManager) StartTransientUnit(ctx context.Context, unitName string, description string, execPath string, execArgs []string, env []string, unitType string) error {
+	return nil
+}
+
 func TestHealthCheck_Success(t *testing.T) {
 	lscpDrv := &mockLscpDriver{}
 	lscpDrv.pingErr.Store(errNoError)
