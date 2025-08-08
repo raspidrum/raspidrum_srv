@@ -3,16 +3,12 @@ package preset
 import (
 	"fmt"
 
+	"github.com/raspidrum-srv/internal/app/audio"
 	"github.com/raspidrum-srv/internal/app/midi"
 	"github.com/raspidrum-srv/internal/repo"
 )
 
-// TODO: remove hardcoded value
-const audioDriver = "COREAUDIO"
-
-// TODO: может сделать тип Sampler, в который сохранять созданные идентификаторы устройств и каналов
-
-func InitSampler(sampler repo.SamplerRepo, midiDev midi.MIDIDevice) (audioDevId, midiDevId int, err error) {
+func InitSampler(sampler repo.SamplerRepo, midiDev midi.MIDIDevice, audioDevice audio.AudioDevice) (audioDevId, midiDevId int, err error) {
 	// Init MIDI
 	var midiBindings repo.Param[string]
 	mport, err := midiDev.GetOutPort()
@@ -36,7 +32,16 @@ func InitSampler(sampler repo.SamplerRepo, midiDev midi.MIDIDevice) (audioDevId,
 	}
 
 	// Init Audio
-	audioId, err := sampler.ConnectAudioOutput(audioDriver, nil)
+	audioBindings := make(map[int][]repo.Param[string], 0)
+	audioDriver := audioDevice.Driver()
+	if audioDriver == "JACK" {
+		// TODO: get from channels
+		audioBindings[0] = []repo.Param[string]{
+			{Name: "JACK_BINDINGS", Value: "system:playback_1"},
+			{Name: "JACK_BINDINGS", Value: "system:playback_2"},
+		}
+	}
+	audioId, err := sampler.ConnectAudioOutput(audioDriver, audioBindings)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed init sampler: %w", err)
 	}

@@ -5,3 +5,9 @@ host:
 data:
   dbRoot: ./db
   samplerRoot: $HOME/_presets
+
+audio:
+  blackList:
+    - "bcm2835 Headphones"
+    - "vc4-hdmi-0"
+    - "vc4-hdmi-1"

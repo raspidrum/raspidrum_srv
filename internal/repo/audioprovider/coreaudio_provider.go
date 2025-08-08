@@ -11,7 +11,7 @@ import (
 
 type coreProvider struct{}
 
-func NewAudioProvider() (audio.AudioDeviceProvider, error) {
+func NewAudioProvider(blackList []string) (audio.AudioDeviceProvider, error) {
 	provider := &coreProvider{}
 	return provider, nil
 }

@@ -15,10 +15,12 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
+	"github.com/raspidrum-srv/internal/app/audio"
 	"github.com/raspidrum-srv/internal/app/devmonitor"
 	"github.com/raspidrum-srv/internal/app/midi"
 	"github.com/raspidrum-srv/internal/app/preset"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
+	"github.com/raspidrum-srv/internal/repo/audioprovider"
 	"github.com/raspidrum-srv/internal/repo/db"
 	"github.com/raspidrum-srv/internal/repo/dbus"
 	lsampler "github.com/raspidrum-srv/internal/repo/linuxsampler"
@@ -38,6 +40,9 @@ type Config struct {
 	Log struct {
 		Level string `mapstructure:"level"`
 	} `mapstructure:"log"`
+	Audio struct {
+		BlackList []string `mapstructure:"blackList"`
+	} `mapstructure:"audio"`
 }
 
 var cfg Config
@@ -88,6 +93,25 @@ func main() {
 	defer cancel()
 	midiDev := initMidi(ctx, cancel)
 
+	// Initialize audio provider and get device
+	var audioProvider audio.AudioDeviceProvider
+	audioProvider, err = audioprovider.NewAudioProvider(cfg.Audio.BlackList)
+	if err != nil {
+		slog.Error("Failed to initialize audio provider", "error", err)
+		os.Exit(1)
+	}
+
+	// Get audio device
+	audioDev, err := audioProvider.GetAudioDev()
+	if err != nil {
+		slog.Error("Failed to get audio device", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Audio device initialized",
+		"name", audioDev.Name(),
+		"driver", audioDev.Driver())
+
 	// start gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))
 	if err != nil {
@@ -103,7 +127,7 @@ func main() {
 	//defer cleanup()
 
 	// Register gRPC services
-	presetServer := preset.NewPresetServer(db, sampler, fs, midiDev)
+	presetServer := preset.NewPresetServer(db, sampler, fs, midiDev, audioDev)
 	pb.RegisterKitPresetServer(s, presetServer)
 	pb.RegisterChannelControlServer(s, presetServer)
 

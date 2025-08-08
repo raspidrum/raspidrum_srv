@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/afero"
 
+	"github.com/raspidrum-srv/internal/app/audio"
 	"github.com/raspidrum-srv/internal/app/midi"
 	"github.com/raspidrum-srv/internal/model"
 	"github.com/raspidrum-srv/internal/repo"
@@ -12,7 +13,7 @@ import (
 )
 
 // Loads the specified preset into the sampler and returns information about the loaded preset
-func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs, midiDev midi.MIDIDevice) (*model.KitPreset, repo.SamplerChannels, error) {
+func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs, midiDev midi.MIDIDevice, audioDevice audio.AudioDevice) (*model.KitPreset, repo.SamplerChannels, error) {
 
 	// 1st step: get preset info from db
 	pst, err := db.GetPreset(d.ById(presetId))
@@ -30,7 +31,7 @@ func LoadPreset(presetId int64, db *d.Sqlite, sampler repo.SamplerRepo, fs afero
 	// skipped: substitute MIDI Keys needed only for generation sfz-ctrl files. MIDI CC stored in db and not needed for substitute
 
 	// 4rd step: init sampler
-	audioDevId, midiDevId, err := InitSampler(sampler, midiDev)
+	audioDevId, midiDevId, err := InitSampler(sampler, midiDev, audioDevice)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed init sampler: %w", err)
 	}

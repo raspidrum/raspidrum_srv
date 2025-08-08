@@ -6,6 +6,7 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/raspidrum-srv/internal/app/audio"
 	"github.com/raspidrum-srv/internal/app/midi"
 	pb "github.com/raspidrum-srv/internal/pkg/grpc"
 	"github.com/spf13/afero"
@@ -27,19 +28,21 @@ type PresetServer struct {
 	fs           afero.Fs
 	loadedPreset *model.KitPreset
 	midiDevice   midi.MIDIDevice
+	audioDevice  audio.AudioDevice
 }
 
-func NewPresetServer(db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs, midiDevice midi.MIDIDevice) *PresetServer {
+func NewPresetServer(db *d.Sqlite, sampler repo.SamplerRepo, fs afero.Fs, midiDevice midi.MIDIDevice, audioDevice audio.AudioDevice) *PresetServer {
 	return &PresetServer{
-		db:         db,
-		sampler:    sampler,
-		fs:         fs,
-		midiDevice: midiDevice,
+		db:          db,
+		sampler:     sampler,
+		fs:          fs,
+		midiDevice:  midiDevice,
+		audioDevice: audioDevice,
 	}
 }
 
 func (s *PresetServer) LoadPreset(ctx context.Context, req *pb.GetPresetRequest) (*pb.PresetResponse, error) {
-	preset, chnls, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs, s.midiDevice)
+	preset, chnls, err := LoadPreset(req.PresetId, s.db, s.sampler, s.fs, s.midiDevice, s.audioDevice)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to load preset: %v", err)
 	}
