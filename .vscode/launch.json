@@ -6,14 +6,32 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/server/main.go",
+      "program": "${workspaceFolder}/cmd/server/",
       "cwd": "${workspaceFolder}",
       "env": {
         "SRV_CFG_NAME": "dev",
         "SRV_LOG_LEVEL": "DEBUG"
       },
       "args": [], // Аргументы командной строки
-      "buildFlags": ""
+      "buildFlags": "-trimpath",
+      "substitutePath": [
+        {
+          "from": "${workspaceFolder}",
+          "to": "github.com/raspidrum-srv",
+        },
+        {
+          "from": "${env:HOME}/go/pkg/mod/github.com",
+          "to": "github.com",
+        },
+        {
+          "from": "${env:HOME}/go/pkg/mod/golang.org",
+          "to": "golang.org",
+        },
+        {
+          "from": "${env:HOME}/go/pkg",
+          "to": ""
+        }
+      ]
     },
     {
       "name": "Srv",

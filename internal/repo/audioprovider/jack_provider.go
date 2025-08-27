@@ -19,14 +19,27 @@ type jackProvider struct {
 
 // startJackTransient starts JACK as a transient systemd unit using provided ALSA hw card string (e.g., "hw:0").
 func startJackTransient(ctx context.Context, systemd dbus.SystemdManager, hwCard string) error {
-	env := []string{fmt.Sprintf("AUDIO_CARD=%s", hwCard)}
+	//env := []string{fmt.Sprintf("AUDIO_CARD=%s", hwCard), "JACK_DEFAULT_SERVER=system:playback_1"}
+	// exec /usr/bin/jackd -t 2000 -R -P 95 -d alsa -d hw:0,0 -r 48000 -p 512 -n 2 -X seq -s -S
 	return systemd.StartTransientUnit(
 		ctx,
 		"jack.service",
 		fmt.Sprintf("JACK Audio Server (%s)", hwCard),
 		"/usr/bin/jackd",
-		[]string{"-d", "alsa", "-d", hwCard},
-		env,
+		[]string{
+			"-t", "2000",
+			"-R",
+			"-P", "95",
+			"-d", "alsa",
+			"-d", hwCard,
+			"-r", "48000",
+			"-p", "512",
+			"-n", "2",
+			//"-X", "seq",
+			//"-s",
+			//"-S",
+		},
+		[]string{"JACK_NO_AUDIO_RESERVATION=1"},
 		"simple",
 	)
 }
@@ -61,8 +74,10 @@ func NewAudioProvider(blackList []string) (audio.AudioDeviceProvider, error) {
 		if sysd, err := dbus.NewDbusSystemdManager(); err == nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := startJackTransient(ctx, sysd, fmt.Sprintf("hw:%d", cardNum)); err == nil {
+			if err := startJackTransient(ctx, sysd, fmt.Sprintf("hw:%d,0", cardInfo.ID)); err == nil {
 				_ = sysd.WaitForServiceActive(ctx, "jack.service", 5*time.Second)
+			} else {
+				return nil, err
 			}
 		}
 		return &jackProvider{

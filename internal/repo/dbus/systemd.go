@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -116,10 +117,23 @@ func (m *DbusSystemdManager) StartTransientUnit(
 	env []string,
 	unitType string,
 ) error {
+	// Types that mirror systemd D-Bus signatures
+	// properties: a(sv)
+	type property struct {
+		Name  string
+		Value dbus.Variant
+	}
+
 	type execStartItem struct {
 		Path          string
 		Arguments     []string
 		IgnoreFailure bool
+	}
+
+	// auxiliary_units: a(sa(sv))
+	type auxUnit struct {
+		Name       string
+		Properties []property
 	}
 
 	if unitType == "" {
@@ -127,24 +141,19 @@ func (m *DbusSystemdManager) StartTransientUnit(
 	}
 
 	// Build properties for StartTransientUnit
-	props := []struct {
-		Name  string
-		Value dbus.Variant
-	}{
+	args := append([]string{execPath}, execArgs...)
+	props := []property{
 		{Name: "Description", Value: dbus.MakeVariant(description)},
 		{Name: "Type", Value: dbus.MakeVariant(unitType)},
 		{Name: "ExecStart", Value: dbus.MakeVariant([]execStartItem{{
 			Path:          execPath,
-			Arguments:     execArgs,
+			Arguments:     args,
 			IgnoreFailure: false,
 		}})},
 	}
 
 	if len(env) > 0 {
-		props = append(props, struct {
-			Name  string
-			Value dbus.Variant
-		}{Name: "Environment", Value: dbus.MakeVariant(env)})
+		props = append(props, property{Name: "Environment", Value: dbus.MakeVariant(env)})
 	}
 
 	obj := m.conn.Object("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
@@ -156,7 +165,7 @@ func (m *DbusSystemdManager) StartTransientUnit(
 		unitName,
 		"replace",
 		props,
-		[]struct{}{}, // No auxiliary units
+		[]auxUnit{}, // No auxiliary units; typed empty slice to convey a(sa(sv))
 	)
 	if call.Err != nil {
 		return fmt.Errorf("failed to start transient unit %s: %w", unitName, call.Err)
@@ -164,5 +173,6 @@ func (m *DbusSystemdManager) StartTransientUnit(
 	if err := call.Store(&jobPath); err != nil {
 		return fmt.Errorf("failed to parse StartTransientUnit response: %w", err)
 	}
+	slog.Info("Started transient unit", "unitName", unitName, "jobPath", jobPath)
 	return nil
 }

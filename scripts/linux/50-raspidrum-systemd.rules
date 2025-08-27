@@ -1,8 +1,0 @@
-// Allow members of the "audio" group to manage systemd units (start/stop transient units)
-polkit.addRule(function(action, subject) {
-  if (action.id.indexOf("org.freedesktop.systemd1.") === 0 && subject.isInGroup("audio")) {
-    return polkit.Result.YES;
-  }
-});
-
-

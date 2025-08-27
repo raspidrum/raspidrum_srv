@@ -87,12 +87,6 @@ func main() {
 	// Initialize filesystem
 	fs := afero.NewOsFs()
 
-	// Initialize midi device. Get current and start monitoring for changes
-	// Create a context that can be cancelled.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	midiDev := initMidi(ctx, cancel)
-
 	// Initialize audio provider and get device
 	var audioProvider audio.AudioDeviceProvider
 	audioProvider, err = audioprovider.NewAudioProvider(cfg.Audio.BlackList)
@@ -111,6 +105,12 @@ func main() {
 	slog.Info("Audio device initialized",
 		"name", audioDev.Name(),
 		"driver", audioDev.Driver())
+
+	// Initialize midi device. Get current and start monitoring for changes
+	// Create a context that can be cancelled.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	midiDev := initMidi(ctx, cancel)
 
 	// start gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host.Addr, cfg.Host.Port))

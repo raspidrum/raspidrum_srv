@@ -101,7 +101,7 @@ start-debug: stop-debug
 stop-debug:
 	@echo "Stopping remote debugger..."
 	ssh $(RD_USER)@$(RD_HOST) "pkill -f dlv" || true
-
+	$(MAKE) logs
 
 
 
@@ -177,7 +177,7 @@ service-logs-tail:
 
 logs:
 	@echo "Showing $(APP_NAME) debug logs..."
-	ssh $(RD_USER)@$(RD_HOST) "tail -f /tmp/dlv.log"
+	ssh $(RD_USER)@$(RD_HOST) "cat /tmp/dlv.log"
 
 # Build release
 PACKAGE_NAME          := github.com/raspidrum-srv
