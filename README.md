@@ -1,5 +1,11 @@
 **Raspidrum backend service**
 
+# Running
+
+## Env
+
+RDRUM_CONFIG - config filename (in folder configs). Default: dev
+
 # Build, deploy and remote debug
 
 ## Prerequisites

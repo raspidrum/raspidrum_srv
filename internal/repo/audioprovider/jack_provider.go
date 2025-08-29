@@ -27,6 +27,7 @@ func startJackTransient(ctx context.Context, systemd dbus.SystemdManager, hwCard
 		fmt.Sprintf("JACK Audio Server (%s)", hwCard),
 		"/usr/bin/jackd",
 		[]string{
+			//"-v",
 			"-t", "2000",
 			"-R",
 			"-P", "95",
@@ -39,7 +40,7 @@ func startJackTransient(ctx context.Context, systemd dbus.SystemdManager, hwCard
 			//"-s",
 			//"-S",
 		},
-		[]string{"JACK_NO_AUDIO_RESERVATION=1"},
+		[]string{"JACK_NO_AUDIO_RESERVATION=1", "JACK_PROMISCUOUS_SERVER=1"},
 		"simple",
 	)
 }

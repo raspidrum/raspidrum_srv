@@ -13,7 +13,7 @@ import (
 
 // Real load preset to running linuxsampler
 //for listening linuxSampler events:
-/* netcat netcat localhost 8888
+/* netcat localhost 8888
 SUBSCRIBE MISCELLANEOUS
 */
 func TestLoadPreset(t *testing.T) {

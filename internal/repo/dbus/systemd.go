@@ -150,6 +150,8 @@ func (m *DbusSystemdManager) StartTransientUnit(
 			Arguments:     args,
 			IgnoreFailure: false,
 		}})},
+		{Name: "User", Value: dbus.MakeVariant("drum")}, //TODO: get from func in params
+		{Name: "Slice", Value: dbus.MakeVariant("user.slice")},
 	}
 
 	if len(env) > 0 {
