@@ -1,31 +1,31 @@
 
 ## MIDI Note
 
-                  ALESIS  GM    Orchestral Percussion   Raspidrum
-kick              36      36    35                      36
-snare             38      38    38                      38
-snare_rimshot     39       -     -                      39
+                  ALESIS  GM    Orchestral Percussion   Raspidrum   NoteName+Octave
+kick              36      36    35                      36          C   1
+snare             38      38    38                      38          D   1
+snare_rimshot     39       -     -                      39          D#  1
 
-tom1              48      50     -                      48
+tom1              48      50     -                      48          C   2
 tom1_rim
-tom2              45      45     -                      45
+tom2              45      45     -                      45          A   1
 tom2_rim
-tom3              43      43     -                      43
+tom3              43      43     -                      43          G   1
 tom3_rim
-tom4              41      41     -                      41
+tom4              41      41     -                      41          F   1
 tom4_rim
 
-hihat_close       42      42    27                      42
-hihat_open        44      46    29                      46
-hihat_loose                                             29
-hihat_foot_open   49                                    27
-hihat_foot_close  50      44                            44
-hihat_splash      51            28                      28
+hihat_close       42      42    27                      42          F#  1
+hihat_open        44      46    29                      46          A#  1
+hihat_loose                                             29          F   0
+hihat_foot_open   49                                    27          D#  0
+hihat_foot_close  50      44                            44          G#  1
+hihat_splash      51            28                      28          E   0
 
-crash1_edge       49      49                            49
+crash1_edge       49      49                            49          C#  2
 crash2_bell               
-ride1_edge        51      51     -                      51
-ride1_bell                53     -                      53
+ride1_edge        51      51     -                      51          D#  2
+ride1_bell                53     -                      53          F   2  
 
 
 

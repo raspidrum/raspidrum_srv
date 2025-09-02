@@ -5,8 +5,8 @@ Wants=network.target sound.target
 
 [Service]
 Type=simple
-User=drum
-Group=drum
+#User=drum
+#Group=audio
 WorkingDirectory=/home/drum
 ExecStart=/usr/bin/linuxsampler
 Restart=no

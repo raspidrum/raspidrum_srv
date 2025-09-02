@@ -101,7 +101,7 @@ start-debug: stop-debug
 stop-debug:
 	@echo "Stopping remote debugger..."
 	ssh $(RD_USER)@$(RD_HOST) "pkill -f dlv" || true
-	$(MAKE) logs
+#	$(MAKE) logs
 
 
 

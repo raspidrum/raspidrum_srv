@@ -27,9 +27,18 @@ type DbusSystemdManager struct {
 	conn *dbus.Conn
 }
 
-// NewDbusSystemdManager creates a new DbusSystemdManager and connects to the system bus.
-func NewDbusSystemdManager() (*DbusSystemdManager, error) {
+// NewDbusSystemdSysBus creates a new DbusSystemdManager and connects to the system bus.
+func NewDbusSystemdSysBus() (*DbusSystemdManager, error) {
 	conn, err := dbus.SystemBus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to system bus: %w", err)
+	}
+	return &DbusSystemdManager{conn: conn}, nil
+}
+
+// NewDbusSystemdSessBus creates a new DbusSystemdManager and connects to the system bus.
+func NewDbusSystemdSessBus() (*DbusSystemdManager, error) {
+	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to system bus: %w", err)
 	}

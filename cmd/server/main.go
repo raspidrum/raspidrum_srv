@@ -59,7 +59,7 @@ func main() {
 	// Initialize systemd manager
 	var systemd dbus.SystemdManager
 	if runtime.GOOS == "linux" {
-		systemd, err = dbus.NewDbusSystemdManager()
+		systemd, err = dbus.NewDbusSystemdSessBus()
 		if err != nil {
 			slog.Error(fmt.Sprintln("failed to connect to systemd: %w", err))
 			os.Exit(1)

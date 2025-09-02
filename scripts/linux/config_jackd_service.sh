@@ -7,4 +7,6 @@ LimitRTPRIO=95
 LimitMEMLOCK=infinity
 EOF
 
+echo "session required pam_limits.so" | sudo tee -a /etc/pam.d/login
+
 sudo systemctl daemon-reload

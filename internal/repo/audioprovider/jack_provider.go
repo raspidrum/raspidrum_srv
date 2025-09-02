@@ -72,7 +72,7 @@ func NewAudioProvider(blackList []string) (audio.AudioDeviceProvider, error) {
 		}
 
 		// Found suitable card: start JACK transient unit bound to this card
-		if sysd, err := dbus.NewDbusSystemdManager(); err == nil {
+		if sysd, err := dbus.NewDbusSystemdSysBus(); err == nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if err := startJackTransient(ctx, sysd, fmt.Sprintf("hw:%d,0", cardInfo.ID)); err == nil {
