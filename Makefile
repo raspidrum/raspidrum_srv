@@ -91,9 +91,10 @@ deploy-full:
 # Start remote debugging
 debug-remote: build-debug deploy start-debug
 
+#LSMONITOR=FALSE
 start-debug: stop-debug
 	@echo "Starting remote debugger..."
-	ssh $(RD_USER)@$(RD_HOST) "cd $(APP_PATH) && tmux new-session -d 'env RDRUM_CONFIG=$(RD_CONFIG) ~/go/bin/dlv dap --listen=:2345 > /tmp/dlv.log 2>&1'"
+	ssh $(RD_USER)@$(RD_HOST) "cd $(APP_PATH) && tmux new-session -d 'env RDRUM_CONFIG=$(RD_CONFIG) LINUXSAMPLER_MONITORING=$(LSMONITOR) ~/go/bin/dlv dap --listen=:2345 > /tmp/dlv.log 2>&1'"
 	@echo "Debugger started on $(RD_HOST):2345"
 	@echo "Connect via VS Code or run: dlv connect $(RD_HOST):2345"
 

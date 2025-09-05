@@ -43,6 +43,9 @@ type Config struct {
 	Audio struct {
 		BlackList []string `mapstructure:"blackList"`
 	} `mapstructure:"audio"`
+	Linuxsampler struct {
+		Monitoring bool `mapstructure:"monitoring"`
+	} `mapstructure:"linuxsampler"`
 }
 
 var cfg Config
@@ -70,7 +73,7 @@ func main() {
 
 	samplerDataPath := util.AbsPathify(projectPath, cfg.Data.Sampler)
 	slog.Info("Working dir: " + samplerDataPath)
-	sampler, err := lsampler.InitLinuxSampler(samplerDataPath, systemd)
+	sampler, err := lsampler.InitLinuxSampler(samplerDataPath, systemd, cfg.Linuxsampler.Monitoring)
 	if err != nil {
 		slog.Error(fmt.Sprintln(err))
 		os.Exit(1)
@@ -159,12 +162,15 @@ func loadConfig(configPath string) (Config, error) {
 	if configName == "" {
 		configName = "dev"
 	}
+
 	v.SetConfigName(configName)
 	v.AddConfigPath(configPath)
 	v.SetConfigType("yaml")
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.BindEnv("log.level", "SRV_LOG_LEVEL")
+	v.BindEnv("linuxsampler.monitoring", "LINUXSAMPLER_MONITORING")
+	v.SetDefault("linuxsampler.monitoring", true)
 
 	if err := v.ReadInConfig(); err != nil {
 		return Config{}, fmt.Errorf("failed to read config file: %w", err)

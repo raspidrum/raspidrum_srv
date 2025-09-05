@@ -26,7 +26,7 @@ type LinuxSampler struct {
 	healthcheckWg     sync.WaitGroup
 }
 
-func InitLinuxSampler(samplesPath string, systemd dbus.SystemdManager) (*LinuxSampler, error) {
+func InitLinuxSampler(samplesPath string, systemd dbus.SystemdManager, monitoring bool) (*LinuxSampler, error) {
 
 	// Initialize sampler
 	sampler := LinuxSampler{
@@ -57,7 +57,7 @@ func InitLinuxSampler(samplesPath string, systemd dbus.SystemdManager) (*LinuxSa
 	// Initialize sampler
 	sampler.Client = lsClient
 
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" && monitoring {
 		sampler.StartHealthCheck(context.Background())
 	}
 
@@ -171,7 +171,7 @@ func (l *LinuxSampler) EnsureLinuxSamplerRunning(ctx context.Context) error {
 
 // StartHealthCheck launches a background goroutine that checks the connection to LinuxSampler every 2 seconds.
 // On connection loss, it attempts to restart the service and reconnect the client as needed.
-// hc — клиент для healthcheck (может быть mock в тестах). Если nil, используется l.Client.
+// hc - клиент для healthcheck (может быть mock в тестах). Если nil, используется l.Client.
 func (l *LinuxSampler) StartHealthCheck(ctx context.Context) {
 	if l.healthcheckCancel != nil {
 		// Already running
