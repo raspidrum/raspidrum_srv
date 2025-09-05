@@ -36,9 +36,9 @@ func InitSampler(sampler repo.SamplerRepo, midiDev midi.MIDIDevice, audioDevice 
 	audioDriver := audioDevice.Driver()
 	if audioDriver == "JACK" {
 		// TODO: get from channels
-		audioBindings[0] = []repo.Param[string]{
-			{Name: "JACK_BINDINGS", Value: "system:playback_1"},
-			{Name: "JACK_BINDINGS", Value: "system:playback_2"},
+		audioBindings = map[int][]repo.Param[string]{
+			0: {{Name: "JACK_BINDINGS", Value: "system:playback_1"}},
+			1: {{Name: "JACK_BINDINGS", Value: "system:playback_2"}},
 		}
 	}
 	audioId, err := sampler.ConnectAudioOutput(audioDriver, audioBindings)

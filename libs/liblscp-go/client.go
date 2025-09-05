@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,6 +26,7 @@ type lscpDriver struct {
 	port       string
 	conTimeout string
 	conn       net.Conn
+	req        sync.Mutex
 }
 
 func newLscpDriver(host, port, timeout string) *lscpDriver {
@@ -62,10 +64,7 @@ func (d *lscpDriver) Disconnect() error {
 
 func (d *lscpDriver) Ping() error {
 	// Use a simple command to check connection, e.g. GET SERVER INFO
-	if d.conn == nil {
-		return fmt.Errorf("not connected")
-	}
-	_, err := fmt.Fprintf(d.conn, "%s\r\n", "GET SERVER INFO")
+	_, err := d.RetrieveInfo("GET SERVER INFO", false)
 	return err
 }
 
@@ -74,6 +73,8 @@ func (d *lscpDriver) RetrieveInfo(lscpCmd string, isMultiResult bool) (ResultSet
 		return ResultSet{}, fmt.Errorf("not connected")
 	}
 	cmd := strings.Trim(lscpCmd, " ")
+	d.req.Lock()
+	defer d.req.Unlock()
 	_, err := fmt.Fprintf(d.conn, "%s\r\n", cmd)
 	if err != nil {
 		return ResultSet{}, fmt.Errorf("failed lscp command: %s : %w", lscpCmd, err)
