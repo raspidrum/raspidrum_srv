@@ -83,6 +83,7 @@ func (s *MonitorService) Start(ctx context.Context) error {
 				monitoringStopped = true
 			}
 		}
+		udevMon.Close()
 		time.Sleep(2 * time.Second)
 		slog.Info("Restarting udev monitor...")
 	}
